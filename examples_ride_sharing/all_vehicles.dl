@@ -1,0 +1,7 @@
+%s:peer1_public(VEHICLE_ID, AREA, REQUEST_ID).
+%s:peer2_public(VEHICLE_ID, AREA, REQUEST_ID).
+%v:all_vehicles(COMPANY_ID, VEHICLE_ID, AREA, REQUEST_ID).
++peer1_public(V, A, R) :- all_vehicles(C, V, A, R),C = 1, NOT peer1_public(V, A, R).
+-peer1_public(V, A, R) :- peer1_public(V, A, R), C = 1, NOT all_vehicles(C, V, A, R).
++peer2_public(V, A, R) :- all_vehicles(C, V, A, R), C = 2, NOT peer2_public(V, A, R).
+-peer2_public(V, A, R) :- peer2_public(V, A, R), C = 2, NOT all_vehicles(C, V, A, R).

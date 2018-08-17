@@ -1,0 +1,5 @@
+tracks2('Lullaby',3,'Galore',1). 
+tracks2('Lullaby',3,'Show',3). 
+tracks2('Lovesong',5,'Galore',1).
+tracks2('Lovesong',5,'Paris',4).
+tracks2('Trust',4,'Wish',5).

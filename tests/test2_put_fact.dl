@@ -1,0 +1,10 @@
+tracks2('Lullaby',3,'Galore',1). 
+tracks2('Lullaby',3,'Show',3). 
+tracks2('Lovesong',5,'Galore',1).
+tracks2('Lovesong',5,'Paris',4).
+tracks2('Trust',4,'Wish',5).
+ 
+tracks3_prime('Lullaby',4,'Show',10). 
+tracks3_prime('Lovesong',5,'Paris',4).
+%tracks3_prime('Trust',4,'Wish',5). % delete this tuple
+%tracks3_prime('Lullaby',3,'Galore',10). % insert a new tuple which may cause FD conflicts

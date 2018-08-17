@@ -1,0 +1,7 @@
+%s:vehicle(VEHICLE_ID, LOCATION, REQUEST_ID).
+%s:area_map(LOCATION, AREA).
+%v:peer_public(VEHICLE_ID, AREA, REQUEST_ID).
+
+-vehicle (V, L, R) :- vehicle (V,L,R), area_map (L,A), not peer_public(V,A,R).
+%-vehicle (V, L, R) :- vehicle (V,L,R), not +vehicle (V, L, R).
++vehicle (V, L, R) :- peer_public (V, A, R), vehicle (V,L,_), area_map(L,A), not vehicle(V,L,R).

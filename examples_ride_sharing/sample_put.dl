@@ -1,0 +1,6 @@
+%s:s1(X).
+%s:s2(X).
+%v:v(X).
+-s1(X) :- s1(X), not v(X).
+-s2(X) :- s2(X), not v(X).
++s1(X) :- v(X), not s1(X), not s2(X).
