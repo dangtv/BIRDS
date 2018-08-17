@@ -1,6 +1,8 @@
-# Bidirectional programing for view updating in relational database system
+---
+layout: default
+---
 
-More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS/)
+# Bidirectional programing for view updating in relational database system
 
 ## Datalog enviroment: Installation, Configuration and Usage
 

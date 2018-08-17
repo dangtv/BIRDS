@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.5.0 -->
+<meta name="generator" content="Jekyll v3.8.3" />
+<meta property="og:locale" content="en_US" />
+<script type="application/ld+json">
+{"@type":"WebSite","url":"/","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
+    <script src="assets/js/main.js"></script>
+    <!--[if lt IE 9]>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js" integrity="sha256-3Jy/GbSLrg0o9y5Z5n1uw0qxZECH7C6OQpVBgNFYa0g=" crossorigin="anonymous"></script>
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <header>
+        <h1>BIRDS</h1>
+        <p style="margin-top:0.2em">Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</p>
+        <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
+        
+        
+        <a href="#" class="button fork">Download for Macos</a>
+        <a href="#" class="button fork">Download for Ubuntu</a>
+        
+      </header>
+
+      <!-- <div id="banner">
+        <span id="logo"></span>
+
+        <a href="https://github.com/dangtv/BIRDS" class="button fork"><strong>View On GitHub</strong></a>
+        
+      </div> -->
+      <!-- end banner -->
+
+    <div class="wrapper">
+      <nav>
+        <ul></ul>
+      </nav>
+      <section>
+        <h1 id="bidirectional-programing-for-view-updating-in-relational-database-system">Bidirectional programing for view updating in relational database system</h1>
+
+<h2 id="datalog-enviroment-installation-configuration-and-usage">Datalog enviroment: Installation, Configuration and Usage</h2>
+
+<ul>
+  <li>datalog program: *.dl</li>
+  <li>datalog runtime environment: <a href="http://des.sourceforge.net">Datalog Educational System (DES)</a></li>
+</ul>
+
+<h2 id="datalog-transformation-installation-and-usage">Datalog Transformation: Installation and Usage</h2>
+
+<h3 id="installation">Installation</h3>
+
+<ul>
+  <li>Dependencies:
+    <ul>
+      <li><a href="https://ocaml.org/docs/install.html#Ubuntu">ocaml</a></li>
+      <li>ocamlyacc: opam install ocamlyacc</li>
+      <li>ocamllex: opam install ocamllex</li>
+      <li>findlib (&gt;= 1.3.1)</li>
+      <li>GNU Make</li>
+    </ul>
+  </li>
+  <li>Installing:
+    <ul>
+      <li>Clean:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  make clean
+</code></pre></div>        </div>
+      </li>
+      <li>Build:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  make
+</code></pre></div>        </div>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="usage">Usage</h3>
+
+<ul>
+  <li>
+    <p>The binary file is ./bin/birds which derive get datalog program from putback one:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  ./bin/birds <span class="o">[</span>OPTIONS]
+  <span class="nt">-db</span>         : print debugging information
+  <span class="nt">-f</span> file     : <span class="nb">read </span>program from file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
+  <span class="nt">-o</span> file     : write program out file, <span class="k">if </span>not chosen, print to stdout
+  <span class="nt">-help</span>  Display this list of options
+  <span class="nt">--help</span>  Display this list of options
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>For example:</p>
+    <pre><code class="language-base">      ./bin/birds -s public -f tests/test1_put_rule.dl -o tests/test1_get.sql
+</code></pre>
+  </li>
+</ul>
+
+<h2 id="datalog-for-view-update-how-to-write">Datalog for View Update: How to write?</h2>
+
+<ul>
+  <li>For example, there is a base relation tracks1 in a database:
+    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code>      <span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">tracks1</span><span class="p">(</span>
+          <span class="n">track</span> <span class="n">VARCHAR</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">PRIMARY</span> <span class="k">KEY</span><span class="p">,</span>
+          <span class="n">date</span> <span class="n">int</span><span class="p">,</span>
+          <span class="n">rating</span> <span class="n">int</span><span class="p">,</span>
+          <span class="n">album</span> <span class="n">VARCHAR</span><span class="p">,</span>
+          <span class="n">quantity</span> <span class="n">int</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">);</span>
+</code></pre></div>    </div>
+    <p>To define a view tracks2_prime, we use set of rules to describe how to update data from the view to the base relation, and put these rules in one file, for example /tests/test1_put_rule.dl. The first step is writing a simple statement to tell the schemma of the view and the source:</p>
+    <pre><code class="language-datalog">      %s:tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
+      %v:tracks2_prime(TRACK,RATING,ALBUM,QUANTITY).
+</code></pre>
+    <p>then writing a set of rules describing how to udpate data from the view tracks2_prime to base relation tracks1:</p>
+
+    <pre><code class="language-datalog">      %s:tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
+      %v:tracks2_prime(TRACK,RATING,ALBUM,QUANTITY).
+      delta_insert_tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2_prime(TRACK,RATING,ALBUM,QUANTITY), not tracks1(TRACK,_,RATING,ALBUM,QUANTITY).
+      delta_delete_tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY) :- tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY), not tracks2_prime(TRACK,RATING,ALBUM,QUANTITY),not tracks2_prime(TRACK,RATING,ALBUM,QUANTITY).
+      tracks1_prime(TRACK,DATE,RATING,ALBUM,QUANTITY) :- tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY), not delta_delete_tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
+      tracks1_prime(TRACK,DATE,RATING,ALBUM,QUANTITY) :- delta_insert_tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
+</code></pre>
+  </li>
+  <li>Derive the get datalog program (definition of the view):
+    <pre><code class="language-base">  ./bin/birds -h localhost -p 5432 -U guestuser -w 12345678 -d datalogdb -f tests/test1_put_rule.dl -o tests/test1_get_rule.dl
+</code></pre>
+    <p>result:</p>
+    <pre><code class="language-datalog">  delta_insert_tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2_prime_med(TRACK,RATING,ALBUM,QUANTITY) , not tracks1(TRACK,_,RATING,ALBUM,QUANTITY).
+  tracks2_prime_med(TRACK,RATING,ALBUM,QUANTITY) :- tracks1(TRACK,_,RATING,ALBUM,QUANTITY).
+  tracks2_prime(TRACKS2_PRIME_A4_COL0,TRACKS2_PRIME_A4_COL1,TRACKS2_PRIME_A4_COL2,TRACKS2_PRIME_A4_COL3) :- tracks2_prime_med(TRACKS2_PRIME_A4_COL0,TRACKS2_PRIME_A4_COL1,TRACKS2_PRIME_A4_COL2,TRACKS2_PRIME_A4_COL3).
+</code></pre>
+  </li>
+</ul>
+
+<h3 id="run-the-pair-of-put-and-get-datalog-programs-by-using-des">Run the pair of put and get datalog programs by using <a href="http://des.sourceforge.net">DES</a></h3>
+
+<ul>
+  <li>Go to DES CLI :
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  des
+</code></pre></div>    </div>
+  </li>
+  <li>put:
+    <ul>
+      <li>load the ground facts:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /consult tests/test1_put_fact.dl
+</code></pre></div>        </div>
+      </li>
+      <li>load the rules of put (you need to remove the first line from tests/test1_put_rule.dl):
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /[+ tests/test1_put_rule.dl <span class="o">]</span>
+</code></pre></div>        </div>
+      </li>
+      <li>get the result of tracks1_prime:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  tracks1_prime<span class="o">(</span>TRACK,DATE,RATING,ALBUM,QUANTITY<span class="o">)</span>
+</code></pre></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li>get:
+    <ul>
+      <li>load the ground facts:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /consult tests/test1_get_fact.dl
+</code></pre></div>        </div>
+      </li>
+      <li>load the rules of put:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /[+ tests/test1_get_rule.dl <span class="o">]</span>
+</code></pre></div>        </div>
+      </li>
+      <li>get the result of tracks2_prime:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  tracks2_prime<span class="o">(</span>TRACK,RATING,ALBUM,QUANTITY<span class="o">)</span>
+</code></pre></div>        </div>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="run-the-pair-of-put-and-get-datalog-programs-by-using-dlv">Run the pair of put and get datalog programs by using <a href="http://www.dlvsystem.com/dlv/">DLV</a></h3>
+
+<p>Because DLV do not allow to write anonimos variable (under score) in the negated predicates, so DLV can not work for the test 1. But it works for the test 2 (test 2 is for the view Tracks3 –&gt; Tracks2):</p>
+
+<ul>
+  <li>put: (need to remove the first line in test2_put_rule.dl) (test2_put.db is the set of ground fact)</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    dlv test2_put_rule.dl test2_put.db <span class="nt">-filter</span><span class="o">=</span>tracks2_prime
+</code></pre></div></div>
+
+<ul>
+  <li>get: (test2_get.db is the set of ground fact)</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    dlv test2_get_rule.dl test2_get.db <span class="nt">-filter</span><span class="o">=</span>tracks3_prime
+</code></pre></div></div>
+
+
+      </section>
+      <footer>
+        
+          <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a></small></p>
+        
+        <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
+      </footer>
+    </div>
+
+    
+  </body>
+</html>

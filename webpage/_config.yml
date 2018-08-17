@@ -1,0 +1,18 @@
+destination: ../docs
+exclude: ['README.md', 'Gemfile.lock', 'Gemfile', 'jekyll-theme-leap-day.gemspec', 'LICENSE']
+show_downloads: false
+execution_downloads: true
+google_analytics:
+theme: jekyll-theme-leap-day
+github:
+  repository_name: BIRDS
+  repository_folder: BIRDS
+  project_tagline: Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies
+  zip_url: '#'
+  tar_url: '#'
+  mac_exe: '#'
+  ubuntu_exe: '#'
+  repository_url: https://github.com/dangtv/BIRDS
+  owner_url: https://dangtv.github.io
+  is_project_page: true
+  owner_name: Vandang Tran
