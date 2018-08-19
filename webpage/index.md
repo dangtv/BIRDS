@@ -6,7 +6,7 @@ layout: default
 
 ## Overview
 
-BIRDS (Putback-based **BI**directional transformation for **R**elational view update **D**atalog-based **S**trategies) is a bidirectional transformation (BX) framework for Relational Database Management Systems (RDBMS). The objective of this framework is allow programers to define a relational view in RDBMS by writing an update strategy for it. 
+BIRDS (Putback-based **BI**directional transformation for **R**elational view update **D**atalog-based **S**trategies) is a bidirectional transformation (BX) framework for Relational Database Management Systems (RDBMS). The objective of this framework is to allow programers to define a relational view in RDBMS by writing an update strategy for it. 
 
 ## View Update Language: Datalog
 
