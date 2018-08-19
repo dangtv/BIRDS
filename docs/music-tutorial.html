@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.5.0 -->
+<meta name="generator" content="Jekyll v3.8.3" />
+<meta property="og:locale" content="en_US" />
+<script type="application/ld+json">
+{"@type":"WebPage","url":"/music-tutorial.html","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
+    <script src="assets/js/main.js"></script>
+    <!--[if lt IE 9]>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js" integrity="sha256-3Jy/GbSLrg0o9y5Z5n1uw0qxZECH7C6OQpVBgNFYa0g=" crossorigin="anonymous"></script>
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <header>
+        <a href="/"> <h1>  BIRDS </h1> </a>
+        <p style="margin-top:0.2em">Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</p>
+        <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
+        
+        
+        <a href="#" class="button fork">Download for Macos</a>
+        <a href="#" class="button fork">Download for Ubuntu</a>
+        
+      </header>
+
+      <!-- <div id="banner">
+        <span id="logo"></span>
+
+        <a href="https://github.com/dangtv/BIRDS" class="button fork"><strong>View On GitHub</strong></a>
+        
+      </div> -->
+      <!-- end banner -->
+
+    <div class="wrapper">
+      <nav>
+        <ul></ul>
+      </nav>
+      <section>
+        <h1 id="birds-tutorial-examples-on-music-schema">BIRDS tutorial: examples on music schema</h1>
+
+<p>Example: music schema (<a href="https://github.com/dangtv/BIRDS/examples/music/schema.sql">schema.sql</a>)</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>tracks1</th>
+      <th> </th>
+      <th> </th>
+      <th> </th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>track</td>
+      <td>date</td>
+      <td>rating</td>
+      <td>album</td>
+      <td>quantity</td>
+    </tr>
+    <tr>
+      <td>Trust</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>Wish</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <td>Lovesong</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>Galore</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>Mysong</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>Galore</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>Lullaby</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>Show</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="create-a-view-tracks2-over-tracks1">Create a view tracks2 over tracks1</h2>
+
+<ol>
+  <li>
+    <p>Write an update trategy on the view <code class="highlighter-rouge">tracks2</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/examples/music/tracks2.dl">tracks2.dl</a>):</p>
+
+    <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">s</span><span class="o">:</span><span class="ss">tracks1</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">DATE</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
+ <span class="err">%</span><span class="ss">v</span><span class="o">:</span><span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
+ <span class="o">+</span><span class="ss">tracks1</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="m">2018</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">tracks1</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
+ <span class="o">-</span><span class="ss">tracks1</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">DATE</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">tracks1</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">DATE</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span><span class="ss">not</span> <span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>Derive view definition and transform this update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/examples/music/tracks2.sql">tracks2.sql</a>):</p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-f</span> examples/music/tracks2.dl <span class="nt">-o</span> examples/music/tracks2.sql
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<h2 id="create-a-view-tracks3-over-tracks2">Create a view tracks3 over tracks2</h2>
+
+<ol>
+  <li>
+    <p>Write an update trategy on the view <code class="highlighter-rouge">tracks2</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/examples/music/tracks3.dl">tracks3.dl</a>):</p>
+
+    <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">v</span><span class="o">:</span><span class="ss">tracks3</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
+ <span class="o">+</span><span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">tracks3</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="nv">QUANTITY</span> <span class="o">&gt;</span> <span class="m">2</span><span class="p">.</span>
+ <span class="o">-</span><span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">tracks3</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="nv">QUANTITY</span> <span class="o">&gt;</span> <span class="m">2</span><span class="p">.</span>
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>Derive view definition and transform this update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/examples/music/tracks3.sql">tracks3.sql</a>):</p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-f</span> examples/music/tracks3.dl <span class="nt">-o</span> examples/music/tracks3.sql
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+
+      </section>
+      <footer>
+        
+          <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a></small></p>
+        
+        <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
+      </footer>
+    </div>
+
+    
+  </body>
+</html>

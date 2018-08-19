@@ -23,7 +23,7 @@
   <body>
 
       <header>
-        <h1>BIRDS</h1>
+        <a href="/"> <h1>  BIRDS </h1> </a>
         <p style="margin-top:0.2em">Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</p>
         <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
         
@@ -46,158 +46,97 @@
         <ul></ul>
       </nav>
       <section>
-        <h1 id="bidirectional-programing-for-view-updating-in-relational-database-system">Bidirectional programing for view updating in relational database system</h1>
+        <h1 id="birds">BIRDS</h1>
 
-<h2 id="datalog-enviroment-installation-configuration-and-usage">Datalog enviroment: Installation, Configuration and Usage</h2>
+<h2 id="overview">Overview</h2>
 
-<ul>
-  <li>datalog program: *.dl</li>
-  <li>datalog runtime environment: <a href="http://des.sourceforge.net">Datalog Educational System (DES)</a></li>
-</ul>
+<p>BIRDS (Putback-based <strong>BI</strong>directional transformation for <strong>R</strong>elational view update <strong>D</strong>atalog-based <strong>S</strong>trategies) is a bidirectional transformation (BX) framework for Relational Database Management Systems (RDBMS). The objective of this framework is allow programers to define a relational view in RDBMS by writing an update strategy for it.</p>
 
-<h2 id="datalog-transformation-installation-and-usage">Datalog Transformation: Installation and Usage</h2>
+<h2 id="view-update-language-datalog">View Update Language: Datalog</h2>
+
+<p>BIRDS employ and extend the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to base tables. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over base tables. Finally, both Datalog-written update strategy and derived view definition is translated into a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.</p>
+
+<!-- The syntax for Datalog in writing relational view update strategies is discribed in [Update Datalog Syntax](syntax.html) -->
+
+<!-- A view should be defined through a view update strategy to the base relations rather than a query over them. -->
+
+<!-- ---
+layout: default
+---
+
+## View Update Datalog Syntax
+
+```text
+<automaton>  ::= <trans> <inits> <acceptings>
+<program> ::= {<statement>}
+<statement> ::= <rule> | <fact> | <query>
+<rule> ::= <predicate> ":-" <literal> { ("and", ",") <literal> }
+<literal> ::= | <predicate> | "not" <predicate> | <builtin> | "not" <builtin>
+<predicate> ::= [ ("+" | "-") ] <relname> "(" <variable> {"," <variable>} ")"
+<builtin> ::= <varname> ("=" | "<>" | "<" | ">" | "<=" | ">=") <const>
+<variable> ::= <varname> | <anonvar> | <const>
+<varname> ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
+<relname> ::= 'a'|..|'z' { ('a'|..|'z'| '0'|..|'9'|'_') }
+<anonvar> ::= '_'
+<const> ::= <integer> | <float> | <string>
+``` -->
+
+<h2 id="datalog-syntax-for-relational-view-update">Datalog Syntax for Relational View Update</h2>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;automaton&gt;  ::= &lt;trans&gt; &lt;inits&gt; &lt;acceptings&gt;
+&lt;program&gt; ::= {&lt;statement&gt;}
+&lt;statement&gt; ::= &lt;rule&gt; | &lt;query&gt; | &lt;baserelation&gt;
+&lt;rule&gt; ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and", ",") &lt;literal&gt; } "."
+&lt;baserelation&gt; ::= "%s:" &lt;predicate&gt; "."
+&lt;query&gt; ::= ("%v:" | "?-") &lt;predicate&gt; "."
+&lt;literal&gt; ::= | &lt;predicate&gt; | "not" &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
+&lt;predicate&gt; ::= [ ("+" | "-") ] &lt;relname&gt; "(" &lt;variable&gt; {"," &lt;variable&gt;} ")"
+&lt;builtin&gt; ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
+&lt;variable&gt; ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
+&lt;varname&gt; ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
+&lt;relname&gt; ::= 'a'|..|'z' { ('a'|..|'z'| '0'|..|'9'|'_') }
+&lt;anonvar&gt; ::= '_'
+&lt;const&gt; ::= &lt;integer&gt; | &lt;float&gt; | &lt;string&gt;
+</code></pre></div></div>
+
+<h2 id="installation-and-usage">Installation and Usage</h2>
 
 <h3 id="installation">Installation</h3>
 
 <ul>
-  <li>Dependencies:
-    <ul>
-      <li><a href="https://ocaml.org/docs/install.html#Ubuntu">ocaml</a></li>
-      <li>ocamlyacc: opam install ocamlyacc</li>
-      <li>ocamllex: opam install ocamllex</li>
-      <li>findlib (&gt;= 1.3.1)</li>
-      <li>GNU Make</li>
-    </ul>
-  </li>
-  <li>Installing:
-    <ul>
-      <li>Clean:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  make clean
-</code></pre></div>        </div>
-      </li>
-      <li>Build:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  make
-</code></pre></div>        </div>
-      </li>
-    </ul>
-  </li>
+  <li>Download executable files: <a href="https://github.com/dangtv/BIRDS/">for Macos</a>, <a href="https://github.com/dangtv/BIRDS">for Ubuntu</a></li>
+  <li>Or build a executable file from the source code available at <a href="https://github.com/dangtv/BIRDS">https://github.com/dangtv/BIRDS</a> (along with instructions)</li>
 </ul>
 
 <h3 id="usage">Usage</h3>
 
 <ul>
   <li>
-    <p>The binary file is ./bin/birds which derive get datalog program from putback one:</p>
+    <p>The executable file is <code class="highlighter-rouge">birds</code>:</p>
 
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  ./bin/birds <span class="o">[</span>OPTIONS]
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  birds <span class="o">[</span>OPTIONS]
   <span class="nt">-db</span>         : print debugging information
   <span class="nt">-f</span> file     : <span class="nb">read </span>program from file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
   <span class="nt">-o</span> file     : write program out file, <span class="k">if </span>not chosen, print to stdout
+  <span class="nt">-s</span> schema_name     : database schema name to connect to <span class="o">(</span>default: public<span class="o">)</span>
   <span class="nt">-help</span>  Display this list of options
   <span class="nt">--help</span>  Display this list of options
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>For example:</p>
-    <pre><code class="language-base">      ./bin/birds -s public -f tests/test1_put_rule.dl -o tests/test1_get.sql
+    <p>For example, this command will transform the update strategy discribed in <code class="highlighter-rouge">test1.dl</code> to sql statements in <code class="highlighter-rouge">test1.sql</code> for creating a view with its triggers</p>
+    <pre><code class="language-base">      birds -s public -f test1.dl -o test1.sql
 </code></pre>
   </li>
 </ul>
 
-<h2 id="datalog-for-view-update-how-to-write">Datalog for View Update: How to write?</h2>
+<h2 id="tutorials-defining-updatable-views-with-datalog-in-birds">Tutorials: defining updatable views with Datalog in BIRDS</h2>
 
 <ul>
-  <li>For example, there is a base relation tracks1 in a database:
-    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code>      <span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">tracks1</span><span class="p">(</span>
-          <span class="n">track</span> <span class="n">VARCHAR</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">PRIMARY</span> <span class="k">KEY</span><span class="p">,</span>
-          <span class="n">date</span> <span class="n">int</span><span class="p">,</span>
-          <span class="n">rating</span> <span class="n">int</span><span class="p">,</span>
-          <span class="n">album</span> <span class="n">VARCHAR</span><span class="p">,</span>
-          <span class="n">quantity</span> <span class="n">int</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">);</span>
-</code></pre></div>    </div>
-    <p>To define a view tracks2_prime, we use set of rules to describe how to update data from the view to the base relation, and put these rules in one file, for example /tests/test1_put_rule.dl. The first step is writing a simple statement to tell the schemma of the view and the source:</p>
-    <pre><code class="language-datalog">      %s:tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
-      %v:tracks2_prime(TRACK,RATING,ALBUM,QUANTITY).
-</code></pre>
-    <p>then writing a set of rules describing how to udpate data from the view tracks2_prime to base relation tracks1:</p>
-
-    <pre><code class="language-datalog">      %s:tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
-      %v:tracks2_prime(TRACK,RATING,ALBUM,QUANTITY).
-      delta_insert_tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2_prime(TRACK,RATING,ALBUM,QUANTITY), not tracks1(TRACK,_,RATING,ALBUM,QUANTITY).
-      delta_delete_tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY) :- tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY), not tracks2_prime(TRACK,RATING,ALBUM,QUANTITY),not tracks2_prime(TRACK,RATING,ALBUM,QUANTITY).
-      tracks1_prime(TRACK,DATE,RATING,ALBUM,QUANTITY) :- tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY), not delta_delete_tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
-      tracks1_prime(TRACK,DATE,RATING,ALBUM,QUANTITY) :- delta_insert_tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
-</code></pre>
-  </li>
-  <li>Derive the get datalog program (definition of the view):
-    <pre><code class="language-base">  ./bin/birds -h localhost -p 5432 -U guestuser -w 12345678 -d datalogdb -f tests/test1_put_rule.dl -o tests/test1_get_rule.dl
-</code></pre>
-    <p>result:</p>
-    <pre><code class="language-datalog">  delta_insert_tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2_prime_med(TRACK,RATING,ALBUM,QUANTITY) , not tracks1(TRACK,_,RATING,ALBUM,QUANTITY).
-  tracks2_prime_med(TRACK,RATING,ALBUM,QUANTITY) :- tracks1(TRACK,_,RATING,ALBUM,QUANTITY).
-  tracks2_prime(TRACKS2_PRIME_A4_COL0,TRACKS2_PRIME_A4_COL1,TRACKS2_PRIME_A4_COL2,TRACKS2_PRIME_A4_COL3) :- tracks2_prime_med(TRACKS2_PRIME_A4_COL0,TRACKS2_PRIME_A4_COL1,TRACKS2_PRIME_A4_COL2,TRACKS2_PRIME_A4_COL3).
-</code></pre>
-  </li>
+  <li><a href="basic-tutorial">The basics</a></li>
+  <li><a href="music-tutorial">Examples on a music schema</a></li>
+  <li><a href="ridesharing-tutorial">Examples on a ride-sharing schema</a></li>
 </ul>
-
-<h3 id="run-the-pair-of-put-and-get-datalog-programs-by-using-des">Run the pair of put and get datalog programs by using <a href="http://des.sourceforge.net">DES</a></h3>
-
-<ul>
-  <li>Go to DES CLI :
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  des
-</code></pre></div>    </div>
-  </li>
-  <li>put:
-    <ul>
-      <li>load the ground facts:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /consult tests/test1_put_fact.dl
-</code></pre></div>        </div>
-      </li>
-      <li>load the rules of put (you need to remove the first line from tests/test1_put_rule.dl):
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /[+ tests/test1_put_rule.dl <span class="o">]</span>
-</code></pre></div>        </div>
-      </li>
-      <li>get the result of tracks1_prime:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  tracks1_prime<span class="o">(</span>TRACK,DATE,RATING,ALBUM,QUANTITY<span class="o">)</span>
-</code></pre></div>        </div>
-      </li>
-    </ul>
-  </li>
-  <li>get:
-    <ul>
-      <li>load the ground facts:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /consult tests/test1_get_fact.dl
-</code></pre></div>        </div>
-      </li>
-      <li>load the rules of put:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /[+ tests/test1_get_rule.dl <span class="o">]</span>
-</code></pre></div>        </div>
-      </li>
-      <li>get the result of tracks2_prime:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  tracks2_prime<span class="o">(</span>TRACK,RATING,ALBUM,QUANTITY<span class="o">)</span>
-</code></pre></div>        </div>
-      </li>
-    </ul>
-  </li>
-</ul>
-
-<h3 id="run-the-pair-of-put-and-get-datalog-programs-by-using-dlv">Run the pair of put and get datalog programs by using <a href="http://www.dlvsystem.com/dlv/">DLV</a></h3>
-
-<p>Because DLV do not allow to write anonimos variable (under score) in the negated predicates, so DLV can not work for the test 1. But it works for the test 2 (test 2 is for the view Tracks3 –&gt; Tracks2):</p>
-
-<ul>
-  <li>put: (need to remove the first line in test2_put_rule.dl) (test2_put.db is the set of ground fact)</li>
-</ul>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    dlv test2_put_rule.dl test2_put.db <span class="nt">-filter</span><span class="o">=</span>tracks2_prime
-</code></pre></div></div>
-
-<ul>
-  <li>get: (test2_get.db is the set of ground fact)</li>
-</ul>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    dlv test2_get_rule.dl test2_get.db <span class="nt">-filter</span><span class="o">=</span>tracks3_prime
-</code></pre></div></div>
 
 
       </section>
