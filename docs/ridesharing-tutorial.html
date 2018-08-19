@@ -23,7 +23,7 @@
   <body>
 
       <header>
-        <a href="/"> <h1>  BIRDS </h1> </a>
+        <a href="/BIRDS"> <h1>  BIRDS </h1> </a>
         <p style="margin-top:0.2em">Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</p>
         <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
         
@@ -48,7 +48,7 @@
       <section>
         <h1 id="birds-tutorial-examples-on-ride-sharing-schema">BIRDS tutorial: examples on ride-sharing schema</h1>
 
-<p>Example: ride-sharing schema (<a href="https://github.com/dangtv/BIRDS/examples/ride_sharing/schema.sql">schema.sql</a>)</p>
+<p>Example: ride-sharing schema (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/ride_sharing/schema.sql">schema.sql</a>)</p>
 
 <table>
   <thead>
@@ -275,7 +275,7 @@
 
 <ol>
   <li>
-    <p>Write an update trategy on the view <code class="highlighter-rouge">peer1_public</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/examples/ride_sharing/real_peer1_public.dl">real_peer1_public.dl</a>):</p>
+    <p>Write an update trategy on the view <code class="highlighter-rouge">peer1_public</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/ride_sharing/real_peer1_public.dl">real_peer1_public.dl</a>):</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">s</span><span class="o">:</span><span class="ss">peer1_vehicle</span><span class="p">(</span><span class="nv">VEHICLE_ID</span> <span class="p">,</span> <span class="nv">CURRENT_LOCATION</span> <span class="p">,</span> <span class="nv">SEAT_COUNT</span> <span class="p">,</span> <span class="nv">REQUEST_ID</span> <span class="p">,</span> <span class="nv">PICKUP_LOCATION</span> <span class="p">,</span> <span class="nv">DROPOFF_LOCATION</span><span class="p">).</span>
  <span class="err">%</span><span class="ss">s</span><span class="o">:</span><span class="ss">area</span><span class="p">(</span><span class="nv">ORIGINAL_NODE</span> <span class="p">,</span> <span class="nv">AREA_NODE</span><span class="p">).</span>
@@ -286,7 +286,7 @@
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>Derive view definition and transform this update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/examples/ride_sharing/real_peer1_public.sql">real_peer1_public.sql</a>):</p>
+    <p>Derive view definition and transform it with the update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/ride_sharing/real_peer1_public.sql">real_peer1_public.sql</a>):</p>
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-f</span> examples/ride_sharing/real_peer1_public.dl <span class="nt">-o</span> examples/ride_sharing/real_peer1_public.sql
 </code></pre></div>    </div>
   </li>
@@ -296,7 +296,7 @@
 
 <ol>
   <li>
-    <p>Write an update trategy on the view <code class="highlighter-rouge">peer2_public</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/examples/ride_sharing/real_peer2_public.dl">real_peer2_public.dl</a>):</p>
+    <p>Write an update trategy on the view <code class="highlighter-rouge">peer2_public</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/ride_sharing/real_peer2_public.dl">real_peer2_public.dl</a>):</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">s</span><span class="o">:</span><span class="ss">peer2_vehicle</span><span class="p">(</span><span class="nv">VEHICLE_ID</span> <span class="p">,</span> <span class="nv">CURRENT_LOCATION</span> <span class="p">,</span> <span class="nv">SEAT_COUNT</span> <span class="p">,</span> <span class="nv">REQUEST_ID</span> <span class="p">,</span> <span class="nv">PICKUP_LOCATION</span> <span class="p">,</span> <span class="nv">DROPOFF_LOCATION</span><span class="p">).</span>
  <span class="err">%</span><span class="ss">s</span><span class="o">:</span><span class="ss">area</span><span class="p">(</span><span class="nv">ORIGINAL_NODE</span> <span class="p">,</span> <span class="nv">AREA_NODE</span><span class="p">).</span>
@@ -307,7 +307,7 @@
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>Derive view definition and transform this update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/examples/ride_sharing/real_peer2_public.sql">real_peer2_public.sql</a>):</p>
+    <p>Derive view definition and transform it with the update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/ride_sharing/real_peer2_public.sql">real_peer2_public.sql</a>):</p>
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-f</span> examples/ride_sharing/real_peer2_public.dl <span class="nt">-o</span> examples/ride_sharing/real_peer2_public.sql
 </code></pre></div>    </div>
   </li>
@@ -317,7 +317,7 @@
 
 <ol>
   <li>
-    <p>Write an update trategy on the view <code class="highlighter-rouge">all_vehicles</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/examples/ride_sharing/real_all_vehicles.dl">real_all_vehicles.dl</a>):</p>
+    <p>Write an update trategy on the view <code class="highlighter-rouge">all_vehicles</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/ride_sharing/real_all_vehicles.dl">real_all_vehicles.dl</a>):</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">s</span><span class="o">:</span><span class="ss">peer1_public</span><span class="p">(</span><span class="nv">VEHICLE_ID</span> <span class="p">,</span> <span class="nv">CURRENT_AREA</span> <span class="p">,</span> <span class="nv">SEAT_COUNT</span> <span class="p">,</span> <span class="nv">REQUEST_ID</span> <span class="p">,</span> <span class="nv">PICKUP_LOCATION</span> <span class="p">,</span> <span class="nv">DROPOFF_LOCATION</span><span class="p">).</span>
  <span class="err">%</span><span class="ss">s</span><span class="o">:</span><span class="ss">peer2_public</span><span class="p">(</span><span class="nv">VEHICLE_ID</span> <span class="p">,</span> <span class="nv">CURRENT_AREA</span> <span class="p">,</span> <span class="nv">SEAT_COUNT</span> <span class="p">,</span> <span class="nv">REQUEST_ID</span> <span class="p">,</span> <span class="nv">PICKUP_LOCATION</span> <span class="p">,</span> <span class="nv">DROPOFF_LOCATION</span><span class="p">).</span>
@@ -329,7 +329,7 @@
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>Derive view definition and transform this update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/examples/ride_sharing/real_all_vehicles.sql">real_all_vehicles.sql</a>):</p>
+    <p>Derive view definition and transform it with the update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/ride_sharing/real_all_vehicles.sql">real_all_vehicles.sql</a>):</p>
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-f</span> examples/ride_sharing/real_all_vehicles.dl <span class="nt">-o</span> examples/ride_sharing/real_all_vehicles.sql
 </code></pre></div>    </div>
   </li>

@@ -23,7 +23,7 @@
   <body>
 
       <header>
-        <a href="/"> <h1>  BIRDS </h1> </a>
+        <a href="/BIRDS"> <h1>  BIRDS </h1> </a>
         <p style="margin-top:0.2em">Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</p>
         <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
         
@@ -48,7 +48,7 @@
       <section>
         <h1 id="birds-tutorial-examples-on-music-schema">BIRDS tutorial: examples on music schema</h1>
 
-<p>Example: music schema (<a href="https://github.com/dangtv/BIRDS/examples/music/schema.sql">schema.sql</a>)</p>
+<p>Example: music schema (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/music/schema.sql">schema.sql</a>)</p>
 
 <table>
   <thead>
@@ -103,7 +103,7 @@
 
 <ol>
   <li>
-    <p>Write an update trategy on the view <code class="highlighter-rouge">tracks2</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/examples/music/tracks2.dl">tracks2.dl</a>):</p>
+    <p>Write an update trategy on the view <code class="highlighter-rouge">tracks2</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/music/tracks2.dl">tracks2.dl</a>):</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">s</span><span class="o">:</span><span class="ss">tracks1</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">DATE</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
  <span class="err">%</span><span class="ss">v</span><span class="o">:</span><span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
@@ -112,7 +112,7 @@
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>Derive view definition and transform this update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/examples/music/tracks2.sql">tracks2.sql</a>):</p>
+    <p>Derive view definition and transform it with the update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/music/tracks2.sql">tracks2.sql</a>):</p>
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-f</span> examples/music/tracks2.dl <span class="nt">-o</span> examples/music/tracks2.sql
 </code></pre></div>    </div>
   </li>
@@ -122,7 +122,7 @@
 
 <ol>
   <li>
-    <p>Write an update trategy on the view <code class="highlighter-rouge">tracks2</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/examples/music/tracks3.dl">tracks3.dl</a>):</p>
+    <p>Write an update trategy on the view <code class="highlighter-rouge">tracks2</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/music/tracks3.dl">tracks3.dl</a>):</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">v</span><span class="o">:</span><span class="ss">tracks3</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
  <span class="o">+</span><span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">tracks3</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="nv">QUANTITY</span> <span class="o">&gt;</span> <span class="m">2</span><span class="p">.</span>
@@ -130,7 +130,7 @@
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>Derive view definition and transform this update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/examples/music/tracks3.sql">tracks3.sql</a>):</p>
+    <p>Derive view definition and transform it with the update trategy to SQL statements saved in the file (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/music/tracks3.sql">tracks3.sql</a>):</p>
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-f</span> examples/music/tracks3.dl <span class="nt">-o</span> examples/music/tracks3.sql
 </code></pre></div>    </div>
   </li>

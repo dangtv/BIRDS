@@ -17,7 +17,7 @@
   <body>
 
       <header>
-        <a href="/"> <h1>  {{ site.title | default: site.github.repository_name }} </h1> </a>
+        <a href="/{{site.github.repository_folder }}"> <h1>  {{ site.title | default: site.github.repository_name }} </h1> </a>
         <p style="margin-top:0.2em">{{ site.description | default: site.github.project_tagline }}</p>
         <a href="{{ site.github.repository_url }}" class="button fork">View On GitHub</a>
         {% if site.show_downloads %}

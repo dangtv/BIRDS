@@ -23,7 +23,7 @@
   <body>
 
       <header>
-        <a href="/"> <h1>  BIRDS </h1> </a>
+        <a href="/BIRDS"> <h1>  BIRDS </h1> </a>
         <p style="margin-top:0.2em">Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</p>
         <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
         
@@ -79,7 +79,7 @@
 
 <ol>
   <li>
-    <p>Write an update trategy on a view v(X) to base tables s1(X) and s2(X) by using Datalog (<a href="https://github.com/dangtv/BIRDS/examples/basic_sample.dl">basic_sample.dl</a>):</p>
+    <p>Write an update trategy on a view v(X) to base tables s1(X) and s2(X) by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.dl">basic_sample.dl</a>):</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">s</span><span class="o">:</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
  <span class="err">%</span><span class="ss">s</span><span class="o">:</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
@@ -89,7 +89,7 @@
  <span class="o">+</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
 </code></pre></div>    </div>
   </li>
-  <li>Derive view definition and transform this update trategy to SQL statements (<a href="https://github.com/dangtv/BIRDS/examples/basic_sample.sql">basic_sample.sql</a>):
+  <li>Derive view definition and transform it with the update trategy to SQL statements (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.sql">basic_sample.sql</a>):
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-s</span> public <span class="nt">-f</span> examples/basic_sample.dl <span class="nt">-o</span> examples/basic_sample.sql
 </code></pre></div>    </div>
   </li>
