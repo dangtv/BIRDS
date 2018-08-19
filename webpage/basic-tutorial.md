@@ -22,7 +22,7 @@ layout: default
 
 Suppose that given two base tables `s1` and `s2`, both have a single column `X`, a view `v` over these two base tables can be defined with the following steps:
 
-1. Write an update trategy on a view v(X) to base tables s1(X) and s2(X) by using Datalog ([basic_sample.dl]({{site.github.repository_url}}/examples/basic_sample.dl)):
+1. Write an update trategy on a view v(X) to base tables s1(X) and s2(X) by using Datalog ([basic_sample.dl]({{site.github.repository_url}}/tree/master/examples/basic_sample.dl)):
 
     ```prolog
     %s: s1(X).
@@ -33,7 +33,7 @@ Suppose that given two base tables `s1` and `s2`, both have a single column `X`,
     +s1(X) :- v(X), not s1(X), not s2(X).
     ```
 
-1. Derive view definition and transform this update trategy to SQL statements ([basic_sample.sql]({{site.github.repository_url}}/examples/basic_sample.sql)):
+1. Derive view definition and transform it with the update trategy to SQL statements ([basic_sample.sql]({{site.github.repository_url}}/tree/master/examples/basic_sample.sql)):
     ```bash
     birds -s public -f examples/basic_sample.dl -o examples/basic_sample.sql
     ```
