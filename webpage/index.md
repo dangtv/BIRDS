@@ -21,10 +21,9 @@ BIRDS employ and extend the power of Datalog, which is a well known query langua
 ## Datalog Syntax for Relational View Update
 
 ```text
-<automaton>  ::= <trans> <inits> <acceptings>
 <program> ::= {<statement>}
 <statement> ::= <rule> | <query> | <baserelation>
-<rule> ::= <predicate> ":-" <literal> { ("and", ",") <literal> } "."
+<rule> ::= <predicate> ":-" <literal> { ("and"| ",") <literal> } "."
 <baserelation> ::= "%s:" <predicate> "."
 <query> ::= ("%v:" | "?-") <predicate> "."
 <literal> ::= | <predicate> | "not" <predicate> | <builtin> | "not" <builtin>
