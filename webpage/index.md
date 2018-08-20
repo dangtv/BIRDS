@@ -58,8 +58,8 @@ BIRDS employs and extends the power of Datalog, which is a well known query lang
     ```
 
 * For example, this command will transform the update strategy discribed in `test1.dl` to sql statements in `test1.sql` for creating a view with its triggers
-    ```base
-        birds -s public -f test1.dl -o test1.sql
+    ```bash
+    birds -s public -f test1.dl -o test1.sql
     ```
 
 ## Tutorials: defining updatable views with Datalog in BIRDS

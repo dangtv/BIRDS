@@ -120,12 +120,12 @@ Suppose that given two base tables `s1` and `s2`, both have a single column `X`,
 
     EXCEPTION
         WHEN object_not_in_prerequisite_state THEN
-            RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert to local db';
+            RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or update or delete from public.v';
         WHEN OTHERS THEN
             GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
                                     text_var2 = PG_EXCEPTION_DETAIL,
                                     text_var3 = MESSAGE_TEXT;
-            RAISE SQLSTATE 'DA000' USING MESSAGE = 'something is wrong;; error code: ' || text_var1 || ' ;; ' || text_var2 ||' ;; ' || text_var3;
+            RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of public.v ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
             RETURN NULL;
     END;
     

@@ -175,12 +175,12 @@
 
  <span class="n">EXCEPTION</span>
      <span class="k">WHEN</span> <span class="n">object_not_in_prerequisite_state</span> <span class="k">THEN</span>
-         <span class="n">RAISE</span> <span class="n">object_not_in_prerequisite_state</span> <span class="k">USING</span> <span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">'no permission to insert to local db'</span><span class="p">;</span>
+         <span class="n">RAISE</span> <span class="n">object_not_in_prerequisite_state</span> <span class="k">USING</span> <span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">'no permission to insert or update or delete from public.v'</span><span class="p">;</span>
      <span class="k">WHEN</span> <span class="n">OTHERS</span> <span class="k">THEN</span>
          <span class="k">GET</span> <span class="n">STACKED</span> <span class="k">DIAGNOSTICS</span> <span class="n">text_var1</span> <span class="o">=</span> <span class="k">RETURNED_SQLSTATE</span><span class="p">,</span>
                                  <span class="n">text_var2</span> <span class="o">=</span> <span class="n">PG_EXCEPTION_DETAIL</span><span class="p">,</span>
                                  <span class="n">text_var3</span> <span class="o">=</span> <span class="k">MESSAGE_TEXT</span><span class="p">;</span>
-         <span class="n">RAISE</span> <span class="k">SQLSTATE</span> <span class="s1">'DA000'</span> <span class="k">USING</span> <span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">'something is wrong;; error code: '</span> <span class="o">||</span> <span class="n">text_var1</span> <span class="o">||</span> <span class="s1">' ;; '</span> <span class="o">||</span> <span class="n">text_var2</span> <span class="o">||</span><span class="s1">' ;; '</span> <span class="o">||</span> <span class="n">text_var3</span><span class="p">;</span>
+         <span class="n">RAISE</span> <span class="k">SQLSTATE</span> <span class="s1">'DA000'</span> <span class="k">USING</span> <span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">'error on the trigger of public.v ; error code: '</span> <span class="o">||</span> <span class="n">text_var1</span> <span class="o">||</span> <span class="s1">' ; '</span> <span class="o">||</span> <span class="n">text_var2</span> <span class="o">||</span><span class="s1">' ; '</span> <span class="o">||</span> <span class="n">text_var3</span><span class="p">;</span>
          <span class="k">RETURN</span> <span class="k">NULL</span><span class="p">;</span>
  <span class="k">END</span><span class="p">;</span>
     
