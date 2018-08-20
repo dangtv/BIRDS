@@ -28,8 +28,8 @@
         <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
         
         
-        <a href="#" class="button fork">Download for Macos</a>
-        <a href="#" class="button fork">Download for Ubuntu</a>
+        <a href="https://github.com/dangtv/BIRDS/releases/download/0.0.1/birds_macos.zip" class="button fork">Download for Macos</a>
+        <a href="https://github.com/dangtv/BIRDS/releases/download/0.0.1/birds_ubuntu.zip" class="button fork">Download for Ubuntu</a>
         
       </header>
 
@@ -122,7 +122,7 @@
 
 <ol>
   <li>
-    <p>Write an update trategy on the view <code class="highlighter-rouge">tracks2</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/music/tracks3.dl">tracks3.dl</a>):</p>
+    <p>Write an update trategy on the view <code class="highlighter-rouge">tracks3</code> by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/music/tracks3.dl">tracks3.dl</a>):</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span><span class="ss">v</span><span class="o">:</span><span class="ss">tracks3</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">).</span>
  <span class="o">+</span><span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">tracks3</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">tracks2</span><span class="p">(</span><span class="nv">TRACK</span><span class="p">,</span><span class="nv">RATING</span><span class="p">,</span><span class="nv">ALBUM</span><span class="p">,</span><span class="nv">QUANTITY</span><span class="p">),</span> <span class="nv">QUANTITY</span> <span class="o">&gt;</span> <span class="m">2</span><span class="p">.</span>

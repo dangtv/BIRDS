@@ -10,7 +10,7 @@ BIRDS (Putback-based **BI**directional transformation for **R**elational view up
 
 ## View Update Language: Datalog
 
-BIRDS employ and extend the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to base tables. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over base tables. Finally, both Datalog-written update strategy and derived view definition is translated into a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.
+BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to base tables. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over base tables. Finally, both Datalog-written update strategy and derived view definition is translated into a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.
 
 <!-- The syntax for Datalog in writing relational view update strategies is discribed in [Update Datalog Syntax](syntax.html) -->
 
@@ -40,7 +40,7 @@ BIRDS employ and extend the power of Datalog, which is a well known query langua
 
 ### Installation
 
-* Download executable files: [for Macos](https://github.com/dangtv/BIRDS/), [for Ubuntu](https://github.com/dangtv/BIRDS)
+* Download executable files: [for Macos]({{ site.github.mac_exe }}), [for Ubuntu]({{ site.github.ubuntu_exe }})
 * Or build a executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
 
 ### Usage
@@ -64,6 +64,6 @@ BIRDS employ and extend the power of Datalog, which is a well known query langua
 
 ## Tutorials: defining updatable views with Datalog in BIRDS
 
-* [The basics](basic-tutorial)
-* [Examples on a music schema](music-tutorial)
-* [Examples on a ride-sharing schema](ridesharing-tutorial)
+* [The basics](basic-tutorial.html)
+* [Examples on a music schema](music-tutorial.html)
+* [Examples on a ride-sharing schema](ridesharing-tutorial.html)

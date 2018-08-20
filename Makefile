@@ -8,8 +8,10 @@ EX_NAME=birds
 
 # binary folder for compilation
 BIN_DIR=bin
+RELEASE_DIR = release
 
 OCAMLC_FLAGS=-I $(BIN_DIR)
+OCAMLOPT_FLAGS=-I $(RELEASE_DIR)
 
 #Name of the files that are part of the project
 MAIN_FILE=main
@@ -21,7 +23,7 @@ FILES=\
 	derivation\
 	ast2sql\
 
-.PHONY: all clean
+.PHONY: all release clean
 all: $(BIN_DIR)/$(EX_NAME)
 
 #The next variables hold the dependencies of each file
@@ -65,4 +67,39 @@ $(BIN_DIR)/%.cmi $(BIN_DIR)/%.cmo: src/%.ml
 # $(BIN_DIR)/utils.cmo: $(DEP_utils:%=$(BIN_DIR)/%.cmo)
 
 clean:
-	rm -f $(BIN_DIR)/*.cmo $(BIN_DIR)/*.cmi src/parser.mli src/parser.ml src/lexer.ml 
+	rm -f $(BIN_DIR)/*.cmo $(BIN_DIR)/*.cmi $(BIN_DIR)/*.o src/parser.mli src/parser.ml src/lexer.ml 
+
+release: $(RELEASE_DIR)/$(EX_NAME)
+
+#The next variables hold the dependencies of each file
+# DEP_lexer=parser 
+# DEP_utils=expr 
+
+#Rule for generating the final executable file
+$(RELEASE_DIR)/$(EX_NAME): $(FILES:%=$(RELEASE_DIR)/%.cmx) $(RELEASE_DIR)/$(MAIN_FILE).cmx
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -linkpkg $(FILES:%=$(RELEASE_DIR)/%.cmx) $(RELEASE_DIR)/$(MAIN_FILE).cmx -o $(RELEASE_DIR)/$(EX_NAME)
+	rm -f $(RELEASE_DIR)/*.cmx $(RELEASE_DIR)/*.cmi $(RELEASE_DIR)/*.o 
+
+#Rule for compiling the main file
+$(RELEASE_DIR)/$(MAIN_FILE).cmx: $(FILES:%=$(RELEASE_DIR)/%.cmx) src/$(MAIN_FILE).ml
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(RELEASE_DIR)/$(MAIN_FILE) -c src/$(MAIN_FILE).ml 
+
+#Special rule for compiling conn_ops
+$(RELEASE_DIR)/conn_ops.cmx $(RELEASE_DIR)/conn_ops.cmi: src/conn_ops.ml
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(RELEASE_DIR)/conn_ops -c $<
+
+#Special rules for creating the lexer and parser
+$(RELEASE_DIR)/parser.cmi:	src/parser.mli
+	$(DIR_GUARD)
+	ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/parser -c $<
+$(RELEASE_DIR)/parser.cmx:	src/parser.ml $(RELEASE_DIR)/parser.cmi
+	$(DIR_GUARD)
+	ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/parser -c $<
+
+#General rule for compiling
+$(RELEASE_DIR)/%.cmi $(RELEASE_DIR)/%.cmx: src/%.ml
+	$(DIR_GUARD)
+	ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/$* -c $<

@@ -32,7 +32,7 @@ tracks1 |
 
 ## Create a view tracks3 over tracks2
 
-1. Write an update trategy on the view `tracks2` by using Datalog ([tracks3.dl]({{site.github.repository_url}}/tree/master/examples/music/tracks3.dl)):
+1. Write an update trategy on the view `tracks3` by using Datalog ([tracks3.dl]({{site.github.repository_url}}/tree/master/examples/music/tracks3.dl)):
 
     ```prolog
     %v:tracks3(TRACK,RATING,ALBUM,QUANTITY).

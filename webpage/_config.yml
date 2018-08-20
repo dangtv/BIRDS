@@ -8,10 +8,10 @@ github:
   repository_name: BIRDS
   repository_folder: BIRDS
   project_tagline: Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies
-  zip_url: '#'
-  tar_url: '#'
-  mac_exe: '#'
-  ubuntu_exe: '#'
+  zip_url: https://github.com/dangtv/BIRDS/archive/0.0.1.zip
+  tar_url: https://github.com/dangtv/BIRDS/archive/0.0.1.tar.gz
+  mac_exe: https://github.com/dangtv/BIRDS/releases/download/0.0.1/birds_macos.zip
+  ubuntu_exe: https://github.com/dangtv/BIRDS/releases/download/0.0.1/birds_ubuntu.zip
   repository_url: https://github.com/dangtv/BIRDS
   owner_url: https://dangtv.github.io
   is_project_page: true
