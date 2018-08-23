@@ -35,6 +35,7 @@ let main () =
   try 
     let chan = if !inputf = "" then stdin else open_in !inputf in
     let lexbuf = Lexing.from_channel chan in 
+    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname =  (if !inputf = "" then "stdin" else !inputf)};
     try
       let ast = Parser.main Lexer.token lexbuf in 
       let edb = extract_edb ast in 
@@ -65,6 +66,8 @@ let main () =
     with
       Compile_error exp -> print_endline ("execution error: "^exp)
     | Parsing.Parse_error -> print_endline "parse error"
+    | LexErr msg -> print_endline (msg^":\nError: Illegal characters")
+    | ParseErr msg -> print_endline (msg^":\nError: Syntax error")
   with Eof ->
     print_string "Lexer.Eof";
     exit 0

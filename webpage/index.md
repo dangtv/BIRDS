@@ -10,7 +10,7 @@ BIRDS (Putback-based **BI**directional transformation for **R**elational view up
 
 ## View Update Language: Datalog
 
-BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to base tables. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over base tables. Finally, both Datalog-written update strategy and derived view definition is translated into a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.
+BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to base tables. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over base tables. Finally, both Datalog-written update strategy and derived view definition are translated to a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.
 
 <!-- The syntax for Datalog in writing relational view update strategies is discribed in [Update Datalog Syntax](syntax.html) -->
 
@@ -22,9 +22,9 @@ BIRDS employs and extends the power of Datalog, which is a well known query lang
 
 ```text
 <program> ::= {<statement>}
-<statement> ::= <rule> | <query> | <baserelation>
+<statement> ::= <rule> | <query> | <base_relation>
 <rule> ::= <predicate> ":-" <literal> { ("and"| ",") <literal> } "."
-<baserelation> ::= "%s:" <predicate> "."
+<base_relation> ::= "%s:" <predicate> "."
 <query> ::= ("%v:" | "?-") <predicate> "."
 <literal> ::= | <predicate> | "not" <predicate> | <builtin> | "not" <builtin>
 <predicate> ::= [ ("+" | "-") ] <relname> "(" <variable> {"," <variable>} ")"
@@ -40,8 +40,11 @@ BIRDS employs and extends the power of Datalog, which is a well known query lang
 
 ### Installation
 
-* Download executable files: [for Macos]({{ site.github.mac_exe }}), [for Ubuntu]({{ site.github.ubuntu_exe }})
-* Or build a executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
+* Download executable files:
+  * [Latest BIRDS for Macos]({{ site.github.mac_exe }})
+  * [Latest BIRDS for Ubuntu]({{ site.github.ubuntu_exe }})
+  <!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) -->
+* Build a executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
 
 ### Usage
 

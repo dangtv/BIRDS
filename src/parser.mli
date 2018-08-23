@@ -1,5 +1,6 @@
 type token =
-  | VAL of (int)
+  | INT of (int)
+  | FLOAT of (float)
   | STRING of (string)
   | RELNAME of (string)
   | VARNAME of (string)

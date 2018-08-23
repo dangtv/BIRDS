@@ -48,18 +48,7 @@
       <section>
         <h2 id="view-update-datalog-syntax">View Update Datalog Syntax</h2>
 
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;automaton&gt;  ::= &lt;trans&gt; &lt;inits&gt; &lt;acceptings&gt;
-&lt;program&gt; ::= {&lt;statement&gt;}
-&lt;statement&gt; ::= &lt;rule&gt; | &lt;fact&gt; | &lt;query&gt;
-&lt;rule&gt; ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and", ",") &lt;literal&gt; }
-&lt;literal&gt; ::= | &lt;predicate&gt; | "not" &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
-&lt;predicate&gt; ::= [ ("+" | "-") ] &lt;relname&gt; "(" &lt;variable&gt; {"," &lt;variable&gt;} ")"
-&lt;builtin&gt; ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
-&lt;variable&gt; ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
-&lt;varname&gt; ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
-&lt;relname&gt; ::= 'a'|..|'z' { ('a'|..|'z'| '0'|..|'9'|'_') }
-&lt;anonvar&gt; ::= '_'
-&lt;const&gt; ::= &lt;integer&gt; | &lt;float&gt; | &lt;string&gt;
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
 </code></pre></div></div>
 
 
@@ -69,6 +58,7 @@
           <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a></small></p>
         
         <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
+        <p style="margin-bottom:0em"><small>Last updated on 24 Aug 2018</small></p>
       </footer>
     </div>
 

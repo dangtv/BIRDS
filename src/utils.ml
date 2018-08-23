@@ -1,6 +1,20 @@
 open Expr;;
+open Parsing;;
+open Lexing;;
 
 exception Compile_error of string
+exception ParseErr of string
+exception LexErr of string
+
+let spec_error msg start finish  = 
+  Printf.sprintf "File '%s', line %d, characters %d-%d: '%s'" start.pos_fname start.pos_lnum 
+    (start.pos_cnum  -start.pos_bol) (finish.pos_cnum  - finish.pos_bol) msg
+
+let spec_parse_error msg nterm =
+  raise ( ParseErr (spec_error msg (rhs_start_pos nterm) (rhs_end_pos nterm)))
+
+let spec_lex_error lexbuf = 
+  raise ( LexErr (spec_error (lexeme lexbuf) (lexeme_start_p lexbuf) (lexeme_end_p lexbuf)))
 
 type symtkey = (string*int) (* string is predicate name, int is the arity of literal*)
 type symtable = (symtkey, stt list) Hashtbl.t (* each row of a symtable is all the rules which has the same literal in head*)

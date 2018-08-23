@@ -17,9 +17,9 @@ OCAMLOPT_FLAGS=-I $(RELEASE_DIR)
 MAIN_FILE=main
 FILES=\
     expr\
+	utils\
     parser\
     lexer\
-    utils\
 	derivation\
 	ast2sql\
 

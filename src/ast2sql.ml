@@ -151,7 +151,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
                 in
                 let len = List.length rterms in
                 let (aliases,_) = List.fold_right set_alias rterms ([],len-1) in
-                "FROM "^(String.concat ", " aliases) in
+                "\nFROM "^(String.concat ", " aliases) in
             let from_sql = unfold_get_from_clause idb p_rt in
             
             let unfold_get_where_clause (idb:symtable) (vt:vartab) (cnt:colnamtab) (eqt:eqtab) ineq neg_rt = 
@@ -190,9 +190,9 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
                         (*Get the from sql of the rterm*)
                         let from_sql =
                             if Hashtbl.mem idb key then
-                                "FROM "^ "("^non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity) ^")"^" AS " ^ alias
+                                "\nFROM "^ "("^non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity) ^")"^" AS " ^ alias
                             else
-                                "FROM "^dbschema^"."^pname^" AS "^alias
+                                "\nFROM "^dbschema^"."^pname^" AS "^alias
                         in
                         (*Get the where sql of the rterm*)
                         let build_const acc col var =
@@ -216,7 +216,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
                         let const_lst = List.fold_left2 build_const [] cnames vlst in
                         let where_sql =
                             if const_lst = [] then ""
-                            else "WHERE "^(String.concat " AND " const_lst)
+                            else "\nWHERE "^(String.concat " AND " const_lst)
                         in
                         (**Return the final string*)
                         "NOT EXISTS ( SELECT * "^from_sql^" "^where_sql^" )"
@@ -227,7 +227,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
                 let constraints = fvt@feqt@fineq@fnrt in
                 match constraints with
                     | [] -> ""
-                    | _ -> "WHERE "^(String.concat " AND " constraints) in
+                    | _ -> "\nWHERE "^(String.concat " AND " constraints) in
             let where_sql = unfold_get_where_clause idb vt cnt eqtb ineqs n_rt in
             let agg_sql = get_aggregation_sql vt cnt head agg_eqs agg_ineqs in
             String.concat " " [select_sql;from_sql;where_sql;agg_sql] in
@@ -244,7 +244,7 @@ let non_rec_unfold_sql_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) (db
         let cols = Hashtbl.find cnt (symtkey_of_rterm query) in
         let sel_lst = List.map (fun (a,b) -> qrule_alias^"."^a^" AS "^b)
                             (List.combine cols cols_by_var) in 
-        "SELECT "^(String.concat "," sel_lst) ^ " FROM (" ^
+        "SELECT "^(String.concat "," sel_lst) ^ " \nFROM (" ^
         non_rec_unfold_sql_of_symtkey dbschema idb cnt (symtkey_of_rterm (rule_head qrule)) ^") AS "^qrule_alias
 
 let unfold_query_sql_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
@@ -260,7 +260,7 @@ let unfold_query_sql_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
 ;;
 
 let unfold_view_sql (dbschema:string) (debug:bool) (edb:symtable) prog =
-    "CREATE OR REPLACE VIEW "^ dbschema ^"."^(get_rterm_predname (get_query_rterm (get_query prog))) ^ " AS " ^unfold_query_sql_stt dbschema debug edb prog
+    "CREATE OR REPLACE VIEW "^ dbschema ^"."^(get_rterm_predname (get_query_rterm (get_query prog))) ^ " AS \n" ^unfold_query_sql_stt dbschema debug edb prog
 ;;
 
 let non_rec_unfold_sql_of_update (dbschema:string) (idb:symtable) (edb:symtable) (delta:rterm)  =
@@ -302,7 +302,7 @@ let unfold_delta_sql_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
     let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema idb local_edb ) delta_rt_lst in 
     let concat_update_sql (d, u) (delquery, updateaction) = (d::delquery, u::updateaction) in 
     let (deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([],[]) in 
-    ((String.concat ";\n" deltas)^";") ^ " \n" ^ ((String.concat ";\n" actions)^";")
+    ((String.concat ";\n\n" deltas)^";") ^ " \n\n" ^ ((String.concat ";\n\n" actions)^";")
 ;;
 
 let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
@@ -337,7 +337,7 @@ AS $$
     RETURN NULL;
   EXCEPTION
     WHEN object_not_in_prerequisite_state THEN
-        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or update or delete from "^dbschema^"."^view_name^"';
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to base tables of "^dbschema^"."^view_name^"';
     WHEN OTHERS THEN
         GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
                                 text_var2 = PG_EXCEPTION_DETAIL,

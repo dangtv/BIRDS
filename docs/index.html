@@ -54,7 +54,7 @@
 
 <h2 id="view-update-language-datalog">View Update Language: Datalog</h2>
 
-<p>BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to base tables. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over base tables. Finally, both Datalog-written update strategy and derived view definition is translated into a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.</p>
+<p>BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to base tables. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over base tables. Finally, both Datalog-written update strategy and derived view definition are translated to a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.</p>
 
 <!-- The syntax for Datalog in writing relational view update strategies is discribed in [Update Datalog Syntax](syntax.html) -->
 
@@ -67,26 +67,15 @@ layout: default
 ## View Update Datalog Syntax
 
 ```text
-<automaton>  ::= <trans> <inits> <acceptings>
-<program> ::= {<statement>}
-<statement> ::= <rule> | <fact> | <query>
-<rule> ::= <predicate> ":-" <literal> { ("and", ",") <literal> }
-<literal> ::= | <predicate> | "not" <predicate> | <builtin> | "not" <builtin>
-<predicate> ::= [ ("+" | "-") ] <relname> "(" <variable> {"," <variable>} ")"
-<builtin> ::= <varname> ("=" | "<>" | "<" | ">" | "<=" | ">=") <const>
-<variable> ::= <varname> | <anonvar> | <const>
-<varname> ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
-<relname> ::= 'a'|..|'z' { ('a'|..|'z'| '0'|..|'9'|'_') }
-<anonvar> ::= '_'
-<const> ::= <integer> | <float> | <string>
+
 ``` -->
 
 <h2 id="datalog-syntax-for-relational-view-update">Datalog Syntax for Relational View Update</h2>
 
 <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;program&gt; ::= {&lt;statement&gt;}
-&lt;statement&gt; ::= &lt;rule&gt; | &lt;query&gt; | &lt;baserelation&gt;
+&lt;statement&gt; ::= &lt;rule&gt; | &lt;query&gt; | &lt;base_relation&gt;
 &lt;rule&gt; ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
-&lt;baserelation&gt; ::= "%s:" &lt;predicate&gt; "."
+&lt;base_relation&gt; ::= "%s:" &lt;predicate&gt; "."
 &lt;query&gt; ::= ("%v:" | "?-") &lt;predicate&gt; "."
 &lt;literal&gt; ::= | &lt;predicate&gt; | "not" &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
 &lt;predicate&gt; ::= [ ("+" | "-") ] &lt;relname&gt; "(" &lt;variable&gt; {"," &lt;variable&gt;} ")"
@@ -103,8 +92,14 @@ layout: default
 <h3 id="installation">Installation</h3>
 
 <ul>
-  <li>Download executable files: <a href="https://github.com/dangtv/BIRDS/releases/download/0.0.1/birds_macos.zip">for Macos</a>, <a href="https://github.com/dangtv/BIRDS/releases/download/0.0.1/birds_ubuntu.zip">for Ubuntu</a></li>
-  <li>Or build a executable file from the source code available at <a href="https://github.com/dangtv/BIRDS">https://github.com/dangtv/BIRDS</a> (along with instructions)</li>
+  <li>Download executable files:
+    <ul>
+      <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.1/birds_macos.zip">Latest BIRDS for Macos</a></li>
+      <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.1/birds_ubuntu.zip">Latest BIRDS for Ubuntu</a>
+<!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) --></li>
+    </ul>
+  </li>
+  <li>Build a executable file from the source code available at <a href="https://github.com/dangtv/BIRDS">https://github.com/dangtv/BIRDS</a> (along with instructions)</li>
 </ul>
 
 <h3 id="usage">Usage</h3>
@@ -144,6 +139,7 @@ layout: default
           <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a></small></p>
         
         <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
+        <p style="margin-bottom:0em"><small>Last updated on 24 Aug 2018</small></p>
       </footer>
     </div>
 

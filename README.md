@@ -10,7 +10,7 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
   * ocaml >= 4.02.3: [installation guideline](https://ocaml.org/docs/install.html)
   * GNU Make >= 4.1
 
-* Installing:
+* Compiling:
   * Clean:
     ```bash
     make clean
