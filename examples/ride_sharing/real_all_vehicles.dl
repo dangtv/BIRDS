@@ -1,7 +1,19 @@
-%s:peer1_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
-%s:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
-%v:all_vehicles(COMPANY_ID, VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
-+peer1_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D),C = 1, NOT peer1_public(V, A, S, R, P, D).
--peer1_public(V, A, S, R, P, D) :- peer1_public(V, A, S, R, P, D), C = 1, NOT all_vehicles(C, V, A, S, R, P, D).
-+peer2_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D), C = 2, NOT peer2_public(V, A, S, R, P, D).
--peer2_public(V, A, S, R, P, D) :- peer2_public(V, A, S, R, P, D), C = 2, NOT all_vehicles(C, V, A, S, R, P, D).
+% describe the schema of sources and views
+%s:peer1_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+    PICKUP_LOCATION , DROPOFF_LOCATION).
+%s:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+    PICKUP_LOCATION , DROPOFF_LOCATION).
+%v:all_vehicles(COMPANY_ID, VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+    PICKUP_LOCATION , DROPOFF_LOCATION).
+
+% rule for insertion and deletion from peer1_public
++peer1_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D),C = 1, 
+    NOT peer1_public(V, A, S, R, P, D).
+-peer1_public(V, A, S, R, P, D) :- peer1_public(V, A, S, R, P, D), C = 1, 
+    NOT all_vehicles(C, V, A, S, R, P, D).
+
+% rule for insertion and deletion from peer2_public
++peer2_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D), C = 2, 
+    NOT peer2_public(V, A, S, R, P, D).
+-peer2_public(V, A, S, R, P, D) :- peer2_public(V, A, S, R, P, D), C = 2, 
+    NOT all_vehicles(C, V, A, S, R, P, D).

@@ -45,15 +45,21 @@ peer2_vehicle |
 
 ## Create a view peer1_public over peer1_vehicle and area
 
-1. Write an update trategy on the view `peer1_public` by using Datalog ([real_peer1_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer1_public.dl)):
+1. Write an update trategy on the view `peer1_public` over `peer1_vehicle` by using Datalog ([real_peer1_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer1_public.dl)):
 
     ```prolog
-    %s:peer1_vehicle(VEHICLE_ID , CURRENT_LOCATION , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
+    % describe the schema of sources and views
+    %s:peer1_vehicle(VEHICLE_ID , CURRENT_LOCATION , SEAT_COUNT , REQUEST_ID , 
+        PICKUP_LOCATION , DROPOFF_LOCATION).
     %s:area(ORIGINAL_NODE , AREA_NODE).
-    %v:peer1_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
+    %v:peer1_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+        PICKUP_LOCATION , DROPOFF_LOCATION).
 
-    -peer1_vehicle (V, L, S, R, P, D) :- peer1_vehicle (V, L, S, R, P, D), area (L,A), not peer1_public(V, A, S, R, P, D).
-    +peer1_vehicle (V, L, S, R, P, D) :- peer1_public (V, A, S, R, P, D), peer1_vehicle (V,L,_, _, _, _), area (L,A), not peer1_vehicle(V, L, S, R, P, D).
+    % rule for insertion and deletion from peer1_vehicle
+    -peer1_vehicle (V, L, S, R, P, D) :- peer1_vehicle (V, L, S, R, P, D), area (L,A), 
+        not peer1_public(V, A, S, R, P, D).
+    +peer1_vehicle (V, L, S, R, P, D) :- peer1_public (V, A, S, R, P, D), peer1_vehicle (V,L,_, _, _, _), 
+        area (L,A), not peer1_vehicle(V, L, S, R, P, D).
     ```
 
 2. Derive view definition and transform it with the update trategy to SQL statements saved in the file ([real_peer1_public.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer1_public.sql)):
@@ -63,15 +69,21 @@ peer2_vehicle |
 
 ## Create a view peer2_public over peer2_vehicle and area
 
-1. Write an update trategy on the view `peer2_public` by using Datalog ([real_peer2_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer2_public.dl)):
+1. Write an update trategy on the view `peer2_public` over `peer2_vehicle` by using Datalog ([real_peer2_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer2_public.dl)):
 
     ```prolog
-    %s:peer2_vehicle(VEHICLE_ID , CURRENT_LOCATION , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
+    % describe the schema of sources and views
+    %s:peer2_vehicle(VEHICLE_ID , CURRENT_LOCATION , SEAT_COUNT , REQUEST_ID , 
+        PICKUP_LOCATION , DROPOFF_LOCATION).
     %s:area(ORIGINAL_NODE , AREA_NODE).
-    %v:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
+    %v:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+        PICKUP_LOCATION , DROPOFF_LOCATION).
 
-    -peer2_vehicle (V, L, S, R, P, D) :- peer2_vehicle (V, L, S, R, P, D), area (L,A), not peer2_public(V, A, S, R, P, D).
-    +peer2_vehicle (V, L, S, R, P, D) :- peer2_public (V, A, S, R, P, D), peer2_vehicle (V,L,_, _, _, _), area (L,A), not peer2_vehicle(V, L, S, R, P, D).
+    % rule for insertion and deletion from peer2_vehicle
+    -peer2_vehicle (V, L, S, R, P, D) :- peer2_vehicle (V, L, S, R, P, D), area (L,A), 
+        not peer2_public(V, A, S, R, P, D).
+    +peer2_vehicle (V, L, S, R, P, D) :- peer2_public (V, A, S, R, P, D), peer2_vehicle (V,L,_, _, _, _), 
+        area (L,A), not peer2_vehicle(V, L, S, R, P, D).
     ```
 
 2. Derive view definition and transform it with the update trategy to SQL statements saved in the file ([real_peer2_public.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer2_public.sql)):
@@ -81,16 +93,28 @@ peer2_vehicle |
 
 ## Create a view all_vehicles over peer1_public and peer2_public
 
-1. Write an update trategy on the view `all_vehicles` by using Datalog ([real_all_vehicles.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_all_vehicles.dl)):
+1. Write an update trategy on the view `all_vehicles` over `peer1_public` and `peer2_public` by using Datalog ([real_all_vehicles.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_all_vehicles.dl)):
 
     ```prolog
-    %s:peer1_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
-    %s:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
-    %v:all_vehicles(COMPANY_ID, VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
-    +peer1_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D),C = 1, NOT peer1_public(V, A, S, R, P, D).
-    -peer1_public(V, A, S, R, P, D) :- peer1_public(V, A, S, R, P, D), C = 1, NOT all_vehicles(C, V, A, S, R, P, D).
-    +peer2_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D), C = 2, NOT peer2_public(V, A, S, R, P, D).
-    -peer2_public(V, A, S, R, P, D) :- peer2_public(V, A, S, R, P, D), C = 2, NOT all_vehicles(C, V, A, S, R, P, D).
+    % describe the schema of sources and views
+    %s:peer1_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+        PICKUP_LOCATION , DROPOFF_LOCATION).
+    %s:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+        PICKUP_LOCATION , DROPOFF_LOCATION).
+    %v:all_vehicles(COMPANY_ID, VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+        PICKUP_LOCATION , DROPOFF_LOCATION).
+
+    % rule for insertion and deletion from peer1_public
+    +peer1_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D),C = 1, 
+        NOT peer1_public(V, A, S, R, P, D).
+    -peer1_public(V, A, S, R, P, D) :- peer1_public(V, A, S, R, P, D), C = 1, 
+        NOT all_vehicles(C, V, A, S, R, P, D).
+
+    % rule for insertion and deletion from peer2_public
+    +peer2_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D), C = 2, 
+        NOT peer2_public(V, A, S, R, P, D).
+    -peer2_public(V, A, S, R, P, D) :- peer2_public(V, A, S, R, P, D), C = 2, 
+        NOT all_vehicles(C, V, A, S, R, P, D).
     ```
 
 2. Derive view definition and transform it with the update trategy to SQL statements saved in the file ([real_all_vehicles.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_all_vehicles.sql)):

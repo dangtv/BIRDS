@@ -1,6 +1,12 @@
-%s:peer2_vehicle(VEHICLE_ID , CURRENT_LOCATION , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
+% describe the schema of sources and views
+%s:peer2_vehicle(VEHICLE_ID , CURRENT_LOCATION , SEAT_COUNT , REQUEST_ID , 
+    PICKUP_LOCATION , DROPOFF_LOCATION).
 %s:area(ORIGINAL_NODE , AREA_NODE).
-%v:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , PICKUP_LOCATION , DROPOFF_LOCATION).
+%v:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
+    PICKUP_LOCATION , DROPOFF_LOCATION).
 
--peer2_vehicle (V, L, S, R, P, D) :- peer2_vehicle (V, L, S, R, P, D), area (L,A), not peer2_public(V, A, S, R, P, D).
-+peer2_vehicle (V, L, S, R, P, D) :- peer2_public (V, A, S, R, P, D), peer2_vehicle (V,L,_, _, _, _), area (L,A), not peer2_vehicle(V, L, S, R, P, D).
+% rule for insertion and deletion from peer2_vehicle
+-peer2_vehicle (V, L, S, R, P, D) :- peer2_vehicle (V, L, S, R, P, D), area (L,A), 
+    not peer2_public(V, A, S, R, P, D).
++peer2_vehicle (V, L, S, R, P, D) :- peer2_public (V, A, S, R, P, D), peer2_vehicle (V,L,_, _, _, _), 
+    area (L,A), not peer2_vehicle(V, L, S, R, P, D).

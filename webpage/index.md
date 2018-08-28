@@ -6,11 +6,11 @@ layout: default
 
 ## Overview
 
-BIRDS (Putback-based **BI**directional transformation for **R**elational view update **D**atalog-based **S**trategies) is a bidirectional transformation (BX) framework for Relational Database Management Systems (RDBMS). The objective of this framework is to allow programers to define a relational view in RDBMS by writing an update strategy for it. 
+BIRDS (Putback-based **BI**directional transformation for **R**elational view update **D**atalog-based **S**trategies) is a bidirectional transformation (BX) framework for Relational Database Management Systems (RDBMS). The objective of this framework is to allow programers to define a relational view in RDBMS by writing an update strategy for it.
 
 ## View Update Language: Datalog
 
-BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to base tables. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over base tables. Finally, both Datalog-written update strategy and derived view definition are translated to a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.
+BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to source relations. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over source relations. Finally, both Datalog-written update strategy and derived view definition are translated to a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.
 
 <!-- The syntax for Datalog in writing relational view update strategies is discribed in [Update Datalog Syntax](syntax.html) -->
 
@@ -44,7 +44,7 @@ BIRDS employs and extends the power of Datalog, which is a well known query lang
   * [Latest BIRDS for Macos]({{ site.github.mac_exe }})
   * [Latest BIRDS for Ubuntu]({{ site.github.ubuntu_exe }})
   <!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) -->
-* Build a executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
+* Build an executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
 
 ### Usage
 

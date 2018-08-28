@@ -1,8 +1,11 @@
-% update from tracks 3 to tracks 2
-
-% describe the schema of a new view tracks3  
+% describe the schema of sources and views 
 %v:tracks3(TRACK,RATING,ALBUM,QUANTITY).
 %s:tracks2(TRACK,RATING,ALBUM,QUANTITY).
 
-+tracks2(TRACK,RATING,ALBUM,QUANTITY) :- tracks3(TRACK,RATING,ALBUM,QUANTITY), not tracks2(TRACK,RATING,ALBUM,QUANTITY), QUANTITY > 2.
--tracks2(TRACK,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY), not tracks3(TRACK,RATING,ALBUM,QUANTITY), QUANTITY > 2.
+% rule for insertion to tracks2
++tracks2(TRACK,RATING,ALBUM,QUANTITY) :- tracks3(TRACK,RATING,ALBUM,QUANTITY),
+    not tracks2(TRACK,RATING,ALBUM,QUANTITY), QUANTITY > 2.
+
+% rule for deletion from tracks2
+-tracks2(TRACK,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY),
+    not tracks3(TRACK,RATING,ALBUM,QUANTITY), QUANTITY > 2.

@@ -50,9 +50,6 @@ FROM public.tracks1 AS tracks1_a5_0
 WHERE NOT EXISTS ( SELECT * 
 FROM (SELECT __temp__tracks2_a4_0.TRACK AS col0, __temp__tracks2_a4_0.RATING AS col1, __temp__tracks2_a4_0.ALBUM AS col2, __temp__tracks2_a4_0.QUANTITY AS col3 
 FROM __temp__tracks2 AS __temp__tracks2_a4_0  ) AS tracks2_a4 
-WHERE tracks2_a4.col3 IS NOT DISTINCT FROM tracks1_a5_0.QUANTITY AND tracks2_a4.col2 IS NOT DISTINCT FROM tracks1_a5_0.ALBUM AND tracks2_a4.col1 IS NOT DISTINCT FROM tracks1_a5_0.RATING AND tracks2_a4.col0 IS NOT DISTINCT FROM tracks1_a5_0.TRACK ) AND NOT EXISTS ( SELECT * 
-FROM (SELECT __temp__tracks2_a4_0.TRACK AS col0, __temp__tracks2_a4_0.RATING AS col1, __temp__tracks2_a4_0.ALBUM AS col2, __temp__tracks2_a4_0.QUANTITY AS col3 
-FROM __temp__tracks2 AS __temp__tracks2_a4_0  ) AS tracks2_a4 
 WHERE tracks2_a4.col3 IS NOT DISTINCT FROM tracks1_a5_0.QUANTITY AND tracks2_a4.col2 IS NOT DISTINCT FROM tracks1_a5_0.ALBUM AND tracks2_a4.col1 IS NOT DISTINCT FROM tracks1_a5_0.RATING AND tracks2_a4.col0 IS NOT DISTINCT FROM tracks1_a5_0.TRACK ) ) AS __dummy__delta__delete__tracks1_a5_0  ;
 
 CREATE TEMPORARY TABLE __dummy__delta__insert__tracks1 WITH OIDS ON COMMIT DROP AS SELECT __dummy__delta__insert__tracks1_a5_0.col0 AS col0, __dummy__delta__insert__tracks1_a5_0.col1 AS col1, __dummy__delta__insert__tracks1_a5_0.col2 AS col2, __dummy__delta__insert__tracks1_a5_0.col3 AS col3, __dummy__delta__insert__tracks1_a5_0.col4 AS col4 
