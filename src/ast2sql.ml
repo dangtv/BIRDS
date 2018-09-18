@@ -281,8 +281,8 @@ let non_rec_unfold_sql_of_update (dbschema:string) (idb:symtable) (edb:symtable)
         ("CREATE TEMPORARY TABLE "^ (get_rterm_predname delta) ^" WITH OIDS ON COMMIT DROP AS " ^ (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))), 
         " FOR temprec IN ( SELECT * FROM " ^ (get_rterm_predname delta) ^ ") LOOP 
         " ^
-        "DELETE FROM " ^dbschema^"."^ pname ^" WHERE " ^cols_tuple_str^ (sql_of_operator "==") ^
-        " ("^(String.concat "," (List.map (fun c -> "temprec."^c) (gen_cols 0 (List.length cols)) )) ^");" ^ "
+        "DELETE FROM " ^dbschema^"."^ pname ^" WHERE ROW" ^cols_tuple_str^ (sql_of_operator "==") ^
+        " ROW("^(String.concat "," (List.map (fun c -> "temprec."^c) (gen_cols 0 (List.length cols)) )) ^");" ^ "
         END LOOP")
         
         else raise (Compile_error "delta predicate is not of any base predicate")
@@ -328,10 +328,10 @@ AS $$
     IF TG_OP = 'INSERT' THEN
       INSERT INTO "^temporary_view_name^" SELECT (NEW).*; 
     ELSIF TG_OP = 'UPDATE' THEN
-      DELETE FROM "^temporary_view_name^" WHERE "^cols_tuple_str^" = OLD;
+      DELETE FROM "^temporary_view_name^" WHERE ROW"^cols_tuple_str^" = OLD;
       INSERT INTO "^temporary_view_name^" SELECT (NEW).*; 
     ELSIF TG_OP = 'DELETE' THEN
-      DELETE FROM "^temporary_view_name^" WHERE "^cols_tuple_str^" = OLD;
+      DELETE FROM "^temporary_view_name^" WHERE ROW"^cols_tuple_str^" = OLD;
     END IF;
     "^delta_sql_stt^"
     RETURN NULL;

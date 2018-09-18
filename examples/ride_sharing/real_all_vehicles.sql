@@ -53,10 +53,10 @@ AS $$
     IF TG_OP = 'INSERT' THEN
       INSERT INTO __temp__all_vehicles SELECT (NEW).*; 
     ELSIF TG_OP = 'UPDATE' THEN
-      DELETE FROM __temp__all_vehicles WHERE (COMPANY_ID,VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) = OLD;
+      DELETE FROM __temp__all_vehicles WHERE ROW(COMPANY_ID,VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) = OLD;
       INSERT INTO __temp__all_vehicles SELECT (NEW).*; 
     ELSIF TG_OP = 'DELETE' THEN
-      DELETE FROM __temp__all_vehicles WHERE (COMPANY_ID,VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) = OLD;
+      DELETE FROM __temp__all_vehicles WHERE ROW(COMPANY_ID,VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) = OLD;
     END IF;
     CREATE TEMPORARY TABLE __dummy__delta__delete__peer1_public WITH OIDS ON COMMIT DROP AS SELECT __dummy__delta__delete__peer1_public_a6_0.col0 AS col0, __dummy__delta__delete__peer1_public_a6_0.col1 AS col1, __dummy__delta__delete__peer1_public_a6_0.col2 AS col2, __dummy__delta__delete__peer1_public_a6_0.col3 AS col3, __dummy__delta__delete__peer1_public_a6_0.col4 AS col4, __dummy__delta__delete__peer1_public_a6_0.col5 AS col5 
 FROM (SELECT peer1_public_a6_0.VEHICLE_ID AS col0, peer1_public_a6_0.CURRENT_AREA AS col1, peer1_public_a6_0.SEAT_COUNT AS col2, peer1_public_a6_0.REQUEST_ID AS col3, peer1_public_a6_0.PICKUP_LOCATION AS col4, peer1_public_a6_0.DROPOFF_LOCATION AS col5 
@@ -91,11 +91,11 @@ FROM public.peer2_public AS peer2_public_a6
 WHERE peer2_public_a6.DROPOFF_LOCATION IS NOT DISTINCT FROM all_vehicles_a7_0.col6 AND peer2_public_a6.PICKUP_LOCATION IS NOT DISTINCT FROM all_vehicles_a7_0.col5 AND peer2_public_a6.REQUEST_ID IS NOT DISTINCT FROM all_vehicles_a7_0.col4 AND peer2_public_a6.SEAT_COUNT IS NOT DISTINCT FROM all_vehicles_a7_0.col3 AND peer2_public_a6.CURRENT_AREA IS NOT DISTINCT FROM all_vehicles_a7_0.col2 AND peer2_public_a6.VEHICLE_ID IS NOT DISTINCT FROM all_vehicles_a7_0.col1 ) ) AS __dummy__delta__insert__peer2_public_a6_0  ; 
 
  FOR temprec IN ( SELECT * FROM __dummy__delta__delete__peer1_public) LOOP 
-        DELETE FROM public.peer1_public WHERE (VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) IS NOT DISTINCT FROM  (temprec.col0,temprec.col1,temprec.col2,temprec.col3,temprec.col4,temprec.col5);
+        DELETE FROM public.peer1_public WHERE ROW(VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) IS NOT DISTINCT FROM  ROW(temprec.col0,temprec.col1,temprec.col2,temprec.col3,temprec.col4,temprec.col5);
         END LOOP;
 
  FOR temprec IN ( SELECT * FROM __dummy__delta__delete__peer2_public) LOOP 
-        DELETE FROM public.peer2_public WHERE (VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) IS NOT DISTINCT FROM  (temprec.col0,temprec.col1,temprec.col2,temprec.col3,temprec.col4,temprec.col5);
+        DELETE FROM public.peer2_public WHERE ROW(VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) IS NOT DISTINCT FROM  ROW(temprec.col0,temprec.col1,temprec.col2,temprec.col3,temprec.col4,temprec.col5);
         END LOOP;
 
 INSERT INTO public.peer1_public SELECT * FROM __dummy__delta__insert__peer1_public;

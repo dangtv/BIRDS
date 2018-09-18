@@ -41,10 +41,10 @@ AS $$
     IF TG_OP = 'INSERT' THEN
       INSERT INTO __temp__tracks3 SELECT (NEW).*; 
     ELSIF TG_OP = 'UPDATE' THEN
-      DELETE FROM __temp__tracks3 WHERE (TRACK,RATING,ALBUM,QUANTITY) = OLD;
+      DELETE FROM __temp__tracks3 WHERE ROW(TRACK,RATING,ALBUM,QUANTITY) = OLD;
       INSERT INTO __temp__tracks3 SELECT (NEW).*; 
     ELSIF TG_OP = 'DELETE' THEN
-      DELETE FROM __temp__tracks3 WHERE (TRACK,RATING,ALBUM,QUANTITY) = OLD;
+      DELETE FROM __temp__tracks3 WHERE ROW(TRACK,RATING,ALBUM,QUANTITY) = OLD;
     END IF;
     CREATE TEMPORARY TABLE __dummy__delta__delete__tracks2 WITH OIDS ON COMMIT DROP AS SELECT __dummy__delta__delete__tracks2_a4_0.col0 AS col0, __dummy__delta__delete__tracks2_a4_0.col1 AS col1, __dummy__delta__delete__tracks2_a4_0.col2 AS col2, __dummy__delta__delete__tracks2_a4_0.col3 AS col3 
 FROM (SELECT tracks2_a4_0.TRACK AS col0, tracks2_a4_0.RATING AS col1, tracks2_a4_0.ALBUM AS col2, tracks2_a4_0.QUANTITY AS col3 
@@ -63,7 +63,7 @@ FROM public.tracks2 AS tracks2_a4
 WHERE tracks2_a4.QUANTITY IS NOT DISTINCT FROM tracks3_a4_0.col3 AND tracks2_a4.ALBUM IS NOT DISTINCT FROM tracks3_a4_0.col2 AND tracks2_a4.RATING IS NOT DISTINCT FROM tracks3_a4_0.col1 AND tracks2_a4.TRACK IS NOT DISTINCT FROM tracks3_a4_0.col0 ) ) AS __dummy__delta__insert__tracks2_a4_0  ; 
 
  FOR temprec IN ( SELECT * FROM __dummy__delta__delete__tracks2) LOOP 
-        DELETE FROM public.tracks2 WHERE (TRACK,RATING,ALBUM,QUANTITY) IS NOT DISTINCT FROM  (temprec.col0,temprec.col1,temprec.col2,temprec.col3);
+        DELETE FROM public.tracks2 WHERE ROW(TRACK,RATING,ALBUM,QUANTITY) IS NOT DISTINCT FROM  ROW(temprec.col0,temprec.col1,temprec.col2,temprec.col3);
         END LOOP;
 
 INSERT INTO public.tracks2 SELECT * FROM __dummy__delta__insert__tracks2;
