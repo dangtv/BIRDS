@@ -33,7 +33,7 @@ let build_schema_mapping (mapping:vartab) (col_names:colnamtab) (view:rterm) (he
     match v with
       NamedVar _ | NumberedVar _ ->
       vt_insert vt (string_of_var v) comp_cn
-    | AggVar _ -> raise (Compile_error (
+    | AggVar _ -> raise (SemErr (
         "Goal "^(string_of_symtkey key)^
         " contains an aggregate function as a variable, "^
         "which is only allowed in rule heads"
@@ -54,7 +54,7 @@ let build_schema_mapping (mapping:vartab) (col_names:colnamtab) (view:rterm) (he
     match v with
       NamedVar _ | NumberedVar _ ->
       vt_insert vt (string_of_var v) comp_cn
-    | AggVar _ -> raise (Compile_error (
+    | AggVar _ -> raise (SemErr (
         "Goal "^(string_of_symtkey key)^
         " contains an aggregate function as a variable, "^
         "which is only allowed in rule heads"
@@ -82,7 +82,7 @@ let schema_mapping_of_rule (col_names:colnamtab) (mapping:vartab) (view:rterm) (
 
 let rename_view (view:rterm) = match view with 
     Pred(pname,varlst) -> Pred(pname^"_med",varlst)
-    | _ -> raise (Compile_error "view rterm is not a normal predicate")
+    | _ -> raise (SemErr "view rterm is not a normal predicate")
 
 let rename_if_isview (view:rterm) (t:term) =
   match t with 

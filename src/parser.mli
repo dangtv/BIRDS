@@ -10,6 +10,10 @@ type token =
   | IMPLIEDBY
   | AND
   | NOT
+  | OR
+  | BOT
+  | TOP
+  | NULL
   | EQ
   | NE
   | LE
@@ -18,6 +22,9 @@ type token =
   | GT
   | PLUS
   | MINUS
+  | TIMES
+  | DIVIDE
+  | CONCAT
   | LPAREN
   | RPAREN
   | SEP

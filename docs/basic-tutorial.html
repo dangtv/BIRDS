@@ -48,6 +48,8 @@
       <section>
         <h1 id="birds-tutorial-basics">BIRDS tutorial: basics</h1>
 
+<h2 id="writing-view-update-strategies-in-datalog">Writing view update strategies in Datalog</h2>
+
 <ul>
   <li>
     <p>Declare the view and the source reations in Datalog by using two special symbols: <code class="highlighter-rouge">%s:</code> for source relations, <code class="highlighter-rouge">%v:</code> for views. For example, this statement is for a source table <code class="highlighter-rouge">people</code> which has two columns <code class="highlighter-rouge">id</code> and <code class="highlighter-rouge">name</code>:</p>
@@ -98,101 +100,105 @@
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>The result contains PostgreSQL SQL statements for creating this view <code class="highlighter-rouge">v</code> in the database schema <code class="highlighter-rouge">public</code> and a INSTEAD OF trigger on <code class="highlighter-rouge">v</code>, which make <code class="highlighter-rouge">v</code> updatable with the written update strategy. The SQL result can run directly in a PostgreSQL database:</p>
+    <p>The result contains PostgreSQL SQL statements for creating this view <code class="highlighter-rouge">v</code> in the database schema <code class="highlighter-rouge">public</code> and triggers on <code class="highlighter-rouge">v</code>, which make <code class="highlighter-rouge">v</code> updatable with the written update strategy. The SQL result can run directly in a PostgreSQL database:</p>
 
-    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="cm">/*_____get datalog program_______
- ?- v(X).
+    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+ <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">VIEW</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span> <span class="k">AS</span> <span class="k">SELECT</span> <span class="n">__dummy__</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">X</span> <span class="k">FROM</span> <span class="p">(...)</span> <span class="k">AS</span> <span class="n">__dummy__</span><span class="p">;</span>
 
- v(V_A1_X) :- v_med(V_A1_X) , not __dummy__delta__insert__s1(V_A1_X).
-
- v_med(X) :- s1(X).
-
- v_med(X) :- s2(X).
-
- __dummy__delta__insert__s1(X) :- v_med(X) , not s1(X) , not s2(X).
-
- ______________*/</span>
-
- <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">VIEW</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span> <span class="k">AS</span>
- <span class="k">SELECT</span> <span class="n">__dummy__</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">X</span>
- <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">v_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">col0</span>
- <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">v_med_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">col0</span>
-     <span class="k">FROM</span> <span class="p">(</span>        <span class="k">SELECT</span> <span class="n">s1_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span>
-         <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">AS</span> <span class="n">s1_a1_0</span>
-     <span class="k">UNION</span> <span class="k">ALL</span>
-         <span class="k">SELECT</span> <span class="n">s2_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span>
-         <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s2</span> <span class="k">AS</span> <span class="n">s2_a1_0</span>  <span class="p">)</span> <span class="k">AS</span> <span class="n">v_med_a1_0</span>
-     <span class="k">WHERE</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span>
-     <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">v_med_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">col0</span>
-         <span class="k">FROM</span> <span class="p">(</span>            <span class="k">SELECT</span> <span class="n">s1_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span>
-             <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">AS</span> <span class="n">s1_a1_0</span>
-         <span class="k">UNION</span> <span class="k">ALL</span>
-             <span class="k">SELECT</span> <span class="n">s2_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span>
-             <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s2</span> <span class="k">AS</span> <span class="n">s2_a1_0</span>  <span class="p">)</span> <span class="k">AS</span> <span class="n">v_med_a1_0</span>
-         <span class="k">WHERE</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span>
-         <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">AS</span> <span class="n">s1_a1</span>
-         <span class="k">WHERE</span> <span class="n">s1_a1</span><span class="p">.</span><span class="n">X</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="n">v_med_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="p">)</span> <span class="k">AND</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span>
-     <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s2</span> <span class="k">AS</span> <span class="n">s2_a1</span>
-     <span class="k">WHERE</span> <span class="n">s2_a1</span><span class="p">.</span><span class="n">X</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="n">v_med_a1_0</span><span class="p">.</span><span class="n">col0</span>
- <span class="p">)</span> <span class="p">)</span> <span class="k">AS</span> <span class="n">__dummy__delta__insert__s1_a1</span> <span class="k">WHERE</span> <span class="n">__dummy__delta__insert__s1_a1</span><span class="p">.</span><span class="n">col0</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="n">v_med_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="p">)</span> <span class="p">)</span> <span class="k">AS</span> <span class="n">v_a1_0</span>  <span class="p">)</span> <span class="k">AS</span> <span class="n">__dummy__</span><span class="p">;</span>
-
- <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="k">public</span><span class="p">.</span><span class="n">v_procedure</span><span class="p">()</span>
- <span class="k">RETURNS</span> <span class="k">TRIGGER</span>
- <span class="k">LANGUAGE</span> <span class="n">plpgsql</span>
- <span class="k">SECURITY</span> <span class="k">DEFINER</span>
- <span class="k">AS</span> <span class="err">$$</span>
+ <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="k">public</span><span class="p">.</span><span class="n">v_delta_action</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="k">TRIGGER</span> <span class="k">LANGUAGE</span> <span class="n">plpgsql</span> 
+ <span class="k">SECURITY</span> <span class="k">DEFINER</span> <span class="k">AS</span> <span class="err">$$</span>
  <span class="k">DECLARE</span>
- <span class="n">text_var1</span> <span class="n">text</span><span class="p">;</span>
- <span class="n">text_var2</span> <span class="n">text</span><span class="p">;</span>
- <span class="n">text_var3</span> <span class="n">text</span><span class="p">;</span>
- <span class="n">temprec</span> <span class="n">record</span><span class="p">;</span>
+ <span class="p">...</span> 
  <span class="k">BEGIN</span>
+     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">v_delta_action_flag</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> <span class="p">(</span><span class="k">SELECT</span> <span class="k">true</span> <span class="k">as</span> <span class="n">finish</span><span class="p">);</span>
+    
+     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__delete__s1</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> 
+     <span class="k">SELECT</span> <span class="p">...</span> <span class="k">FROM</span> <span class="p">(...)</span> <span class="p">;</span>
+     <span class="p">...</span>
+     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__insert__s1</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> 
+     <span class="k">SELECT</span> <span class="p">...</span> <span class="k">FROM</span> <span class="p">(...);</span>
 
+     <span class="k">FOR</span> <span class="n">temprec</span> <span class="k">IN</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">__dummy__delta__delete__s1</span><span class="p">)</span> <span class="n">LOOP</span> 
+             <span class="k">DELETE</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">WHERE</span> <span class="k">ROW</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span>  <span class="n">temprec</span><span class="p">;</span>
+             <span class="k">END</span> <span class="n">LOOP</span><span class="p">;</span>
+     <span class="k">DROP</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__delete__s1</span><span class="p">;</span>
+     <span class="p">...</span>
+     <span class="k">INSERT</span> <span class="k">INTO</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span>  <span class="n">__dummy__delta__insert__s1</span><span class="p">;</span> 
+     <span class="k">DROP</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__insert__s1</span><span class="p">;</span>
+     <span class="k">RETURN</span> <span class="k">NULL</span><span class="p">;</span>
+ <span class="n">EXCEPTION</span>
+     <span class="p">...</span>
+ <span class="k">END</span><span class="p">;</span>
+ <span class="err">$$</span><span class="p">;</span>
+
+ <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="k">public</span><span class="p">.</span><span class="n">v_materialization</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="k">TRIGGER</span> <span class="k">LANGUAGE</span> <span class="n">plpgsql</span> 
+ <span class="k">SECURITY</span> <span class="k">DEFINER</span> <span class="k">AS</span> <span class="err">$$</span>
+ <span class="k">DECLARE</span>
+ <span class="p">...</span>
+ <span class="k">BEGIN</span>
      <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__temp__v</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span><span class="p">;</span>
+     <span class="k">CREATE</span> <span class="k">CONSTRAINT</span> <span class="k">TRIGGER</span> <span class="n">__temp__peer1_public_trigger_delta_action</span>
+     <span class="k">AFTER</span> <span class="k">INSERT</span> <span class="k">OR</span> <span class="k">UPDATE</span> <span class="k">OR</span> <span class="k">DELETE</span> <span class="k">ON</span> 
+         <span class="n">__temp__v</span> <span class="k">DEFERRABLE</span> <span class="k">INITIALLY</span> <span class="k">DEFERRED</span> 
+         <span class="k">FOR</span> <span class="k">EACH</span> <span class="k">ROW</span> <span class="k">EXECUTE</span> <span class="k">PROCEDURE</span> <span class="k">public</span><span class="p">.</span><span class="n">v_delta_action</span><span class="p">();</span>
+     <span class="k">RETURN</span> <span class="k">NULL</span><span class="p">;</span>
+ <span class="n">EXCEPTION</span>
+     <span class="p">...</span>
+ <span class="k">END</span><span class="p">;</span>
+ <span class="err">$$</span><span class="p">;</span>
+
+ <span class="k">DROP</span> <span class="k">TRIGGER</span> <span class="n">IF</span> <span class="k">EXISTS</span> <span class="n">v_trigger_materialization</span> <span class="k">ON</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span><span class="p">;</span>
+ <span class="k">CREATE</span> <span class="k">TRIGGER</span> <span class="n">v_trigger_materialization</span>
+     <span class="k">BEFORE</span> <span class="k">INSERT</span> <span class="k">OR</span> <span class="k">UPDATE</span> <span class="k">OR</span> <span class="k">DELETE</span> <span class="k">ON</span>
+     <span class="k">public</span><span class="p">.</span><span class="n">v</span> <span class="k">FOR</span> <span class="k">EACH</span> <span class="k">STATEMENT</span> <span class="k">EXECUTE</span> <span class="k">PROCEDURE</span> <span class="k">public</span><span class="p">.</span><span class="n">v_materialization</span><span class="p">();</span>
+
+ <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="k">public</span><span class="p">.</span><span class="n">v_update</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="k">TRIGGER</span> <span class="k">LANGUAGE</span> <span class="n">plpgsql</span> 
+ <span class="k">SECURITY</span> <span class="k">DEFINER</span> <span class="k">AS</span> <span class="err">$$</span>
+ <span class="k">DECLARE</span>
+ <span class="p">...</span>
+ <span class="k">BEGIN</span>
      <span class="n">IF</span> <span class="n">TG_OP</span> <span class="o">=</span> <span class="s1">'INSERT'</span> <span class="k">THEN</span>
      <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">__temp__v</span> <span class="k">SELECT</span> <span class="p">(</span><span class="k">NEW</span><span class="p">).</span><span class="o">*</span><span class="p">;</span> 
      <span class="n">ELSIF</span> <span class="n">TG_OP</span> <span class="o">=</span> <span class="s1">'UPDATE'</span> <span class="k">THEN</span>
-     <span class="k">DELETE</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">WHERE</span> <span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">=</span> <span class="k">OLD</span><span class="p">;</span>
+     <span class="k">DELETE</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">WHERE</span> <span class="k">ROW</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="k">OLD</span><span class="p">;</span>
      <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">__temp__v</span> <span class="k">SELECT</span> <span class="p">(</span><span class="k">NEW</span><span class="p">).</span><span class="o">*</span><span class="p">;</span> 
      <span class="n">ELSIF</span> <span class="n">TG_OP</span> <span class="o">=</span> <span class="s1">'DELETE'</span> <span class="k">THEN</span>
-     <span class="k">DELETE</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">WHERE</span> <span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">=</span> <span class="k">OLD</span><span class="p">;</span>
+     <span class="k">DELETE</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">WHERE</span> <span class="k">ROW</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="k">OLD</span><span class="p">;</span>
      <span class="k">END</span> <span class="n">IF</span><span class="p">;</span>
-
-     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__delete__s1</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> 
-     <span class="k">SELECT</span> <span class="n">__dummy__delta__delete__s1_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">s1_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">AS</span> <span class="n">s1_a1_0</span> <span class="k">WHERE</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">__temp__v_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">AS</span> <span class="n">__temp__v_a1_0</span>  <span class="p">)</span> <span class="k">AS</span> <span class="n">v_a1</span> <span class="k">WHERE</span> <span class="n">v_a1</span><span class="p">.</span><span class="n">col0</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="n">s1_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="p">)</span> <span class="p">)</span> <span class="k">AS</span> <span class="n">__dummy__delta__delete__s1_a1_0</span>  <span class="p">;</span>
-
-     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__delete__s2</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> <span class="k">SELECT</span> <span class="n">__dummy__delta__delete__s2_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">s2_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s2</span> <span class="k">AS</span> <span class="n">s2_a1_0</span> <span class="k">WHERE</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">__temp__v_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">AS</span> <span class="n">__temp__v_a1_0</span>  <span class="p">)</span> <span class="k">AS</span> <span class="n">v_a1</span> <span class="k">WHERE</span> <span class="n">v_a1</span><span class="p">.</span><span class="n">col0</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="n">s2_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="p">)</span> <span class="p">)</span> <span class="k">AS</span> <span class="n">__dummy__delta__delete__s2_a1_0</span>  <span class="p">;</span>
-
-     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__insert__s1</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> <span class="k">SELECT</span> <span class="n">__dummy__delta__insert__s1_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">v_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">__temp__v_a1_0</span><span class="p">.</span><span class="n">X</span> <span class="k">AS</span> <span class="n">col0</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">AS</span> <span class="n">__temp__v_a1_0</span>  <span class="p">)</span> <span class="k">AS</span> <span class="n">v_a1_0</span> <span class="k">WHERE</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">AS</span> <span class="n">s1_a1</span> <span class="k">WHERE</span> <span class="n">s1_a1</span><span class="p">.</span><span class="n">X</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="n">v_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="p">)</span> <span class="k">AND</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s2</span> <span class="k">AS</span> <span class="n">s2_a1</span> <span class="k">WHERE</span> <span class="n">s2_a1</span><span class="p">.</span><span class="n">X</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="n">v_a1_0</span><span class="p">.</span><span class="n">col0</span> <span class="p">)</span> <span class="p">)</span> <span class="k">AS</span> <span class="n">__dummy__delta__insert__s1_a1_0</span>  <span class="p">;</span> 
-
-
-     <span class="k">FOR</span> <span class="n">temprec</span> <span class="k">IN</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">__dummy__delta__delete__s1</span><span class="p">)</span> <span class="n">LOOP</span> 
-         <span class="k">DELETE</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">WHERE</span> <span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span>  <span class="p">(</span><span class="n">temprec</span><span class="p">.</span><span class="n">col0</span><span class="p">);</span>
-         <span class="k">END</span> <span class="n">LOOP</span><span class="p">;</span>
-
-     <span class="k">FOR</span> <span class="n">temprec</span> <span class="k">IN</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">__dummy__delta__delete__s2</span><span class="p">)</span> <span class="n">LOOP</span> 
-         <span class="k">DELETE</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s2</span> <span class="k">WHERE</span> <span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span>  <span class="p">(</span><span class="n">temprec</span><span class="p">.</span><span class="n">col0</span><span class="p">);</span>
-         <span class="k">END</span> <span class="n">LOOP</span><span class="p">;</span>
-
-     <span class="k">INSERT</span> <span class="k">INTO</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">__dummy__delta__insert__s1</span><span class="p">;</span>
      <span class="k">RETURN</span> <span class="k">NULL</span><span class="p">;</span>
-
  <span class="n">EXCEPTION</span>
-     <span class="k">WHEN</span> <span class="n">object_not_in_prerequisite_state</span> <span class="k">THEN</span>
-         <span class="n">RAISE</span> <span class="n">object_not_in_prerequisite_state</span> <span class="k">USING</span> <span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">'no permission to insert or update or delete from public.v'</span><span class="p">;</span>
-     <span class="k">WHEN</span> <span class="n">OTHERS</span> <span class="k">THEN</span>
-         <span class="k">GET</span> <span class="n">STACKED</span> <span class="k">DIAGNOSTICS</span> <span class="n">text_var1</span> <span class="o">=</span> <span class="k">RETURNED_SQLSTATE</span><span class="p">,</span>
-                                 <span class="n">text_var2</span> <span class="o">=</span> <span class="n">PG_EXCEPTION_DETAIL</span><span class="p">,</span>
-                                 <span class="n">text_var3</span> <span class="o">=</span> <span class="k">MESSAGE_TEXT</span><span class="p">;</span>
-         <span class="n">RAISE</span> <span class="k">SQLSTATE</span> <span class="s1">'DA000'</span> <span class="k">USING</span> <span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">'error on the trigger of public.v ; error code: '</span> <span class="o">||</span> <span class="n">text_var1</span> <span class="o">||</span> <span class="s1">' ; '</span> <span class="o">||</span> <span class="n">text_var2</span> <span class="o">||</span><span class="s1">' ; '</span> <span class="o">||</span> <span class="n">text_var3</span><span class="p">;</span>
-         <span class="k">RETURN</span> <span class="k">NULL</span><span class="p">;</span>
+     <span class="p">...</span> 
  <span class="k">END</span><span class="p">;</span>
-    
  <span class="err">$$</span><span class="p">;</span>
- <span class="k">DROP</span> <span class="k">TRIGGER</span> <span class="n">IF</span> <span class="k">EXISTS</span> <span class="n">v_trigger</span> <span class="k">ON</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span><span class="p">;</span>
- <span class="k">CREATE</span> <span class="k">TRIGGER</span> <span class="n">v_trigger</span>
+
+ <span class="k">DROP</span> <span class="k">TRIGGER</span> <span class="n">IF</span> <span class="k">EXISTS</span> <span class="n">v_trigger_update</span> <span class="k">ON</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span><span class="p">;</span>
+ <span class="k">CREATE</span> <span class="k">TRIGGER</span> <span class="n">v_trigger_update</span>
      <span class="k">INSTEAD</span> <span class="k">OF</span> <span class="k">INSERT</span> <span class="k">OR</span> <span class="k">UPDATE</span> <span class="k">OR</span> <span class="k">DELETE</span> <span class="k">ON</span>
-     <span class="k">public</span><span class="p">.</span><span class="n">v</span> <span class="k">FOR</span> <span class="k">EACH</span> <span class="k">ROW</span> <span class="k">EXECUTE</span> <span class="k">PROCEDURE</span> <span class="k">public</span><span class="p">.</span><span class="n">v_procedure</span><span class="p">();</span>
+     <span class="k">public</span><span class="p">.</span><span class="n">v</span> <span class="k">FOR</span> <span class="k">EACH</span> <span class="k">ROW</span> <span class="k">EXECUTE</span> <span class="k">PROCEDURE</span> <span class="k">public</span><span class="p">.</span><span class="n">v_update</span><span class="p">();</span>
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<h2 id="running-in-postgresql-as-a-backend-database-system">Running in PostgreSQL as a backend database system</h2>
+
+<ol>
+  <li>Load and run the SQL generated by BIRDS in PostgreSQL:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nb">sudo</span> <span class="nt">-u</span> &lt;db_user_name&gt; psql <span class="nt">-d</span> &lt;db_name&gt; <span class="nt">-f</span> &lt;path_to_sql_file&gt;
+</code></pre></div>    </div>
+    <p>For example:</p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nb">sudo</span> <span class="nt">-u</span> postgres psql <span class="nt">-d</span> my_db <span class="nt">-f</span> examples/basic_sample.sql
+</code></pre></div>    </div>
+  </li>
+  <li>Run a UPDATE/INSERT/DELETE statement to modify data on view, for example:
+    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">v</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">6</span><span class="p">);</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Request a complex modification on view by combining all UPDATE/INSERT/DELETE statements in one transaction:
+    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">BEGIN</span><span class="p">;</span>
+     <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">v</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">6</span><span class="p">);</span>
+     <span class="k">DELETE</span> <span class="k">FROM</span> <span class="n">v</span> <span class="k">where</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+     <span class="k">UPDATE</span> <span class="n">v</span> <span class="k">SET</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">10</span> <span class="k">where</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+ <span class="k">END</span><span class="p">;</span>
 </code></pre></div>    </div>
   </li>
 </ol>
@@ -201,10 +207,10 @@
       </section>
       <footer>
         
-          <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a></small></p>
+          <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small></p>
         
         <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
-        <p style="margin-bottom:0em"><small>Last updated on 28 Aug 2018</small></p>
+        <p style="margin-bottom:0em"><small>Last updated on 12 Oct 2018</small></p>
       </footer>
     </div>
 

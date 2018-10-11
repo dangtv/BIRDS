@@ -2,12 +2,12 @@ open Expr;;
 open Parsing;;
 open Lexing;;
 
-exception Compile_error of string
+exception SemErr of string 
 exception ParseErr of string
 exception LexErr of string
 
 let spec_error msg start finish  = 
-  Printf.sprintf "File '%s', line %d, characters %d-%d: '%s'" start.pos_fname start.pos_lnum 
+  Printf.sprintf "File \"%s\", line %d, characters %d-%d: '%s'" start.pos_fname start.pos_lnum 
     (start.pos_cnum  -start.pos_bol) (finish.pos_cnum  - finish.pos_bol) msg
 
 let spec_parse_error msg nterm =
@@ -18,6 +18,8 @@ let spec_lex_error lexbuf =
 
 type symtkey = (string*int) (* string is predicate name, int is the arity of literal*)
 type symtable = (symtkey, stt list) Hashtbl.t (* each row of a symtable is all the rules which has the same literal in head*)
+
+let hash_max_size = ref 500;;
 
 (** Prints a symtable
  *)
@@ -88,7 +90,7 @@ let alias_of_symtkey ((n,a):symtkey) =
 * a symtable*)
 let extract_idb = function
     | Prog stt_lst ->
-        let idb:symtable = Hashtbl.create 100 in
+        let idb:symtable = Hashtbl.create !hash_max_size in
         let in_stt t = match t with
             | Rule _ -> symt_insert idb t 
             | Query _ -> ()
@@ -98,7 +100,7 @@ let extract_idb = function
 
 let extract_edb = function
     | Prog stt_lst ->
-        let edb:symtable = Hashtbl.create 100 in
+        let edb:symtable = Hashtbl.create !hash_max_size in
         let in_stt t = match t with
             | Rule _ -> ()
             | Query rt -> ()
@@ -125,7 +127,7 @@ type colnamtab = (symtkey, (string list)) Hashtbl.t
 (*Extracts from the edb and idb their column names and
  * stores them in a colnamtab, places them in order*)
 let build_colnamtab (edb:symtable) (idb:symtable) =
-    let hs:colnamtab = Hashtbl.create 100 in
+    let hs:colnamtab = Hashtbl.create !hash_max_size in
     let e_cols key rules =
         let rule = List.hd rules in
         let varlist = List.map string_of_var (get_rterm_varlist (rule_head rule)) in
@@ -171,7 +173,7 @@ let vt_print (vt:vartab) =
 
 (*builds a vartab out of a list of rterms and with the colnamtab*)
 let build_vartab (col_names:colnamtab) rterms =
-    let vt:vartab = Hashtbl.create 100 in
+    let vt:vartab = Hashtbl.create !hash_max_size in
     let in_rt n rterm =
         let pname = get_rterm_predname rterm in
         let vlst = get_rterm_varlist rterm in
@@ -186,7 +188,7 @@ let build_vartab (col_names:colnamtab) rterms =
             match v with
             NamedVar _ | NumberedVar _ ->
                 vt_insert vt (string_of_var v) comp_cn
-            | AggVar _ -> raise (Compile_error (
+            | AggVar _ -> raise (SemErr (
                     "Goal "^(string_of_symtkey key)^
                     " contains an aggregate function as a variable, "^
                     "which is only allowed in rule heads"
@@ -211,7 +213,7 @@ type eqtab = (string,const) Hashtbl.t
  * in the provided list.*)
 let build_eqtab eqs =
     let tuples = List.map extract_eq_tuple eqs in
-    let hs:eqtab = Hashtbl.create 100 in
+    let hs:eqtab = Hashtbl.create !hash_max_size in
     let add_rel (var,c) = match var with
         NamedVar _ | NumberedVar _ -> Hashtbl.add hs (string_of_var var) c
         | _ -> invalid_arg "Trying to build_eqtab with equalities not of the form var = const" in
@@ -232,9 +234,9 @@ let get_query e = match e with
         in
         let lq = List.filter is_q sttl in
         match lq with 
-            | []     -> raise (Compile_error "The program has no query")
+            | []     -> raise (SemErr "The program has no query")
             | h::[]    ->  h
-            | h::_ -> raise (Compile_error "The program has more than one query")
+            | h::_ -> raise (SemErr "The program has more than one query")
 ;;
 
 let extract_rterm_constants ?(pos = 0) rt = match rt with
@@ -329,7 +331,7 @@ let get_delta_rterms e = match e with
         (* print_endline "____delta____";
         print_deltas delta_lst; *)
         match delta_lst with 
-            | []     -> raise (Compile_error "The program has no update")
+            | []     -> raise (SemErr "The program has no update")
             | _::tail    -> delta_lst
 ;;
 

@@ -19,7 +19,7 @@ let vname_to_col (vt:vartab) (eqt:eqtab) key vname =
     else if Hashtbl.mem eqt vname
         then string_of_const (eqt_extract eqt vname)
     (*Else, the query is unsafe or inclomplete*)
-    else raise (Compile_error (
+    else raise (SemErr (
             "Predicate "^(string_of_symtkey key)^
             " is unsafe, variable "^vname^" is not in a positive "^
             "goal or strict equality relation."
@@ -29,7 +29,7 @@ let vname_to_col (vt:vartab) (eqt:eqtab) key vname =
 let check_agg_function fn =
     let allowed = ["MAX";"MIN";"SUM";"AVG";"COUNT"] in
     if List.mem fn allowed then fn
-    else raise (Compile_error (
+    else raise (SemErr (
         "Aggregate function '"^fn^"' is not supported, "^
         "allowed functions are: "^(String.concat ", " allowed)
     ))
@@ -43,7 +43,7 @@ let get_select_clause (vt:vartab) (eqt:eqtab) rterm =
     let vlst = get_rterm_varlist rterm in 
     let key = symtkey_of_rterm rterm in
     if vlst = [] then
-        raise (Compile_error
+        raise (SemErr
             ("Predicate "^(get_rterm_predname rterm)^
             " has arity 0, which is not allowed"))
     else
@@ -64,7 +64,7 @@ let get_select_clause (vt:vartab) (eqt:eqtab) rterm =
         | col::col2::tl ->
             (col^" AS col"^(string_of_int ind))^", "^(alias (ind+1) (col2::tl))
     in
-    "SELECT "^(alias 0 cols)
+    "SELECT DISTINCT "^(alias 0 cols)
 
 let rule_of_query query (idb:symtable) =
     let (q2,eqs) = extract_rterm_constants query in
@@ -81,7 +81,7 @@ let get_aggregation_sql (vt:vartab) (cnt:colnamtab) head agg_eqs agg_ineqs =
     let is_agg = List.exists is_aggvar vars in
     if not is_agg then
         if comparisons = [] then ""
-        else raise (Compile_error (
+        else raise (SemErr (
             "Predicate "^(string_of_symtkey key)^
             " contains comparisons of aggregates but defines no "^
             "aggregations in its head"))
@@ -105,7 +105,7 @@ let get_aggregation_sql (vt:vartab) (cnt:colnamtab) head agg_eqs agg_ineqs =
     let agg_var_col agv =
         let tuple = extract_aggvar_tuple agv in
         if Hashtbl.mem av_aggs tuple then Hashtbl.find av_aggs tuple
-        else raise (Compile_error (
+        else raise (SemErr (
             "Predicate "^(string_of_symtkey key)^" contains comparisons of "^
             "aggregates that are not defined in its head"
         )) in
@@ -203,7 +203,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
                                     (eq_to^(List.hd (Hashtbl.find vt vn)))::acc
                                 else if Hashtbl.mem eqt vn then
                                     (eq_to^(string_of_const (Hashtbl.find eqt vn)))::acc
-                                else raise (Compile_error (
+                                else raise (SemErr (
                                     "Program is unsafe, variable "^vn^
                                     " in negated call to predicate "^
                                     (string_of_symtkey key)^" does not appear in a positive "^
@@ -232,7 +232,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
             let agg_sql = get_aggregation_sql vt cnt head agg_eqs agg_ineqs in
             String.concat " " [select_sql;from_sql;where_sql;agg_sql] in
         let sql_list = List.map (unfold_sql_of_rule idb cnt) rules in
-        String.concat " UNION ALL " sql_list in
+        String.concat " UNION " sql_list in
     let sql = unfold_sql_of_rule_lst idb cnt rule_lst in
     sql
 
@@ -270,24 +270,49 @@ let non_rec_unfold_sql_of_update (dbschema:string) (idb:symtable) (edb:symtable)
         symt_insert local_idb qrule;
         match delta with
         Deltainsert (pname, varlst) -> if Hashtbl.mem edb (pname, List.length varlst) 
-            then  ( "CREATE TEMPORARY TABLE "^ (get_rterm_predname delta) ^" WITH OIDS ON COMMIT DROP AS " ^ non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)), "INSERT INTO " ^dbschema^"."^ pname ^" SELECT * FROM " ^ (get_rterm_predname delta))
-            else raise (Compile_error "delta predicate is not of any base predicate")
-                
-        | Deltadelete (pname, varlst) -> if Hashtbl.mem edb (pname, List.length varlst) then 
-        (* get all the columns of base predicate *)
-        let cols = Hashtbl.find cnt (pname, List.length varlst) in
-        (* convert these cols to string of tuple of these cols *)
-        let cols_tuple_str = "("^(String.concat "," cols) ^")" in
-        ("CREATE TEMPORARY TABLE "^ (get_rterm_predname delta) ^" WITH OIDS ON COMMIT DROP AS " ^ (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))), 
-        " FOR temprec IN ( SELECT * FROM " ^ (get_rterm_predname delta) ^ ") LOOP 
-        " ^
-        "DELETE FROM " ^dbschema^"."^ pname ^" WHERE ROW" ^cols_tuple_str^ (sql_of_operator "==") ^
-        " ROW("^(String.concat "," (List.map (fun c -> "temprec."^c) (gen_cols 0 (List.length cols)) )) ^");" ^ "
-        END LOOP")
-        
-        else raise (Compile_error "delta predicate is not of any base predicate")
-        | _ -> raise (Compile_error "the non_rec_unfold_sql_of_update is called without and delta predicate")
+                        then  (
+            (* variable with rowtype of the source relation *)
+            "temprec"^ (get_rterm_predname delta) ^" " ^dbschema^"."^ pname ^"%ROWTYPE", 
+            (* calculate the delta relation by creating a temporary table *)
+            "CREATE TEMPORARY TABLE "^ (get_rterm_predname delta) ^" WITH OIDS ON COMMIT DROP AS " ^ 
+            "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").* 
+            FROM ("^
+            (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))) ^") AS "^(get_rterm_predname delta)^"_extra_alias", 
+            (* insert tuples using batch insertion *)
+            "INSERT INTO " ^dbschema^"."^ pname ^" SELECT * FROM  "^ (get_rterm_predname delta) ^ "; " ^
+            (* insert  each tuple by using a LOOP*)
+            (* "FOR temprec"^ (get_rterm_predname delta) ^" IN ( SELECT * FROM " ^ (get_rterm_predname delta) ^ ") LOOP 
+            " ^
+            "INSERT INTO " ^dbschema^"."^ pname ^" SELECT (temprec"^ (get_rterm_predname delta) ^").*; 
+            END LOOP; " ^ *)
 
+            "\nDROP TABLE "^ (get_rterm_predname delta))
+            else raise (SemErr "delta predicate is not of any base predicate")
+        
+        | Deltadelete (pname, varlst) -> if Hashtbl.mem edb (pname, List.length varlst) 
+            then 
+            (* get all the columns of base predicate *)
+            let cols = Hashtbl.find cnt (pname, List.length varlst) in
+            (* convert these cols to string of tuple of these cols *)
+            let cols_tuple_str = "("^(String.concat "," cols) ^")" in
+            (
+            (* variable with rowtype of the source relation *)
+            "temprec"^ (get_rterm_predname delta) ^" " ^dbschema^"."^ pname ^"%ROWTYPE", 
+            (* calculate the delta relation by creating a temporary table *)
+            "CREATE TEMPORARY TABLE "^ (get_rterm_predname delta) ^" WITH OIDS ON COMMIT DROP AS " ^ 
+            "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").* 
+            FROM ("^
+            (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))^") AS "^(get_rterm_predname delta)^"_extra_alias", 
+            (* delete each tuple *)
+            "FOR temprec"^ (get_rterm_predname delta) ^" IN ( SELECT * FROM " ^ (get_rterm_predname delta) ^ ") LOOP 
+            " ^
+            "DELETE FROM " ^dbschema^"."^ pname ^" WHERE ROW" ^cols_tuple_str^ (sql_of_operator "==") ^
+            " temprec"^ (get_rterm_predname delta) ^";" ^ "
+            END LOOP;\nDROP TABLE " ^ (get_rterm_predname delta))
+            
+            else raise (SemErr "delta predicate is not of any base predicate")
+        | _ -> raise (SemErr "the non_rec_unfold_sql_of_update is called without and delta predicate")
+                
 
 let unfold_delta_sql_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
     let query_rt = get_query_rterm (get_query prog) in
@@ -300,9 +325,10 @@ let unfold_delta_sql_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
     let delta_rt_lst = get_delta_rterms prog in
     (*Return the desired SQL*)
     let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema idb local_edb ) delta_rt_lst in 
-    let concat_update_sql (d, u) (delquery, updateaction) = (d::delquery, u::updateaction) in 
-    let (deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([],[]) in 
-    ((String.concat ";\n\n" deltas)^";") ^ " \n\n" ^ ((String.concat ";\n\n" actions)^";")
+    let concat_update_sql (v, d, u) (vardec,delquery, updateaction) = (v::vardec,d::delquery, u::updateaction) in 
+    let (vars, deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([],[],[]) in 
+    ((String.concat ";\n" vars)^";",
+    ((String.concat ";\n\n" deltas)^";") ^ " \n\n" ^ ((String.concat ";\n\n" actions)^";"))
 ;;
 
 let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
@@ -310,10 +336,10 @@ let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (edb:symtable) prog 
     let view_name = get_rterm_predname query_rt in
     let temporary_view_name = get_rterm_predname (get_temp_rterm query_rt) in
     let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (get_temp_rterm query_rt)) )) ^")" in
-    let delta_sql_stt = unfold_delta_sql_stt dbschema debug edb prog in
+    let (vardec, delta_sql_stt) = unfold_delta_sql_stt dbschema debug edb prog in
     let trigger_pgsql = 
 "
-CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_procedure()
+CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_delta_action()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -322,22 +348,17 @@ AS $$
   text_var1 text;
   text_var2 text;
   text_var3 text;
-  temprec record;
+  "^vardec^"
   BEGIN
-    CREATE TEMPORARY TABLE "^temporary_view_name^" WITH OIDS ON COMMIT DROP AS SELECT * FROM "^dbschema^"."^view_name^";
-    IF TG_OP = 'INSERT' THEN
-      INSERT INTO "^temporary_view_name^" SELECT (NEW).*; 
-    ELSIF TG_OP = 'UPDATE' THEN
-      DELETE FROM "^temporary_view_name^" WHERE ROW"^cols_tuple_str^" = OLD;
-      INSERT INTO "^temporary_view_name^" SELECT (NEW).*; 
-    ELSIF TG_OP = 'DELETE' THEN
-      DELETE FROM "^temporary_view_name^" WHERE ROW"^cols_tuple_str^" = OLD;
+    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
+        -- RAISE NOTICE 'execute procedure "^view_name^"_delta_action';
+        CREATE TEMPORARY TABLE "^view_name^"_delta_action_flag ON COMMIT DROP AS (SELECT true as finish);
+        "^delta_sql_stt^"
     END IF;
-    "^delta_sql_stt^"
     RETURN NULL;
   EXCEPTION
     WHEN object_not_in_prerequisite_state THEN
-        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to base tables of "^dbschema^"."^view_name^"';
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to source relations of "^dbschema^"."^view_name^"';
     WHEN OTHERS THEN
         GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
                                 text_var2 = PG_EXCEPTION_DETAIL,
@@ -345,12 +366,81 @@ AS $$
         RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of "^dbschema^"."^view_name^" ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
         RETURN NULL;
   END;
-  
 $$;
-DROP TRIGGER IF EXISTS "^view_name^"_trigger ON "^dbschema^"."^view_name^";
-CREATE TRIGGER "^view_name^"_trigger
+
+CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_materialization()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+  DECLARE
+  text_var1 text;
+  text_var2 text;
+  text_var3 text;
+  BEGIN
+    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^temporary_view_name^"')
+    THEN
+        -- RAISE NOTICE 'execute procedure "^view_name^"_materialization';
+        CREATE TEMPORARY TABLE "^temporary_view_name^" WITH OIDS ON COMMIT DROP AS SELECT * FROM "^dbschema^"."^view_name^";
+        CREATE CONSTRAINT TRIGGER __temp__peer1_public_trigger_delta_action
+        AFTER INSERT OR UPDATE OR DELETE ON 
+            "^temporary_view_name^" DEFERRABLE INITIALLY DEFERRED 
+            FOR EACH ROW EXECUTE PROCEDURE "^dbschema^"."^view_name^"_delta_action();
+    END IF;
+    RETURN NULL;
+  EXCEPTION
+    WHEN object_not_in_prerequisite_state THEN
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to source relations of "^dbschema^"."^view_name^"';
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
+                                text_var2 = PG_EXCEPTION_DETAIL,
+                                text_var3 = MESSAGE_TEXT;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of "^dbschema^"."^view_name^" ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RETURN NULL;
+  END;
+$$;
+
+DROP TRIGGER IF EXISTS "^view_name^"_trigger_materialization ON "^dbschema^"."^view_name^";
+CREATE TRIGGER "^view_name^"_trigger_materialization
+    BEFORE INSERT OR UPDATE OR DELETE ON
+      "^dbschema^"."^view_name^" FOR EACH STATEMENT EXECUTE PROCEDURE "^dbschema^"."^view_name^"_materialization();
+
+CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+  DECLARE
+  text_var1 text;
+  text_var2 text;
+  text_var3 text;
+  BEGIN
+    -- RAISE NOTICE 'execute procedure "^view_name^"_update';
+    IF TG_OP = 'INSERT' THEN
+      INSERT INTO "^temporary_view_name^" SELECT (NEW).*; 
+    ELSIF TG_OP = 'UPDATE' THEN
+      DELETE FROM "^temporary_view_name^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+      INSERT INTO "^temporary_view_name^" SELECT (NEW).*; 
+    ELSIF TG_OP = 'DELETE' THEN
+      DELETE FROM "^temporary_view_name^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+    END IF;
+    RETURN NULL;
+  EXCEPTION
+    WHEN object_not_in_prerequisite_state THEN
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to source relations of "^dbschema^"."^view_name^"';
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
+                                text_var2 = PG_EXCEPTION_DETAIL,
+                                text_var3 = MESSAGE_TEXT;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of "^dbschema^"."^view_name^" ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RETURN NULL;
+  END;
+$$;
+
+DROP TRIGGER IF EXISTS "^view_name^"_trigger_update ON "^dbschema^"."^view_name^";
+CREATE TRIGGER "^view_name^"_trigger_update
     INSTEAD OF INSERT OR UPDATE OR DELETE ON
-      "^dbschema^"."^view_name^" FOR EACH ROW EXECUTE PROCEDURE "^dbschema^"."^view_name^"_procedure();
+      "^dbschema^"."^view_name^" FOR EACH ROW EXECUTE PROCEDURE "^dbschema^"."^view_name^"_update();
 "
     in trigger_pgsql
 ;;

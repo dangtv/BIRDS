@@ -11,22 +11,22 @@ ______________*/
 
 CREATE OR REPLACE VIEW public.peer1_public AS 
 SELECT __dummy__.col0 AS VEHICLE_ID,__dummy__.col1 AS CURRENT_AREA,__dummy__.col2 AS SEAT_COUNT,__dummy__.col3 AS REQUEST_ID,__dummy__.col4 AS PICKUP_LOCATION,__dummy__.col5 AS DROPOFF_LOCATION 
-FROM (SELECT peer1_public_a6_0.col0 AS col0, peer1_public_a6_0.col1 AS col1, peer1_public_a6_0.col2 AS col2, peer1_public_a6_0.col3 AS col3, peer1_public_a6_0.col4 AS col4, peer1_public_a6_0.col5 AS col5 
-FROM (SELECT peer1_public_med_a6_0.col0 AS col0, peer1_public_med_a6_0.col1 AS col1, peer1_public_med_a6_0.col2 AS col2, peer1_public_med_a6_0.col3 AS col3, peer1_public_med_a6_0.col4 AS col4, peer1_public_med_a6_0.col5 AS col5 
-FROM (SELECT peer1_vehicle_a6_0.VEHICLE_ID AS col0, area_a2_1.AREA_NODE AS col1, peer1_vehicle_a6_0.SEAT_COUNT AS col2, peer1_vehicle_a6_0.REQUEST_ID AS col3, peer1_vehicle_a6_0.PICKUP_LOCATION AS col4, peer1_vehicle_a6_0.DROPOFF_LOCATION AS col5 
+FROM (SELECT DISTINCT peer1_public_a6_0.col0 AS col0, peer1_public_a6_0.col1 AS col1, peer1_public_a6_0.col2 AS col2, peer1_public_a6_0.col3 AS col3, peer1_public_a6_0.col4 AS col4, peer1_public_a6_0.col5 AS col5 
+FROM (SELECT DISTINCT peer1_public_med_a6_0.col0 AS col0, peer1_public_med_a6_0.col1 AS col1, peer1_public_med_a6_0.col2 AS col2, peer1_public_med_a6_0.col3 AS col3, peer1_public_med_a6_0.col4 AS col4, peer1_public_med_a6_0.col5 AS col5 
+FROM (SELECT DISTINCT peer1_vehicle_a6_0.VEHICLE_ID AS col0, area_a2_1.AREA_NODE AS col1, peer1_vehicle_a6_0.SEAT_COUNT AS col2, peer1_vehicle_a6_0.REQUEST_ID AS col3, peer1_vehicle_a6_0.PICKUP_LOCATION AS col4, peer1_vehicle_a6_0.DROPOFF_LOCATION AS col5 
 FROM public.peer1_vehicle AS peer1_vehicle_a6_0, public.area AS area_a2_1 
 WHERE area_a2_1.ORIGINAL_NODE = peer1_vehicle_a6_0.CURRENT_LOCATION ) AS peer1_public_med_a6_0 
 WHERE NOT EXISTS ( SELECT * 
-FROM (SELECT peer1_vehicle_a6_1.VEHICLE_ID AS col0, area_a2_2.ORIGINAL_NODE AS col1, peer1_public_med_a6_0.col2 AS col2, peer1_public_med_a6_0.col3 AS col3, peer1_public_med_a6_0.col4 AS col4, peer1_public_med_a6_0.col5 AS col5 
-FROM (SELECT peer1_vehicle_a6_0.VEHICLE_ID AS col0, area_a2_1.AREA_NODE AS col1, peer1_vehicle_a6_0.SEAT_COUNT AS col2, peer1_vehicle_a6_0.REQUEST_ID AS col3, peer1_vehicle_a6_0.PICKUP_LOCATION AS col4, peer1_vehicle_a6_0.DROPOFF_LOCATION AS col5 
+FROM (SELECT DISTINCT peer1_vehicle_a6_1.VEHICLE_ID AS col0, area_a2_2.ORIGINAL_NODE AS col1, peer1_public_med_a6_0.col2 AS col2, peer1_public_med_a6_0.col3 AS col3, peer1_public_med_a6_0.col4 AS col4, peer1_public_med_a6_0.col5 AS col5 
+FROM (SELECT DISTINCT peer1_vehicle_a6_0.VEHICLE_ID AS col0, area_a2_1.AREA_NODE AS col1, peer1_vehicle_a6_0.SEAT_COUNT AS col2, peer1_vehicle_a6_0.REQUEST_ID AS col3, peer1_vehicle_a6_0.PICKUP_LOCATION AS col4, peer1_vehicle_a6_0.DROPOFF_LOCATION AS col5 
 FROM public.peer1_vehicle AS peer1_vehicle_a6_0, public.area AS area_a2_1 
 WHERE area_a2_1.ORIGINAL_NODE = peer1_vehicle_a6_0.CURRENT_LOCATION ) AS peer1_public_med_a6_0, public.peer1_vehicle AS peer1_vehicle_a6_1, public.area AS area_a2_2 
-WHERE peer1_vehicle_a6_1.VEHICLE_ID = peer1_public_med_a6_0.col0 AND area_a2_2.ORIGINAL_NODE = peer1_vehicle_a6_1.CURRENT_LOCATION AND area_a2_2.AREA_NODE = peer1_public_med_a6_0.col1 AND NOT EXISTS ( SELECT * 
+WHERE area_a2_2.AREA_NODE = peer1_public_med_a6_0.col1 AND peer1_vehicle_a6_1.VEHICLE_ID = peer1_public_med_a6_0.col0 AND area_a2_2.ORIGINAL_NODE = peer1_vehicle_a6_1.CURRENT_LOCATION AND NOT EXISTS ( SELECT * 
 FROM public.peer1_vehicle AS peer1_vehicle_a6 
 WHERE peer1_vehicle_a6.DROPOFF_LOCATION IS NOT DISTINCT FROM peer1_public_med_a6_0.col5 AND peer1_vehicle_a6.PICKUP_LOCATION IS NOT DISTINCT FROM peer1_public_med_a6_0.col4 AND peer1_vehicle_a6.REQUEST_ID IS NOT DISTINCT FROM peer1_public_med_a6_0.col3 AND peer1_vehicle_a6.SEAT_COUNT IS NOT DISTINCT FROM peer1_public_med_a6_0.col2 AND peer1_vehicle_a6.CURRENT_LOCATION IS NOT DISTINCT FROM area_a2_2.ORIGINAL_NODE AND peer1_vehicle_a6.VEHICLE_ID IS NOT DISTINCT FROM peer1_vehicle_a6_1.VEHICLE_ID ) ) AS __dummy__delta__insert__peer1_vehicle_a6 
 WHERE __dummy__delta__insert__peer1_vehicle_a6.col5 IS NOT DISTINCT FROM peer1_public_med_a6_0.col5 AND __dummy__delta__insert__peer1_vehicle_a6.col4 IS NOT DISTINCT FROM peer1_public_med_a6_0.col4 AND __dummy__delta__insert__peer1_vehicle_a6.col3 IS NOT DISTINCT FROM peer1_public_med_a6_0.col3 AND __dummy__delta__insert__peer1_vehicle_a6.col2 IS NOT DISTINCT FROM peer1_public_med_a6_0.col2 AND __dummy__delta__insert__peer1_vehicle_a6.col0 IS NOT DISTINCT FROM peer1_public_med_a6_0.col0 ) ) AS peer1_public_a6_0  ) AS __dummy__;
 
-CREATE OR REPLACE FUNCTION public.peer1_public_procedure()
+CREATE OR REPLACE FUNCTION public.peer1_public_delta_action()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -35,42 +35,42 @@ AS $$
   text_var1 text;
   text_var2 text;
   text_var3 text;
-  temprec record;
+  temprec__dummy__delta__delete__peer1_vehicle public.peer1_vehicle%ROWTYPE;
+temprec__dummy__delta__insert__peer1_vehicle public.peer1_vehicle%ROWTYPE;
   BEGIN
-    CREATE TEMPORARY TABLE __temp__peer1_public WITH OIDS ON COMMIT DROP AS SELECT * FROM public.peer1_public;
-    IF TG_OP = 'INSERT' THEN
-      INSERT INTO __temp__peer1_public SELECT (NEW).*; 
-    ELSIF TG_OP = 'UPDATE' THEN
-      DELETE FROM __temp__peer1_public WHERE ROW(VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) = OLD;
-      INSERT INTO __temp__peer1_public SELECT (NEW).*; 
-    ELSIF TG_OP = 'DELETE' THEN
-      DELETE FROM __temp__peer1_public WHERE ROW(VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) = OLD;
-    END IF;
-    CREATE TEMPORARY TABLE __dummy__delta__delete__peer1_vehicle WITH OIDS ON COMMIT DROP AS SELECT __dummy__delta__delete__peer1_vehicle_a6_0.col0 AS col0, __dummy__delta__delete__peer1_vehicle_a6_0.col1 AS col1, __dummy__delta__delete__peer1_vehicle_a6_0.col2 AS col2, __dummy__delta__delete__peer1_vehicle_a6_0.col3 AS col3, __dummy__delta__delete__peer1_vehicle_a6_0.col4 AS col4, __dummy__delta__delete__peer1_vehicle_a6_0.col5 AS col5 
-FROM (SELECT peer1_vehicle_a6_0.VEHICLE_ID AS col0, area_a2_1.ORIGINAL_NODE AS col1, peer1_vehicle_a6_0.SEAT_COUNT AS col2, peer1_vehicle_a6_0.REQUEST_ID AS col3, peer1_vehicle_a6_0.PICKUP_LOCATION AS col4, peer1_vehicle_a6_0.DROPOFF_LOCATION AS col5 
+    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = 'peer1_public_delta_action_flag') THEN
+        -- RAISE NOTICE 'execute procedure peer1_public_delta_action';
+        CREATE TEMPORARY TABLE peer1_public_delta_action_flag ON COMMIT DROP AS (SELECT true as finish);
+        CREATE TEMPORARY TABLE __dummy__delta__delete__peer1_vehicle WITH OIDS ON COMMIT DROP AS SELECT (ROW(col0,col1,col2,col3,col4,col5) :: public.peer1_vehicle).* 
+            FROM (SELECT DISTINCT __dummy__delta__delete__peer1_vehicle_a6_0.col0 AS col0, __dummy__delta__delete__peer1_vehicle_a6_0.col1 AS col1, __dummy__delta__delete__peer1_vehicle_a6_0.col2 AS col2, __dummy__delta__delete__peer1_vehicle_a6_0.col3 AS col3, __dummy__delta__delete__peer1_vehicle_a6_0.col4 AS col4, __dummy__delta__delete__peer1_vehicle_a6_0.col5 AS col5 
+FROM (SELECT DISTINCT peer1_vehicle_a6_0.VEHICLE_ID AS col0, area_a2_1.ORIGINAL_NODE AS col1, peer1_vehicle_a6_0.SEAT_COUNT AS col2, peer1_vehicle_a6_0.REQUEST_ID AS col3, peer1_vehicle_a6_0.PICKUP_LOCATION AS col4, peer1_vehicle_a6_0.DROPOFF_LOCATION AS col5 
 FROM public.peer1_vehicle AS peer1_vehicle_a6_0, public.area AS area_a2_1 
 WHERE area_a2_1.ORIGINAL_NODE = peer1_vehicle_a6_0.CURRENT_LOCATION AND NOT EXISTS ( SELECT * 
-FROM (SELECT __temp__peer1_public_a6_0.VEHICLE_ID AS col0, __temp__peer1_public_a6_0.CURRENT_AREA AS col1, __temp__peer1_public_a6_0.SEAT_COUNT AS col2, __temp__peer1_public_a6_0.REQUEST_ID AS col3, __temp__peer1_public_a6_0.PICKUP_LOCATION AS col4, __temp__peer1_public_a6_0.DROPOFF_LOCATION AS col5 
+FROM (SELECT DISTINCT __temp__peer1_public_a6_0.VEHICLE_ID AS col0, __temp__peer1_public_a6_0.CURRENT_AREA AS col1, __temp__peer1_public_a6_0.SEAT_COUNT AS col2, __temp__peer1_public_a6_0.REQUEST_ID AS col3, __temp__peer1_public_a6_0.PICKUP_LOCATION AS col4, __temp__peer1_public_a6_0.DROPOFF_LOCATION AS col5 
 FROM __temp__peer1_public AS __temp__peer1_public_a6_0  ) AS peer1_public_a6 
-WHERE peer1_public_a6.col5 IS NOT DISTINCT FROM peer1_vehicle_a6_0.DROPOFF_LOCATION AND peer1_public_a6.col4 IS NOT DISTINCT FROM peer1_vehicle_a6_0.PICKUP_LOCATION AND peer1_public_a6.col3 IS NOT DISTINCT FROM peer1_vehicle_a6_0.REQUEST_ID AND peer1_public_a6.col2 IS NOT DISTINCT FROM peer1_vehicle_a6_0.SEAT_COUNT AND peer1_public_a6.col1 IS NOT DISTINCT FROM area_a2_1.AREA_NODE AND peer1_public_a6.col0 IS NOT DISTINCT FROM peer1_vehicle_a6_0.VEHICLE_ID ) ) AS __dummy__delta__delete__peer1_vehicle_a6_0  ;
+WHERE peer1_public_a6.col5 IS NOT DISTINCT FROM peer1_vehicle_a6_0.DROPOFF_LOCATION AND peer1_public_a6.col4 IS NOT DISTINCT FROM peer1_vehicle_a6_0.PICKUP_LOCATION AND peer1_public_a6.col3 IS NOT DISTINCT FROM peer1_vehicle_a6_0.REQUEST_ID AND peer1_public_a6.col2 IS NOT DISTINCT FROM peer1_vehicle_a6_0.SEAT_COUNT AND peer1_public_a6.col1 IS NOT DISTINCT FROM area_a2_1.AREA_NODE AND peer1_public_a6.col0 IS NOT DISTINCT FROM peer1_vehicle_a6_0.VEHICLE_ID ) ) AS __dummy__delta__delete__peer1_vehicle_a6_0  ) AS __dummy__delta__delete__peer1_vehicle_extra_alias;
 
-CREATE TEMPORARY TABLE __dummy__delta__insert__peer1_vehicle WITH OIDS ON COMMIT DROP AS SELECT __dummy__delta__insert__peer1_vehicle_a6_0.col0 AS col0, __dummy__delta__insert__peer1_vehicle_a6_0.col1 AS col1, __dummy__delta__insert__peer1_vehicle_a6_0.col2 AS col2, __dummy__delta__insert__peer1_vehicle_a6_0.col3 AS col3, __dummy__delta__insert__peer1_vehicle_a6_0.col4 AS col4, __dummy__delta__insert__peer1_vehicle_a6_0.col5 AS col5 
-FROM (SELECT peer1_vehicle_a6_1.VEHICLE_ID AS col0, area_a2_2.ORIGINAL_NODE AS col1, peer1_public_a6_0.col2 AS col2, peer1_public_a6_0.col3 AS col3, peer1_public_a6_0.col4 AS col4, peer1_public_a6_0.col5 AS col5 
-FROM (SELECT __temp__peer1_public_a6_0.VEHICLE_ID AS col0, __temp__peer1_public_a6_0.CURRENT_AREA AS col1, __temp__peer1_public_a6_0.SEAT_COUNT AS col2, __temp__peer1_public_a6_0.REQUEST_ID AS col3, __temp__peer1_public_a6_0.PICKUP_LOCATION AS col4, __temp__peer1_public_a6_0.DROPOFF_LOCATION AS col5 
+CREATE TEMPORARY TABLE __dummy__delta__insert__peer1_vehicle WITH OIDS ON COMMIT DROP AS SELECT (ROW(col0,col1,col2,col3,col4,col5) :: public.peer1_vehicle).* 
+            FROM (SELECT DISTINCT __dummy__delta__insert__peer1_vehicle_a6_0.col0 AS col0, __dummy__delta__insert__peer1_vehicle_a6_0.col1 AS col1, __dummy__delta__insert__peer1_vehicle_a6_0.col2 AS col2, __dummy__delta__insert__peer1_vehicle_a6_0.col3 AS col3, __dummy__delta__insert__peer1_vehicle_a6_0.col4 AS col4, __dummy__delta__insert__peer1_vehicle_a6_0.col5 AS col5 
+FROM (SELECT DISTINCT peer1_vehicle_a6_1.VEHICLE_ID AS col0, area_a2_2.ORIGINAL_NODE AS col1, peer1_public_a6_0.col2 AS col2, peer1_public_a6_0.col3 AS col3, peer1_public_a6_0.col4 AS col4, peer1_public_a6_0.col5 AS col5 
+FROM (SELECT DISTINCT __temp__peer1_public_a6_0.VEHICLE_ID AS col0, __temp__peer1_public_a6_0.CURRENT_AREA AS col1, __temp__peer1_public_a6_0.SEAT_COUNT AS col2, __temp__peer1_public_a6_0.REQUEST_ID AS col3, __temp__peer1_public_a6_0.PICKUP_LOCATION AS col4, __temp__peer1_public_a6_0.DROPOFF_LOCATION AS col5 
 FROM __temp__peer1_public AS __temp__peer1_public_a6_0  ) AS peer1_public_a6_0, public.peer1_vehicle AS peer1_vehicle_a6_1, public.area AS area_a2_2 
-WHERE peer1_vehicle_a6_1.VEHICLE_ID = peer1_public_a6_0.col0 AND area_a2_2.ORIGINAL_NODE = peer1_vehicle_a6_1.CURRENT_LOCATION AND area_a2_2.AREA_NODE = peer1_public_a6_0.col1 AND NOT EXISTS ( SELECT * 
+WHERE area_a2_2.AREA_NODE = peer1_public_a6_0.col1 AND peer1_vehicle_a6_1.VEHICLE_ID = peer1_public_a6_0.col0 AND area_a2_2.ORIGINAL_NODE = peer1_vehicle_a6_1.CURRENT_LOCATION AND NOT EXISTS ( SELECT * 
 FROM public.peer1_vehicle AS peer1_vehicle_a6 
-WHERE peer1_vehicle_a6.DROPOFF_LOCATION IS NOT DISTINCT FROM peer1_public_a6_0.col5 AND peer1_vehicle_a6.PICKUP_LOCATION IS NOT DISTINCT FROM peer1_public_a6_0.col4 AND peer1_vehicle_a6.REQUEST_ID IS NOT DISTINCT FROM peer1_public_a6_0.col3 AND peer1_vehicle_a6.SEAT_COUNT IS NOT DISTINCT FROM peer1_public_a6_0.col2 AND peer1_vehicle_a6.CURRENT_LOCATION IS NOT DISTINCT FROM area_a2_2.ORIGINAL_NODE AND peer1_vehicle_a6.VEHICLE_ID IS NOT DISTINCT FROM peer1_vehicle_a6_1.VEHICLE_ID ) ) AS __dummy__delta__insert__peer1_vehicle_a6_0  ; 
+WHERE peer1_vehicle_a6.DROPOFF_LOCATION IS NOT DISTINCT FROM peer1_public_a6_0.col5 AND peer1_vehicle_a6.PICKUP_LOCATION IS NOT DISTINCT FROM peer1_public_a6_0.col4 AND peer1_vehicle_a6.REQUEST_ID IS NOT DISTINCT FROM peer1_public_a6_0.col3 AND peer1_vehicle_a6.SEAT_COUNT IS NOT DISTINCT FROM peer1_public_a6_0.col2 AND peer1_vehicle_a6.CURRENT_LOCATION IS NOT DISTINCT FROM area_a2_2.ORIGINAL_NODE AND peer1_vehicle_a6.VEHICLE_ID IS NOT DISTINCT FROM peer1_vehicle_a6_1.VEHICLE_ID ) ) AS __dummy__delta__insert__peer1_vehicle_a6_0  ) AS __dummy__delta__insert__peer1_vehicle_extra_alias; 
 
- FOR temprec IN ( SELECT * FROM __dummy__delta__delete__peer1_vehicle) LOOP 
-        DELETE FROM public.peer1_vehicle WHERE ROW(VEHICLE_ID,CURRENT_LOCATION,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) IS NOT DISTINCT FROM  ROW(temprec.col0,temprec.col1,temprec.col2,temprec.col3,temprec.col4,temprec.col5);
-        END LOOP;
+FOR temprec__dummy__delta__delete__peer1_vehicle IN ( SELECT * FROM __dummy__delta__delete__peer1_vehicle) LOOP 
+            DELETE FROM public.peer1_vehicle WHERE ROW(VEHICLE_ID,CURRENT_LOCATION,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) IS NOT DISTINCT FROM  temprec__dummy__delta__delete__peer1_vehicle;
+            END LOOP;
+DROP TABLE __dummy__delta__delete__peer1_vehicle;
 
-INSERT INTO public.peer1_vehicle SELECT * FROM __dummy__delta__insert__peer1_vehicle;
+INSERT INTO public.peer1_vehicle SELECT * FROM  __dummy__delta__insert__peer1_vehicle; 
+DROP TABLE __dummy__delta__insert__peer1_vehicle;
+    END IF;
     RETURN NULL;
   EXCEPTION
     WHEN object_not_in_prerequisite_state THEN
-        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to base tables of public.peer1_public';
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to source relations of public.peer1_public';
     WHEN OTHERS THEN
         GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
                                 text_var2 = PG_EXCEPTION_DETAIL,
@@ -78,10 +78,79 @@ INSERT INTO public.peer1_vehicle SELECT * FROM __dummy__delta__insert__peer1_veh
         RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of public.peer1_public ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
         RETURN NULL;
   END;
-  
 $$;
-DROP TRIGGER IF EXISTS peer1_public_trigger ON public.peer1_public;
-CREATE TRIGGER peer1_public_trigger
+
+CREATE OR REPLACE FUNCTION public.peer1_public_materialization()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+  DECLARE
+  text_var1 text;
+  text_var2 text;
+  text_var3 text;
+  BEGIN
+    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '__temp__peer1_public')
+    THEN
+        -- RAISE NOTICE 'execute procedure peer1_public_materialization';
+        CREATE TEMPORARY TABLE __temp__peer1_public WITH OIDS ON COMMIT DROP AS SELECT * FROM public.peer1_public;
+        CREATE CONSTRAINT TRIGGER __temp__peer1_public_trigger_delta_action
+        AFTER INSERT OR UPDATE OR DELETE ON 
+            __temp__peer1_public DEFERRABLE INITIALLY DEFERRED 
+            FOR EACH ROW EXECUTE PROCEDURE public.peer1_public_delta_action();
+    END IF;
+    RETURN NULL;
+  EXCEPTION
+    WHEN object_not_in_prerequisite_state THEN
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to source relations of public.peer1_public';
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
+                                text_var2 = PG_EXCEPTION_DETAIL,
+                                text_var3 = MESSAGE_TEXT;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of public.peer1_public ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RETURN NULL;
+  END;
+$$;
+
+DROP TRIGGER IF EXISTS peer1_public_trigger_materialization ON public.peer1_public;
+CREATE TRIGGER peer1_public_trigger_materialization
+    BEFORE INSERT OR UPDATE OR DELETE ON
+      public.peer1_public FOR EACH STATEMENT EXECUTE PROCEDURE public.peer1_public_materialization();
+
+CREATE OR REPLACE FUNCTION public.peer1_public_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+  DECLARE
+  text_var1 text;
+  text_var2 text;
+  text_var3 text;
+  BEGIN
+    -- RAISE NOTICE 'execute procedure peer1_public_update';
+    IF TG_OP = 'INSERT' THEN
+      INSERT INTO __temp__peer1_public SELECT (NEW).*; 
+    ELSIF TG_OP = 'UPDATE' THEN
+      DELETE FROM __temp__peer1_public WHERE ROW(VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) IS NOT DISTINCT FROM OLD;
+      INSERT INTO __temp__peer1_public SELECT (NEW).*; 
+    ELSIF TG_OP = 'DELETE' THEN
+      DELETE FROM __temp__peer1_public WHERE ROW(VEHICLE_ID,CURRENT_AREA,SEAT_COUNT,REQUEST_ID,PICKUP_LOCATION,DROPOFF_LOCATION) IS NOT DISTINCT FROM OLD;
+    END IF;
+    RETURN NULL;
+  EXCEPTION
+    WHEN object_not_in_prerequisite_state THEN
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to source relations of public.peer1_public';
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
+                                text_var2 = PG_EXCEPTION_DETAIL,
+                                text_var3 = MESSAGE_TEXT;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of public.peer1_public ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RETURN NULL;
+  END;
+$$;
+
+DROP TRIGGER IF EXISTS peer1_public_trigger_update ON public.peer1_public;
+CREATE TRIGGER peer1_public_trigger_update
     INSTEAD OF INSERT OR UPDATE OR DELETE ON
-      public.peer1_public FOR EACH ROW EXECUTE PROCEDURE public.peer1_public_procedure();
+      public.peer1_public FOR EACH ROW EXECUTE PROCEDURE public.peer1_public_update();
 

@@ -1,0 +1,1 @@
+Examples from the paper "On the Correct Translation of Update Operations on Relational Views" (figure 2)

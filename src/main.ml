@@ -64,7 +64,7 @@ let main () =
       fprintf oc "%s\n" trigger_sql;
       close_out oc; 
     with
-      Compile_error exp -> print_endline ("execution error: "^exp)
+      SemErr exp -> print_endline ("execution error: "^exp)
     | Parsing.Parse_error -> print_endline "parse error"
     | LexErr msg -> print_endline (msg^":\nError: Illegal characters")
     | ParseErr msg -> print_endline (msg^":\nError: Syntax error")

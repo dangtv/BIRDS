@@ -1,0 +1,34 @@
+%s:ed(ENAME,DEPT).
+%s:dm(DEPT,MGR).
+%v:edm(ENAME, DEPT,MGR).
+
+% definition of em: join two source relation on DEPT
+% edm(ENAME, DEPT, MGR) :- ed(ENAME, DEPT), dm(DEPT, MGR).
+
+% update strategy for edm
+
+% ===== calculate delta relation on the view
+tempv(ENAME,DEPT,MGR) :- ed(ENAME,DEPT), dm(DEPT,MGR).
+edm_keep(ENAME,DEPT,MGR) :- tempv(ENAME,DEPT,MGR), edm(ENAME,DEPT,MGR).
+% delta relation on edm
+edm_del(ENAME,DEPT,MGR) :- tempv(ENAME,DEPT,MGR), not edm(ENAME,DEPT,MGR).
+edm_ins(ENAME,DEPT,MGR) :- edm(ENAME,DEPT,MGR), not tempv(ENAME,DEPT,MGR).
+
+% calculate delta relations on the source
+% for insertion to souce, just take a tuple from edm_ins and check whether it is already in the source or not
++ed(ENAME,DEPT) :- edm_ins(ENAME,DEPT,_), not ed(ENAME,DEPT). 
++dm(DEPT,MGR) :- edm_ins(_,DEPT,MGR), not dm(DEPT,MGR).
+
+% for deletion, for each tuple in edm_del we need to choose one of ed and dm to delete, 
+% if (DEPT, MGR) need to appear in the view => have to choose ed
+-ed(ENAME,DEPT) :- edm_del(ENAME,DEPT,MGR), edm_keep(_,DEPT,MGR) .
+-ed(ENAME,DEPT) :- edm_del(ENAME,DEPT,MGR), edm_ins(_,DEPT,MGR) .
+% in contrast, if (ENAME, DEPT) need to appear in the view -> choose dm
+-dm(DEPT,MGR) :- edm_del(ENAME,DEPT,MGR), edm_keep(ENAME,DEPT,_) .
+-dm(DEPT,MGR) :- edm_del(ENAME,DEPT,MGR), edm_ins(ENAME,DEPT,_) .
+% if both do not appear in the view, choose either ed or dm, below is choosing ed
+-ed(ENAME,DEPT) :- edm_del(ENAME,DEPT,MGR), not edm_keep(ENAME,DEPT,_), not edm_ins(_,DEPT,MGR), not edm_keep(_,DEPT,MGR), not edm_ins(ENAME,DEPT,_).
+
+% delete old ed and dm which can join with new inserted tuples to produce tuples not in the view edm
+-ed(ENAME,DEPT) :- ed(ENAME,DEPT), edm_ins(_,DEPT,MGR), not edm(ENAME,DEPT,MGR).
+-dm(DEPT,MGR) :- dm(DEPT,MGR), edm_ins(ENAME,DEPT,_), not edm(ENAME,DEPT,MGR).
