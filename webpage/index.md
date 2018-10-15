@@ -6,7 +6,7 @@ layout: default
 
 ## Overview
 
-BIRDS (Putback-based **BI**directional transformation for **R**elational view update **D**atalog-based **S**trategies) is a bidirectional transformation (BX) framework for Relational Database Management Systems (RDBMS). The objective of this framework is to allow programers to define a relational view in RDBMS by writing an update strategy for it.
+BIRDS (Putback-based **BI**directional transformation for **R**elational view update **D**atalog-based **S**trategies) is a bidirectional transformation (BX) framework for Relational Database Management Systems (RDBMS). The objective of this framework is to allow programmers to define a relational view in RDBMS by writing an update strategy for it.
 
 ## View Update Language: Datalog
 
@@ -41,8 +41,8 @@ BIRDS employs and extends the power of Datalog, which is a well known query lang
 ### Installation
 
 * Download executable files:
-  * [Latest BIRDS for Macos]({{ site.github.mac_exe }})
-  * [Latest BIRDS for Ubuntu]({{ site.github.ubuntu_exe }})
+  * [For Macos]({{ site.github.mac_exe }})
+  * [Ror Ubuntu]({{ site.github.ubuntu_exe }})
   <!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) -->
 * Build an executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
 

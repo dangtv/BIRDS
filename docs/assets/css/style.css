@@ -566,6 +566,12 @@ a small {
   margin-top: -0.6em;
   display: block; }
 
+section a {
+  text-decoration: underline; }
+
+section a:hover {
+  text-decoration: none; }
+
 strong {
   font-weight: bold;
   color: #333; }

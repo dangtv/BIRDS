@@ -55,6 +55,13 @@ a small {
   display:block;
 }
 
+section a {
+    text-decoration: underline;
+}
+section a:hover {
+      text-decoration: none;
+    }
+
 // ul{
 //   list-style-image:url('../images/bullet.png');
 // }
