@@ -15,15 +15,15 @@ let dbschema = ref "public";;
 
 let usage = "usage: " ^ Sys.argv.(0) ^ " [OPTIONS]"
 let speclist = [
-  ("-db", Arg.Unit (fun () -> debug := true),  "        : print debugging information");
-  ("-f", Arg.String (fun s -> inputf := s),   "file     : read program from file, if not chosen, read from stdin");
-  ("-o", Arg.String (fun s -> outputf := s),   "file     : write program out file, if not chosen, print to stdout");
-  ("-s", Arg.String (fun s -> dbschema := s),   "schemaname     : database schema name to connect to (default: public)");
+  ("-db", Arg.Unit (fun () -> debug := true),  " print debugging information");
+  ("-f", Arg.String (fun s -> inputf := s),   "file read program from file, if not chosen, read from stdin");
+  ("-o", Arg.String (fun s -> outputf := s),   "file write program out file, if not chosen, print to stdout");
+  ("-s", Arg.String (fun s -> dbschema := s),   "schemaname database schema name to connect to (default: public)");
 ];;
 
 let () =
   Arg.parse
-    speclist
+    (Arg.align speclist)
     (fun x ->
        raise (Arg.Bad ("Bad argument : " ^ x))
     )
