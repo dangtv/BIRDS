@@ -566,11 +566,8 @@ a small {
   margin-top: -0.6em;
   display: block; }
 
-section a {
-  text-decoration: underline; }
-
 section a:hover {
-  text-decoration: none; }
+  text-decoration: underline; }
 
 strong {
   font-weight: bold;

@@ -42,7 +42,7 @@ BIRDS employs and extends the power of Datalog, which is a well known query lang
 
 * Download executable files:
   * [For Macos]({{ site.github.mac_exe }})
-  * [Ror Ubuntu]({{ site.github.ubuntu_exe }})
+  * [For Ubuntu]({{ site.github.ubuntu_exe }})
   <!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) -->
 * Build an executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
 
