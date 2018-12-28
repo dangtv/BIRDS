@@ -16,7 +16,7 @@ tracks1 |
 
 ## Create a view tracks2 over tracks1
 
-1. Write an update trategy on the view `tracks2` over the table `tracks1` by using Datalog ([tracks2.dl]({{site.github.repository_url}}/tree/master/examples/music/tracks2.dl)):
+1. Write an update strategy on the view `tracks2` over the table `tracks1` by using Datalog ([tracks2.dl]({{site.github.repository_url}}/tree/master/examples/music/tracks2.dl)):
 
     ```prolog
     % describe the schema of sources and views

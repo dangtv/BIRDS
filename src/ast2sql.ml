@@ -4,6 +4,7 @@
 
 open Expr ;;
 open Utils;;
+open Rule_preprocess;;
 
 let split_terms terms =
     let rec split t (pos,neg,eq,inq) = match t with
@@ -65,11 +66,6 @@ let get_select_clause (vt:vartab) (eqt:eqtab) rterm =
             (col^" AS col"^(string_of_int ind))^", "^(alias (ind+1) (col2::tl))
     in
     "SELECT DISTINCT "^(alias 0 cols)
-
-let rule_of_query query (idb:symtable) =
-    let (q2,eqs) = extract_rterm_constants query in
-    let dummy = Pred ("__dummy__", get_rterm_varlist q2) in
-    Rule (dummy, (Rel q2)::eqs)
 
 let get_aggregation_sql (vt:vartab) (cnt:colnamtab) head agg_eqs agg_ineqs =
     let vars = get_rterm_varlist head in

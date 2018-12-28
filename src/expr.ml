@@ -84,7 +84,7 @@ let get_rterm_varlist t = match t with
 ;;
 
 (** get the list of variables of a term *)
-let rec get_varlist t = match t with
+let rec get_term_varlist t = match t with
     | Rel r            -> get_rterm_varlist r
     | Equal (s, i)     -> s :: []
     | Ineq  (op,s, i)  -> s :: []
@@ -159,6 +159,11 @@ let negate_eq = function
 (** Returns true if the provided argument is an aggregate variable *)
 let is_aggvar = function
     | AggVar _ -> true
+    | _ -> false
+
+(** Returns true if the provided argument is an anonymous variable *)
+let is_anon = function
+    | AnonVar _ -> true
     | _ -> false
 
 (** Returns true if the provided argument is an equality involving an

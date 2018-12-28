@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-
+    <title>Bidirectional Transformation for Relational view update Datalog-based Strategies (BIRDS)</title>
 <!-- Begin Jekyll SEO tag v2.5.0 -->
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
 <script type="application/ld+json">
-{"@type":"WebSite","url":"/","@context":"http://schema.org"}</script>
+{"url":"/","@type":"WebSite","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
     <link rel="stylesheet" href="assets/css/style.css?v=">
@@ -56,7 +56,7 @@
 
 <p>BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to source relations. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over source relations. Finally, both Datalog-written update strategy and derived view definition are translated to a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.</p>
 
-<!-- The syntax for Datalog in writing relational view update strategies is discribed in [Update Datalog Syntax](syntax.html) -->
+<!-- The syntax for Datalog in writing relational view update strategies is described in [Update Datalog Syntax](syntax.html) -->
 
 <!-- A view should be defined through a view update strategy to the base relations rather than a query over them. -->
 
@@ -94,7 +94,7 @@ layout: default
 <ul>
   <li>Download executable files:
     <ul>
-      <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_macos_v0.0.2.zip">For Macos</a></li>
+      <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_macos_v0.0.2.zip">For Macosx</a></li>
       <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_ubuntu_v0.0.2.zip">For Ubuntu</a>
 <!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) --></li>
     </ul>
@@ -118,7 +118,7 @@ layout: default
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>For example, this command will transform the update strategy discribed in <code class="highlighter-rouge">test1.dl</code> to sql statements in <code class="highlighter-rouge">test1.sql</code> for creating a view with its triggers</p>
+    <p>For example, this command will transform the update strategy described in <code class="highlighter-rouge">test1.dl</code> to sql statements in <code class="highlighter-rouge">test1.sql</code> for creating a view with its triggers</p>
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  birds <span class="nt">-s</span> public <span class="nt">-f</span> test1.dl <span class="nt">-o</span> test1.sql
 </code></pre></div>    </div>
   </li>
@@ -139,7 +139,7 @@ layout: default
           <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small></p>
         
         <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
-        <p style="margin-bottom:0em"><small>Last updated on 30 Nov 2018</small></p>
+        <p style="margin-bottom:0em"><small>Last updated on 28 Dec 2018</small></p>
       </footer>
     </div>
 

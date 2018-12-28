@@ -45,7 +45,7 @@ peer2_vehicle |
 
 ## Create a view peer1_public over peer1_vehicle and area
 
-1. Write an update trategy on the view `peer1_public` over `peer1_vehicle` by using Datalog ([real_peer1_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer1_public.dl)):
+1. Write an update strategy on the view `peer1_public` over `peer1_vehicle` by using Datalog ([real_peer1_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer1_public.dl)):
 
     ```prolog
     % describe the schema of sources and views
@@ -62,14 +62,14 @@ peer2_vehicle |
         area (L,A), not peer1_vehicle(V, L, S, R, P, D).
     ```
 
-2. Derive view definition and transform it with the update trategy to SQL statements saved in the file ([real_peer1_public.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer1_public.sql)):
+2. Derive view definition and transform it with the update strategy to SQL statements saved in the file ([real_peer1_public.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer1_public.sql)):
     ```bash
     birds -f examples/ride_sharing/real_peer1_public.dl -o examples/ride_sharing/real_peer1_public.sql
     ```
 
 ## Create a view peer2_public over peer2_vehicle and area
 
-1. Write an update trategy on the view `peer2_public` over `peer2_vehicle` by using Datalog ([real_peer2_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer2_public.dl)):
+1. Write an update strategy on the view `peer2_public` over `peer2_vehicle` by using Datalog ([real_peer2_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer2_public.dl)):
 
     ```prolog
     % describe the schema of sources and views
@@ -86,14 +86,14 @@ peer2_vehicle |
         area (L,A), not peer2_vehicle(V, L, S, R, P, D).
     ```
 
-2. Derive view definition and transform it with the update trategy to SQL statements saved in the file ([real_peer2_public.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer2_public.sql)):
+2. Derive view definition and transform it with the update strategy to SQL statements saved in the file ([real_peer2_public.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer2_public.sql)):
     ```bash
     birds -f examples/ride_sharing/real_peer2_public.dl -o examples/ride_sharing/real_peer2_public.sql
     ```
 
 ## Create a view all_vehicles over peer1_public and peer2_public
 
-1. Write an update trategy on the view `all_vehicles` over `peer1_public` and `peer2_public` by using Datalog ([real_all_vehicles.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_all_vehicles.dl)):
+1. Write an update strategy on the view `all_vehicles` over `peer1_public` and `peer2_public` by using Datalog ([real_all_vehicles.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_all_vehicles.dl)):
 
     ```prolog
     % describe the schema of sources and views
@@ -117,7 +117,7 @@ peer2_vehicle |
         NOT all_vehicles(C, V, A, S, R, P, D).
     ```
 
-2. Derive view definition and transform it with the update trategy to SQL statements saved in the file ([real_all_vehicles.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_all_vehicles.sql)):
+2. Derive view definition and transform it with the update strategy to SQL statements saved in the file ([real_all_vehicles.sql]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_all_vehicles.sql)):
     ```bash
     birds -f examples/ride_sharing/real_all_vehicles.dl -o examples/ride_sharing/real_all_vehicles.sql
     ```

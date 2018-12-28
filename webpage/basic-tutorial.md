@@ -6,17 +6,17 @@ layout: default
 
 ## Writing view update strategies in Datalog
 
-* Declare the view and the source reations in Datalog by using two special symbols: `%s:` for source relations, `%v:` for views. For example, this statement is for a source table `people` which has two columns `id` and `name`:
+* Declare the view and the source relations in Datalog by using two special symbols: `%s:` for source relations, `%v:` for views. For example, this statement is for a source table `people` which has two columns `id` and `name`:
 
     ```prolog
     %s: people(ID, NAME).
     ```
-* Database modifications (Insertion, Deletion, Updates): we can use datalog for describing data modications on a source relation by writing rules for delta relations of this source relation:
+* Database modifications (Insertion, Deletion, Updates): we can use Datalog for describing data modifications on a source relation by writing rules for delta relations of this source relation:
   * Delta predicate: a delta predicate is a normal predicate following a symbol `+` or `-`
     * The predicate `+R` corresponds to the delta relation of tuples being inserted into source relation `R`
-    * The predicte `−R` corresponds to the delta relation of tuples being deleted from `R`
+    * The predicate `−R` corresponds to the delta relation of tuples being deleted from `R`
     * Updates on `R` can be represented by using both `+R` and `-R`
-  * Delta rule: a delta rule is a rule for modifying data in a soure relation, it is a Datalog rule with a delta predicate in its head. For example, the following rule means any tuple `X`, which is in `s1` but not in `v`, will be deleted from `s1`:
+  * Delta rule: a delta rule is a rule for modifying data in a source relation, it is a Datalog rule with a delta predicate in its head. For example, the following rule means any tuple `X`, which is in `s1` but not in `v`, will be deleted from `s1`:
 
     ```prolog
     -s1(X) :- s1(X), not v(X).
@@ -24,7 +24,7 @@ layout: default
 
 Suppose that a database has two tables `s1` and `s2`, both have a single column `X`, a view `v` over these two tables can be defined with the following steps:
 
-1. Write an update trategy on a view v(X) to tables s1(X) and s2(X) by using Datalog ([basic_sample.dl]({{site.github.repository_url}}/tree/master/examples/basic_sample.dl)):
+1. Write an update strategy on a view v(X) to tables s1(X) and s2(X) by using Datalog ([basic_sample.dl]({{site.github.repository_url}}/tree/master/examples/basic_sample.dl)):
 
     ```prolog
     % describe the schema of sources and views
@@ -32,14 +32,14 @@ Suppose that a database has two tables `s1` and `s2`, both have a single column 
     %s: s2(X).
     %v: v(X).
 
-    % rule for deletetion from sources
+    % rule for deletion from sources
     -s1(X) :- s1(X), not v(X).
     -s2(X) :- s2(X), not v(X).
     % rule for insertion to sources
     +s1(X) :- v(X), not s1(X), not s2(X).
     ```
 
-1. Derive view definition and transform it with the update trategy to SQL statements ([basic_sample.sql]({{site.github.repository_url}}/tree/master/examples/basic_sample.sql)):
+1. Derive view definition and transform it with the update strategy to SQL statements ([basic_sample.sql]({{site.github.repository_url}}/tree/master/examples/basic_sample.sql)):
     ```bash
     birds -s public -f examples/basic_sample.dl -o examples/basic_sample.sql
     ```

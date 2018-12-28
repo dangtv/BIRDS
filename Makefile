@@ -20,8 +20,10 @@ FILES=\
 	utils\
     parser\
     lexer\
+	rule_preprocess\
 	derivation\
 	ast2sql\
+	ast2lambda\
 
 .PHONY: all release clean
 all: $(BIN_DIR)/$(EX_NAME)

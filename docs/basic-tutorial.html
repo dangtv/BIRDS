@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-
+    <title>Bidirectional Transformation for Relational view update Datalog-based Strategies (BIRDS)</title>
 <!-- Begin Jekyll SEO tag v2.5.0 -->
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
 <script type="application/ld+json">
-{"@type":"WebPage","url":"/basic-tutorial.html","@context":"http://schema.org"}</script>
+{"url":"/basic-tutorial.html","@type":"WebPage","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
     <link rel="stylesheet" href="assets/css/style.css?v=">
@@ -52,23 +52,23 @@
 
 <ul>
   <li>
-    <p>Declare the view and the source reations in Datalog by using two special symbols: <code class="highlighter-rouge">%s:</code> for source relations, <code class="highlighter-rouge">%v:</code> for views. For example, this statement is for a source table <code class="highlighter-rouge">people</code> which has two columns <code class="highlighter-rouge">id</code> and <code class="highlighter-rouge">name</code>:</p>
+    <p>Declare the view and the source relations in Datalog by using two special symbols: <code class="highlighter-rouge">%s:</code> for source relations, <code class="highlighter-rouge">%v:</code> for views. For example, this statement is for a source table <code class="highlighter-rouge">people</code> which has two columns <code class="highlighter-rouge">id</code> and <code class="highlighter-rouge">name</code>:</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="err">%</span><span class="ss">s</span><span class="o">:</span> <span class="ss">people</span><span class="p">(</span><span class="nv">ID</span><span class="p">,</span> <span class="nv">NAME</span><span class="p">).</span>
 </code></pre></div>    </div>
   </li>
   <li>
-    <p>Database modifications (Insertion, Deletion, Updates): we can use datalog for describing data modications on a source relation by writing rules for delta relations of this source relation:</p>
+    <p>Database modifications (Insertion, Deletion, Updates): we can use Datalog for describing data modifications on a source relation by writing rules for delta relations of this source relation:</p>
     <ul>
       <li>Delta predicate: a delta predicate is a normal predicate following a symbol <code class="highlighter-rouge">+</code> or <code class="highlighter-rouge">-</code>
         <ul>
           <li>The predicate <code class="highlighter-rouge">+R</code> corresponds to the delta relation of tuples being inserted into source relation <code class="highlighter-rouge">R</code></li>
-          <li>The predicte <code class="highlighter-rouge">−R</code> corresponds to the delta relation of tuples being deleted from <code class="highlighter-rouge">R</code></li>
+          <li>The predicate <code class="highlighter-rouge">−R</code> corresponds to the delta relation of tuples being deleted from <code class="highlighter-rouge">R</code></li>
           <li>Updates on <code class="highlighter-rouge">R</code> can be represented by using both <code class="highlighter-rouge">+R</code> and <code class="highlighter-rouge">-R</code></li>
         </ul>
       </li>
       <li>
-        <p>Delta rule: a delta rule is a rule for modifying data in a soure relation, it is a Datalog rule with a delta predicate in its head. For example, the following rule means any tuple <code class="highlighter-rouge">X</code>, which is in <code class="highlighter-rouge">s1</code> but not in <code class="highlighter-rouge">v</code>, will be deleted from <code class="highlighter-rouge">s1</code>:</p>
+        <p>Delta rule: a delta rule is a rule for modifying data in a source relation, it is a Datalog rule with a delta predicate in its head. For example, the following rule means any tuple <code class="highlighter-rouge">X</code>, which is in <code class="highlighter-rouge">s1</code> but not in <code class="highlighter-rouge">v</code>, will be deleted from <code class="highlighter-rouge">s1</code>:</p>
 
         <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">-</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
 </code></pre></div>        </div>
@@ -81,21 +81,21 @@
 
 <ol>
   <li>
-    <p>Write an update trategy on a view v(X) to tables s1(X) and s2(X) by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.dl">basic_sample.dl</a>):</p>
+    <p>Write an update strategy on a view v(X) to tables s1(X) and s2(X) by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.dl">basic_sample.dl</a>):</p>
 
     <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span> <span class="ss">describe</span> <span class="ss">the</span> <span class="ss">schema</span> <span class="ss">of</span> <span class="ss">sources</span> <span class="ss">and</span> <span class="ss">views</span>
  <span class="err">%</span><span class="ss">s</span><span class="o">:</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
  <span class="err">%</span><span class="ss">s</span><span class="o">:</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
  <span class="err">%</span><span class="ss">v</span><span class="o">:</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
 
- <span class="err">%</span> <span class="ss">rule</span> <span class="ss">for</span> <span class="ss">deletetion</span> <span class="ss">from</span> <span class="ss">sources</span>
+ <span class="err">%</span> <span class="ss">rule</span> <span class="ss">for</span> <span class="ss">deletion</span> <span class="ss">from</span> <span class="ss">sources</span>
  <span class="o">-</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
  <span class="o">-</span><span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
  <span class="err">%</span> <span class="ss">rule</span> <span class="ss">for</span> <span class="ss">insertion</span> <span class="ss">to</span> <span class="ss">sources</span>
  <span class="o">+</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
 </code></pre></div>    </div>
   </li>
-  <li>Derive view definition and transform it with the update trategy to SQL statements (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.sql">basic_sample.sql</a>):
+  <li>Derive view definition and transform it with the update strategy to SQL statements (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.sql">basic_sample.sql</a>):
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-s</span> public <span class="nt">-f</span> examples/basic_sample.dl <span class="nt">-o</span> examples/basic_sample.sql
 </code></pre></div>    </div>
   </li>
@@ -210,7 +210,7 @@
           <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small></p>
         
         <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
-        <p style="margin-bottom:0em"><small>Last updated on 30 Nov 2018</small></p>
+        <p style="margin-bottom:0em"><small>Last updated on 28 Dec 2018</small></p>
       </footer>
     </div>
 

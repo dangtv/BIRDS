@@ -12,7 +12,7 @@ BIRDS (Putback-based **BI**directional transformation for **R**elational view up
 
 BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to source relations. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over source relations. Finally, both Datalog-written update strategy and derived view definition are translated to a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.
 
-<!-- The syntax for Datalog in writing relational view update strategies is discribed in [Update Datalog Syntax](syntax.html) -->
+<!-- The syntax for Datalog in writing relational view update strategies is described in [Update Datalog Syntax](syntax.html) -->
 
 <!-- A view should be defined through a view update strategy to the base relations rather than a query over them. -->
 
@@ -41,7 +41,7 @@ BIRDS employs and extends the power of Datalog, which is a well known query lang
 ### Installation
 
 * Download executable files:
-  * [For Macos]({{ site.github.mac_exe }})
+  * [For Macosx]({{ site.github.mac_exe }})
   * [For Ubuntu]({{ site.github.ubuntu_exe }})
   <!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) -->
 * Build an executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
@@ -60,7 +60,7 @@ BIRDS employs and extends the power of Datalog, which is a well known query lang
     --help  Display this list of options
     ```
 
-* For example, this command will transform the update strategy discribed in `test1.dl` to sql statements in `test1.sql` for creating a view with its triggers
+* For example, this command will transform the update strategy described in `test1.dl` to sql statements in `test1.sql` for creating a view with its triggers
     ```bash
     birds -s public -f test1.dl -o test1.sql
     ```
