@@ -64,15 +64,17 @@ $(BIN_DIR)/%.cmi $(BIN_DIR)/%.cmo $(BIN_DIR)/%.cmt: $(SOURCE_DIR)/%.ml
 	$(DIR_GUARD)
 	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(BIN_DIR)/$* -c $<
 
-annot: $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(MAIN_FILE:%=$(BIN_DIR)/%.cmt)
-	mv $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(LOGIC_SOURCE_DIR)/
-	mv $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(SOURCE_DIR)/
-	mv $(MAIN_FILE:%=$(BIN_DIR)/%.cmt) $(SOURCE_DIR)/
+annot: $(FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt)
+
+$(LOGIC_FILES:%=$(LOGIC_SOURCE_DIR)/%.cmt) $(TOP_FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt): $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(MAIN_FILE:%=$(BIN_DIR)/%.cmt)
+	cp $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(LOGIC_SOURCE_DIR)/
+	cp $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(SOURCE_DIR)/
+	cp $(MAIN_FILE:%=$(BIN_DIR)/%.cmt) $(SOURCE_DIR)/
 
 include .depend
 
 clean:
-	rm -f $(BIN_DIR)/*.cmo $(BIN_DIR)/*.cmi $(BIN_DIR)/*.o $(LOGIC_BIN_DIR)/*.cmo $(LOGIC_BIN_DIR)/*.cmi $(LOGIC_BIN_DIR)/*.o $(SOURCE_DIR)/parser.mli $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/lexer.ml $(SOURCE_DIR)/*.cmt $(LOGIC_SOURCE_DIR)/*.cmt
+	rm -f $(BIN_DIR)/*.cmo $(BIN_DIR)/*.cmi $(BIN_DIR)/*.o $(LOGIC_BIN_DIR)/*.cmo $(LOGIC_BIN_DIR)/*.cmi $(LOGIC_BIN_DIR)/*.o $(SOURCE_DIR)/parser.mli $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/lexer.ml $(SOURCE_DIR)/*.cmt $(LOGIC_SOURCE_DIR)/*.cmt $(BIN_DIR)/*.cmt $(LOGIC_BIN_DIR)/*.cmt
 
 depend:
 	ocamlfind ocamldep $(OCAMLDEP_FLAGS) $(FILES:%=$(SOURCE_DIR)/%.ml) $(SOURCE_DIR)/lexer.mll $(SOURCE_DIR)/parser.mli |sed -e 's/$(SOURCE_DIR)/$(BIN_DIR)/g' > .depend
