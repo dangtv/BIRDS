@@ -72,7 +72,7 @@ let printert tm =
 (* ------------------------------------------------------------------------- *)
 
 let print_atom prec (R(p,args)) =
-  if mem p ["="; "<"; "<="; ">"; ">="] & length args = 2
+  if mem p ["="; "<"; "<="; ">"; ">="] && length args = 2
   then print_infix_term false 12 12 (" "^p) (el 0 args) (el 1 args)
   else print_fargs p args;;
 
@@ -95,9 +95,9 @@ let rec holds (domain,func,pred as m) v fm =
   | True -> true
   | Atom(R(r,args)) -> pred r (map (termval m v) args)
   | Not(p) -> not(holds m v p)
-  | And(p,q) -> (holds m v p) & (holds m v q)
-  | Or(p,q) -> (holds m v p) or (holds m v q)
-  | Imp(p,q) -> not(holds m v p) or (holds m v q)
+  | And(p,q) -> (holds m v p) && (holds m v q)
+  | Or(p,q) -> (holds m v p) || (holds m v q)
+  | Imp(p,q) -> not(holds m v p) || (holds m v q)
   | Iff(p,q) -> (holds m v p = holds m v q)
   | Forall(x,p) -> forall (fun a -> holds m ((x |-> a) v) p) domain
   | Exists(x,p) -> exists (fun a -> holds m ((x |-> a) v) p) domain;;
@@ -112,7 +112,7 @@ let bool_interp =
       ("0",[]) -> false
     | ("1",[]) -> true
     | ("+",[x;y]) -> not(x = y)
-    | ("*",[x;y]) -> x & y
+    | ("*",[x;y]) -> x && y
     | _ -> failwith "uninterpreted function"
   and pred p args =
     match (p,args) with

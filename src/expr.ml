@@ -163,7 +163,7 @@ let is_aggvar = function
 
 (** Returns true if the provided argument is an anonymous variable *)
 let is_anon = function
-    | AnonVar _ -> true
+    | AnonVar -> true
     | _ -> false
 
 (** Returns true if the provided argument is an equality involving an

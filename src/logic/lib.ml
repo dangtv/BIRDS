@@ -97,12 +97,12 @@ let rec zip l1 l2 =
 let rec forall p l =
   match l with
     [] -> true
-  | h::t -> p(h) & forall p t;;
+  | h::t -> p(h) && forall p t;;
 
 let rec exists p l =
   match l with
     [] -> false
-  | h::t -> p(h) or exists p t;;
+  | h::t -> p(h) || exists p t;;
 
 let partition p l =
     itlist (fun a (yes,no) -> if p a then a::yes,no else yes,a::no) l ([],[]);;
@@ -167,7 +167,7 @@ let rec insertat i x l =
 let rec forall2 p l1 l2 =
   match (l1,l2) with
     [],[] -> true
-  | (h1::t1,h2::t2) -> p h1 h2 & forall2 p t1 t2
+  | (h1::t1,h2::t2) -> p h1 h2 && forall2 p t1 t2
   | _ -> false;;
 
 let index x =
@@ -189,8 +189,8 @@ let rec unzip l =
 
 let rec earlier l x y =
   match l with
-    h::t -> (Pervasives.compare h y <> 0) &
-            (Pervasives.compare h x = 0 or earlier t x y)
+    h::t -> (Pervasives.compare h y <> 0) &&
+            (Pervasives.compare h x = 0 || earlier t x y)
   | [] -> false;;
 
 (* ------------------------------------------------------------------------- *)
@@ -297,7 +297,7 @@ let maximize f l = optimize (>) f l and minimize f l = optimize (<) f l;;
 let setify =
   let rec canonical lis =
      match lis with
-       x::(y::_ as rest) -> Pervasives.compare x y < 0 & canonical rest
+       x::(y::_ as rest) -> Pervasives.compare x y < 0 && canonical rest
      | _ -> true in
   fun l -> if canonical l then l
            else uniq (sort (fun x y -> Pervasives.compare x y <= 0) l);;
@@ -374,7 +374,7 @@ let unions s = setify(itlist (@) s []);;
 let rec mem x lis =
   match lis with
     [] -> false
-  | (h::t) -> Pervasives.compare x h = 0 or mem x t;;
+  | (h::t) -> Pervasives.compare x h = 0 || mem x t;;
 
 (* ------------------------------------------------------------------------- *)
 (* Finding all subsets or all subsets of a given size.                       *)

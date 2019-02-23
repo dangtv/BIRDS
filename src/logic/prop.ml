@@ -42,10 +42,11 @@ let rec eval fm v =
   | True -> true
   | Atom(x) -> v(x)
   | Not(p) -> not(eval p v)
-  | And(p,q) -> (eval p v) & (eval q v)
-  | Or(p,q) -> (eval p v) or (eval q v)
-  | Imp(p,q) -> not(eval p v) or (eval q v)
-  | Iff(p,q) -> (eval p v) = (eval q v);;
+  | And(p,q) -> (eval p v) && (eval q v)
+  | Or(p,q) -> (eval p v) || (eval q v)
+  | Imp(p,q) -> not(eval p v) || (eval q v)
+  | Iff(p,q) -> (eval p v) = (eval q v)
+  | _ -> invalid_arg "eval";;
 
 (* ------------------------------------------------------------------------- *)
 (* Example of use.                                                           *)
@@ -81,7 +82,7 @@ let rec onallvaluations subfn v ats =
   match ats with
     [] -> subfn v
   | p::ps -> let v' t q = if q = p then t else v(q) in
-             onallvaluations subfn (v' false) ps &
+             onallvaluations subfn (v' false) ps &&
              onallvaluations subfn (v' true) ps;;
 
 let print_truthtable fm =
