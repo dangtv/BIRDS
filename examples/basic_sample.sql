@@ -1,34 +1,26 @@
-/*_____get datalog program_______
-?- v(X).
-
-v(V_A1_X) :- v_med(V_A1_X) , not __dummy__delta__insert__s1(V_A1_X).
-
-v_med(X) :- s1(X).
-
-v_med(X) :- s2(X).
-
-__dummy__delta__insert__s1(X) :- v_med(X) , not s1(X) , not s2(X).
-
-______________*/
-
 CREATE OR REPLACE VIEW public.v AS 
-SELECT __dummy__.col0 AS X 
-FROM (SELECT DISTINCT v_a1_0.col0 AS col0 
-FROM (SELECT DISTINCT v_med_a1_0.col0 AS col0 
-FROM (SELECT DISTINCT s1_a1_0.X AS col0 
-FROM public.s1 AS s1_a1_0   UNION SELECT DISTINCT s2_a1_0.X AS col0 
+SELECT __dummy__.COL0 AS X 
+FROM (SELECT DISTINCT v_a1_0.COL0 AS COL0 
+FROM (SELECT DISTINCT v_med_a1_0.COL0 AS COL0 
+FROM (SELECT DISTINCT s1_a1_0.X AS COL0 
+FROM public.s1 AS s1_a1_0   UNION SELECT DISTINCT s2_a1_0.X AS COL0 
 FROM public.s2 AS s2_a1_0  ) AS v_med_a1_0 
 WHERE NOT EXISTS ( SELECT * 
-FROM (SELECT DISTINCT v_med_a1_0.col0 AS col0 
-FROM (SELECT DISTINCT s1_a1_0.X AS col0 
-FROM public.s1 AS s1_a1_0   UNION SELECT DISTINCT s2_a1_0.X AS col0 
+FROM (SELECT DISTINCT v_med_a1_0.COL0 AS COL0 
+FROM (SELECT DISTINCT s1_a1_0.X AS COL0 
+FROM public.s1 AS s1_a1_0   UNION SELECT DISTINCT s2_a1_0.X AS COL0 
 FROM public.s2 AS s2_a1_0  ) AS v_med_a1_0 
 WHERE NOT EXISTS ( SELECT * 
 FROM public.s1 AS s1_a1 
-WHERE s1_a1.X IS NOT DISTINCT FROM v_med_a1_0.col0 ) AND NOT EXISTS ( SELECT * 
+WHERE s1_a1.X IS NOT DISTINCT FROM v_med_a1_0.COL0 ) AND NOT EXISTS ( SELECT * 
 FROM public.s2 AS s2_a1 
-WHERE s2_a1.X IS NOT DISTINCT FROM v_med_a1_0.col0 ) ) AS __dummy__delta__insert__s1_a1 
-WHERE __dummy__delta__insert__s1_a1.col0 IS NOT DISTINCT FROM v_med_a1_0.col0 ) ) AS v_a1_0  ) AS __dummy__;
+WHERE s2_a1.X IS NOT DISTINCT FROM v_med_a1_0.COL0 ) ) AS _derived_Δ_ins_s1_a1 
+WHERE _derived_Δ_ins_s1_a1.COL0 IS NOT DISTINCT FROM v_med_a1_0.COL0 ) ) AS v_a1_0  ) AS __dummy__;
+
+DROP MATERIALIZED VIEW IF EXISTS public.__dummy__materialized_v;
+
+CREATE  MATERIALIZED VIEW public.__dummy__materialized_v AS 
+SELECT * FROM public.v;
 
 CREATE OR REPLACE FUNCTION public.v_delta_action()
 RETURNS TRIGGER
@@ -39,54 +31,70 @@ AS $$
   text_var1 text;
   text_var2 text;
   text_var3 text;
-  temprec__dummy__delta__delete__s1 public.s1%ROWTYPE;
-temprec__dummy__delta__delete__s2 public.s2%ROWTYPE;
-temprec__dummy__delta__insert__s1 public.s1%ROWTYPE;
+  temprecΔ_del_s1 public.s1%ROWTYPE;
+temprecΔ_del_s2 public.s2%ROWTYPE;
+temprecΔ_ins_s1 public.s1%ROWTYPE;
   BEGIN
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = 'v_delta_action_flag') THEN
         -- RAISE NOTICE 'execute procedure v_delta_action';
         CREATE TEMPORARY TABLE v_delta_action_flag ON COMMIT DROP AS (SELECT true as finish);
-        CREATE TEMPORARY TABLE __dummy__delta__delete__s1 WITH OIDS ON COMMIT DROP AS SELECT (ROW(col0) :: public.s1).* 
-            FROM (SELECT DISTINCT __dummy__delta__delete__s1_a1_0.col0 AS col0 
-FROM (SELECT DISTINCT s1_a1_0.X AS col0 
+        IF EXISTS (SELECT WHERE false )
+        THEN 
+          RAISE check_violation USING MESSAGE = 'Invalid update on view';
+        END IF;
+        CREATE TEMPORARY TABLE Δ_del_s1 WITH OIDS ON COMMIT DROP AS SELECT (ROW(COL0) :: public.s1).* 
+            FROM (SELECT DISTINCT Δ_del_s1_a1_0.COL0 AS COL0 
+FROM (SELECT DISTINCT s1_a1_0.X AS COL0 
 FROM public.s1 AS s1_a1_0 
 WHERE NOT EXISTS ( SELECT * 
-FROM (SELECT DISTINCT __temp__v_a1_0.X AS col0 
-FROM __temp__v AS __temp__v_a1_0  ) AS v_a1 
-WHERE v_a1.col0 IS NOT DISTINCT FROM s1_a1_0.X ) ) AS __dummy__delta__delete__s1_a1_0  ) AS __dummy__delta__delete__s1_extra_alias;
+FROM (SELECT DISTINCT __dummy__materialized_v_a1_0.X AS COL0 
+FROM public.__dummy__materialized_v AS __dummy__materialized_v_a1_0 
+WHERE NOT EXISTS ( SELECT * 
+FROM __temp__Δ_del_v AS __temp__Δ_del_v_a1 
+WHERE __temp__Δ_del_v_a1.X IS NOT DISTINCT FROM __dummy__materialized_v_a1_0.X )  UNION SELECT DISTINCT __temp__Δ_ins_v_a1_0.X AS COL0 
+FROM __temp__Δ_ins_v AS __temp__Δ_ins_v_a1_0  ) AS v_a1 
+WHERE v_a1.COL0 IS NOT DISTINCT FROM s1_a1_0.X ) ) AS Δ_del_s1_a1_0  ) AS Δ_del_s1_extra_alias;
 
-CREATE TEMPORARY TABLE __dummy__delta__delete__s2 WITH OIDS ON COMMIT DROP AS SELECT (ROW(col0) :: public.s2).* 
-            FROM (SELECT DISTINCT __dummy__delta__delete__s2_a1_0.col0 AS col0 
-FROM (SELECT DISTINCT s2_a1_0.X AS col0 
+CREATE TEMPORARY TABLE Δ_del_s2 WITH OIDS ON COMMIT DROP AS SELECT (ROW(COL0) :: public.s2).* 
+            FROM (SELECT DISTINCT Δ_del_s2_a1_0.COL0 AS COL0 
+FROM (SELECT DISTINCT s2_a1_0.X AS COL0 
 FROM public.s2 AS s2_a1_0 
 WHERE NOT EXISTS ( SELECT * 
-FROM (SELECT DISTINCT __temp__v_a1_0.X AS col0 
-FROM __temp__v AS __temp__v_a1_0  ) AS v_a1 
-WHERE v_a1.col0 IS NOT DISTINCT FROM s2_a1_0.X ) ) AS __dummy__delta__delete__s2_a1_0  ) AS __dummy__delta__delete__s2_extra_alias;
+FROM (SELECT DISTINCT __dummy__materialized_v_a1_0.X AS COL0 
+FROM public.__dummy__materialized_v AS __dummy__materialized_v_a1_0 
+WHERE NOT EXISTS ( SELECT * 
+FROM __temp__Δ_del_v AS __temp__Δ_del_v_a1 
+WHERE __temp__Δ_del_v_a1.X IS NOT DISTINCT FROM __dummy__materialized_v_a1_0.X )  UNION SELECT DISTINCT __temp__Δ_ins_v_a1_0.X AS COL0 
+FROM __temp__Δ_ins_v AS __temp__Δ_ins_v_a1_0  ) AS v_a1 
+WHERE v_a1.COL0 IS NOT DISTINCT FROM s2_a1_0.X ) ) AS Δ_del_s2_a1_0  ) AS Δ_del_s2_extra_alias;
 
-CREATE TEMPORARY TABLE __dummy__delta__insert__s1 WITH OIDS ON COMMIT DROP AS SELECT (ROW(col0) :: public.s1).* 
-            FROM (SELECT DISTINCT __dummy__delta__insert__s1_a1_0.col0 AS col0 
-FROM (SELECT DISTINCT v_a1_0.col0 AS col0 
-FROM (SELECT DISTINCT __temp__v_a1_0.X AS col0 
-FROM __temp__v AS __temp__v_a1_0  ) AS v_a1_0 
+CREATE TEMPORARY TABLE Δ_ins_s1 WITH OIDS ON COMMIT DROP AS SELECT (ROW(COL0) :: public.s1).* 
+            FROM (SELECT DISTINCT Δ_ins_s1_a1_0.COL0 AS COL0 
+FROM (SELECT DISTINCT v_a1_0.COL0 AS COL0 
+FROM (SELECT DISTINCT __dummy__materialized_v_a1_0.X AS COL0 
+FROM public.__dummy__materialized_v AS __dummy__materialized_v_a1_0 
+WHERE NOT EXISTS ( SELECT * 
+FROM __temp__Δ_del_v AS __temp__Δ_del_v_a1 
+WHERE __temp__Δ_del_v_a1.X IS NOT DISTINCT FROM __dummy__materialized_v_a1_0.X )  UNION SELECT DISTINCT __temp__Δ_ins_v_a1_0.X AS COL0 
+FROM __temp__Δ_ins_v AS __temp__Δ_ins_v_a1_0  ) AS v_a1_0 
 WHERE NOT EXISTS ( SELECT * 
 FROM public.s1 AS s1_a1 
-WHERE s1_a1.X IS NOT DISTINCT FROM v_a1_0.col0 ) AND NOT EXISTS ( SELECT * 
+WHERE s1_a1.X IS NOT DISTINCT FROM v_a1_0.COL0 ) AND NOT EXISTS ( SELECT * 
 FROM public.s2 AS s2_a1 
-WHERE s2_a1.X IS NOT DISTINCT FROM v_a1_0.col0 ) ) AS __dummy__delta__insert__s1_a1_0  ) AS __dummy__delta__insert__s1_extra_alias; 
+WHERE s2_a1.X IS NOT DISTINCT FROM v_a1_0.COL0 ) ) AS Δ_ins_s1_a1_0  ) AS Δ_ins_s1_extra_alias; 
 
-FOR temprec__dummy__delta__delete__s1 IN ( SELECT * FROM __dummy__delta__delete__s1) LOOP 
-            DELETE FROM public.s1 WHERE ROW(X) IS NOT DISTINCT FROM  temprec__dummy__delta__delete__s1;
+FOR temprecΔ_del_s1 IN ( SELECT * FROM Δ_del_s1) LOOP 
+            DELETE FROM public.s1 WHERE ROW(X) IS NOT DISTINCT FROM  temprecΔ_del_s1;
             END LOOP;
-DROP TABLE __dummy__delta__delete__s1;
+DROP TABLE Δ_del_s1;
 
-FOR temprec__dummy__delta__delete__s2 IN ( SELECT * FROM __dummy__delta__delete__s2) LOOP 
-            DELETE FROM public.s2 WHERE ROW(X) IS NOT DISTINCT FROM  temprec__dummy__delta__delete__s2;
+FOR temprecΔ_del_s2 IN ( SELECT * FROM Δ_del_s2) LOOP 
+            DELETE FROM public.s2 WHERE ROW(X) IS NOT DISTINCT FROM  temprecΔ_del_s2;
             END LOOP;
-DROP TABLE __dummy__delta__delete__s2;
+DROP TABLE Δ_del_s2;
 
-INSERT INTO public.s1 SELECT * FROM  __dummy__delta__insert__s1; 
-DROP TABLE __dummy__delta__insert__s1;
+INSERT INTO public.s1 SELECT * FROM  Δ_ins_s1; 
+DROP TABLE Δ_ins_s1;
     END IF;
     RETURN NULL;
   EXCEPTION
@@ -111,13 +119,20 @@ AS $$
   text_var2 text;
   text_var3 text;
   BEGIN
-    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '__temp__v')
+    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '__temp__Δ_ins_v' OR table_name = '__temp__Δ_del_v')
     THEN
         -- RAISE NOTICE 'execute procedure v_materialization';
-        CREATE TEMPORARY TABLE __temp__v WITH OIDS ON COMMIT DROP AS SELECT * FROM public.v;
-        CREATE CONSTRAINT TRIGGER __temp__peer1_public_trigger_delta_action
+        REFRESH MATERIALIZED VIEW public.__dummy__materialized_v;
+        CREATE TEMPORARY TABLE __temp__Δ_ins_v ( LIKE public.__dummy__materialized_v INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
+        CREATE CONSTRAINT TRIGGER __temp__v_trigger_delta_action
         AFTER INSERT OR UPDATE OR DELETE ON 
-            __temp__v DEFERRABLE INITIALLY DEFERRED 
+            __temp__Δ_ins_v DEFERRABLE INITIALLY DEFERRED 
+            FOR EACH ROW EXECUTE PROCEDURE public.v_delta_action();
+
+        CREATE TEMPORARY TABLE __temp__Δ_del_v ( LIKE public.__dummy__materialized_v INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
+        CREATE CONSTRAINT TRIGGER __temp__v_trigger_delta_action
+        AFTER INSERT OR UPDATE OR DELETE ON 
+            __temp__Δ_del_v DEFERRABLE INITIALLY DEFERRED 
             FOR EACH ROW EXECUTE PROCEDURE public.v_delta_action();
     END IF;
     RETURN NULL;
@@ -150,12 +165,18 @@ AS $$
   BEGIN
     -- RAISE NOTICE 'execute procedure v_update';
     IF TG_OP = 'INSERT' THEN
-      INSERT INTO __temp__v SELECT (NEW).*; 
+      -- raise notice 'NEW: %', NEW;
+      DELETE FROM __temp__Δ_del_v WHERE ROW(X) IS NOT DISTINCT FROM NEW;
+      INSERT INTO __temp__Δ_ins_v SELECT (NEW).*; 
     ELSIF TG_OP = 'UPDATE' THEN
-      DELETE FROM __temp__v WHERE ROW(X) IS NOT DISTINCT FROM OLD;
-      INSERT INTO __temp__v SELECT (NEW).*; 
+      DELETE FROM __temp__Δ_ins_v WHERE ROW(X) IS NOT DISTINCT FROM OLD;
+      INSERT INTO __temp__Δ_del_v SELECT (OLD).*;
+      DELETE FROM __temp__Δ_del_v WHERE ROW(X) IS NOT DISTINCT FROM NEW;
+      INSERT INTO __temp__Δ_ins_v SELECT (NEW).*; 
     ELSIF TG_OP = 'DELETE' THEN
-      DELETE FROM __temp__v WHERE ROW(X) IS NOT DISTINCT FROM OLD;
+      -- raise notice 'OLD: %', OLD;
+      DELETE FROM __temp__Δ_ins_v WHERE ROW(X) IS NOT DISTINCT FROM OLD;
+      INSERT INTO __temp__Δ_del_v SELECT (OLD).*;
     END IF;
     RETURN NULL;
   EXCEPTION

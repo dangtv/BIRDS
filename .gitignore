@@ -12,3 +12,5 @@ src/parser.ml
 src/parser.mli
 src/*.cmt
 src/logic/*.cmt
+
+temp.smt2

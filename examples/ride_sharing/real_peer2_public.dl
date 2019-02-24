@@ -1,12 +1,32 @@
-% describe the schema of sources and views
-%s:peer2_vehicle(VEHICLE_ID , CURRENT_LOCATION , SEAT_COUNT , REQUEST_ID , 
-    PICKUP_LOCATION , DROPOFF_LOCATION).
-%s:area(ORIGINAL_NODE , AREA_NODE).
-%v:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
-    PICKUP_LOCATION , DROPOFF_LOCATION).
+%s:peer2_vehicle(VEHICLE_ID:int , CURRENT_LOCATION:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+%s:area(ORIGINAL_NODE:int , AREA_NODE:int).
+%v:peer2_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
 
-% rule for insertion and deletion from peer2_vehicle
--peer2_vehicle (V, L, S, R, P, D) :- peer2_vehicle (V, L, S, R, P, D), area (L,A), 
-    not peer2_public(V, A, S, R, P, D).
-+peer2_vehicle (V, L, S, R, P, D) :- peer2_public (V, A, S, R, P, D), peer2_vehicle (V,L,_, _, _, _), 
-    area (L,A), not peer2_vehicle(V, L, S, R, P, D).
+%constraints
+% primary key VEHICLE_ID on peer2_vehicle
+_|_ :- peer2_vehicle (V, L1, S1, R1, P1, D1), peer2_vehicle (V, L2, S2, R2, P2, D2), NOT L1 = L2.
+_|_ :- peer2_vehicle (V, L1, S1, R1, P1, D1), peer2_vehicle (V, L2, S2, R2, P2, D2), NOT S1 = S2.
+_|_ :- peer2_vehicle (V, L1, S1, R1, P1, D1), peer2_vehicle (V, L2, S2, R2, P2, D2), NOT R1 = R2.
+_|_ :- peer2_vehicle (V, L1, S1, R1, P1, D1), peer2_vehicle (V, L2, S2, R2, P2, D2), NOT P1 = P2.
+_|_ :- peer2_vehicle (V, L1, S1, R1, P1, D1), peer2_vehicle (V, L2, S2, R2, P2, D2), NOT D1 = D2.
+
+% primary key ORIGINAL_NODE
+_|_ :- area (ORIGINAL_NODE, AREA_NODE1),  area (ORIGINAL_NODE, AREA_NODE2), NOT AREA_NODE1 = AREA_NODE2.
+
+% primary key VEHICLE_ID on peer2_public
+_|_ :- peer2_public (V, L1, S1, R1, P1, D1), peer2_public (V, L2, S2, R2, P2, D2), NOT L1 = L2.
+_|_ :- peer2_public (V, L1, S1, R1, P1, D1), peer2_public (V, L2, S2, R2, P2, D2), NOT S1 = S2.
+_|_ :- peer2_public (V, L1, S1, R1, P1, D1), peer2_public (V, L2, S2, R2, P2, D2), NOT R1 = R2.
+_|_ :- peer2_public (V, L1, S1, R1, P1, D1), peer2_public (V, L2, S2, R2, P2, D2), NOT P1 = P2.
+_|_ :- peer2_public (V, L1, S1, R1, P1, D1), peer2_public (V, L2, S2, R2, P2, D2), NOT D1 = D2.
+
+% prevent updates on the column CURRENT_AREA
+_|_ :-peer2_vehicle (V, L, S, R, P, D), area (L,A1), peer2_public (V, A2, _, _, _, _), NOT A1 = A2.
+% prevent insertion or deletion of a new vehicle id
+all_id(V) :- peer2_vehicle (V, L, _, _, _, _), area (L,_).
+_|_ :- all_id(V), NOT peer2_public (V, _, _, _, _, _).
+_|_ :-peer2_public (V, _, _, _, _, _), NOT all_id(V).
+
+% update strategy
+-peer2_vehicle (V, L, S, R, P, D) :- peer2_vehicle (V, L, S, R, P, D), area (L,A), not peer2_public(V, A, S, R, P, D).
++peer2_vehicle (V, L, S, R, P, D) :- peer2_public (V, A, S, R, P, D), peer2_vehicle (V,L,_, _, _, _), area (L,A), not peer2_vehicle(V, L, S, R, P, D).

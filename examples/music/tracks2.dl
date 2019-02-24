@@ -1,6 +1,6 @@
 % describe the schema of sources and views
-%s:tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
-%v:tracks2(TRACK,RATING,ALBUM,QUANTITY).
+%s:tracks1(TRACK:string,DATE:int,RATING:int,ALBUM:string,QUANTITY:int).
+%v:tracks2(TRACK:string,RATING:int,ALBUM:string,QUANTITY:int).
 
 %rule for insertion to tracks1
 +tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY),

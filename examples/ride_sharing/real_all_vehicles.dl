@@ -1,19 +1,12 @@
-% describe the schema of sources and views
-%s:peer1_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
-    PICKUP_LOCATION , DROPOFF_LOCATION).
-%s:peer2_public(VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
-    PICKUP_LOCATION , DROPOFF_LOCATION).
-%v:all_vehicles(COMPANY_ID, VEHICLE_ID , CURRENT_AREA , SEAT_COUNT , REQUEST_ID , 
-    PICKUP_LOCATION , DROPOFF_LOCATION).
+%s:peer1_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+%s:peer2_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+%v:all_vehicles(COMPANY_ID:int, VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
 
-% rule for insertion and deletion from peer1_public
-+peer1_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D),C = 1, 
-    NOT peer1_public(V, A, S, R, P, D).
--peer1_public(V, A, S, R, P, D) :- peer1_public(V, A, S, R, P, D), C = 1, 
-    NOT all_vehicles(C, V, A, S, R, P, D).
+% constraint
+% ensure that the company_id in all_vehicles is 1 or 2
+_|_ :- all_vehicles(C, V, A, S, R, P, D), NOT C=1, NOT C=2.
 
-% rule for insertion and deletion from peer2_public
-+peer2_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D), C = 2, 
-    NOT peer2_public(V, A, S, R, P, D).
--peer2_public(V, A, S, R, P, D) :- peer2_public(V, A, S, R, P, D), C = 2, 
-    NOT all_vehicles(C, V, A, S, R, P, D).
++peer1_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D),C = 1, NOT peer1_public(V, A, S, R, P, D).
+-peer1_public(V, A, S, R, P, D) :- peer1_public(V, A, S, R, P, D), C = 1, NOT all_vehicles(C, V, A, S, R, P, D).
++peer2_public(V, A, S, R, P, D) :- all_vehicles(C, V, A, S, R, P, D), C = 2, NOT peer2_public(V, A, S, R, P, D).
+-peer2_public(V, A, S, R, P, D) :- peer2_public(V, A, S, R, P, D), C = 2, NOT all_vehicles(C, V, A, S, R, P, D).

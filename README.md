@@ -29,7 +29,7 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
 
 ### Installation
 
-*  Macosx: 
+* Macosx: 
   * Installing Lean
     ```bash 
     brew install lean
@@ -51,7 +51,7 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
 
   * Installing BIRDS: copy execution file to `/usr/local/bin/`
 
-*  Ubuntu: 
+* Ubuntu: 
   * Installing Lean
     ```bash 
     apt-get install lean
