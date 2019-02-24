@@ -7,8 +7,8 @@ DIR_GUARD=@mkdir -p $(@D)
 EX_NAME=birds
 
 # source folder
-SOURCE_DIR = src
-LOGIC_SOURCE_DIR = src/logic 
+SOURCE_DIR=src
+LOGIC_SOURCE_DIR=src/logic
 
 # binary folder for compilation
 BIN_DIR=bin
@@ -16,20 +16,26 @@ LOGIC_BIN_DIR=bin/logic
 RELEASE_DIR = release
 LOGIC_RELEASE_DIR = release/logic
 
-OCAMLC_FLAGS=-I $(BIN_DIR) -I $(LOGIC_BIN_DIR)
-OCAMLOPT_FLAGS=-I $(RELEASE_DIR) -I $(LOGIC_RELEASE_DIR)
+OCAMLC_FLAGS=-bin-annot -I $(BIN_DIR) -I $(LOGIC_BIN_DIR)
+OCAMLOPT_FLAGS=-bin-annot -I $(RELEASE_DIR) -I $(LOGIC_RELEASE_DIR)
 OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR)
 
 #Name of the files that are part of the project
 MAIN_FILE=main
-FILES=\
-    logic/lib logic/intro logic/formulas logic/prop logic/fol logic/skolem logic/fol_ex\
+LOGIC_FILES=\
+    lib intro formulas prop fol skolem fol_ex\
+
+TOP_FILES=\
     expr utils parser lexer\
 	rule_preprocess derivation\
     ast2sql\
 
-.PHONY: all release clean depend
-all: $(BIN_DIR)/$(EX_NAME)
+FILES=\
+    $(LOGIC_FILES:%=logic/%)\
+    $(TOP_FILES)
+
+.PHONY: all release clean depend annot
+all: $(BIN_DIR)/$(EX_NAME) annot
 
 #Rule for generating the final executable file
 $(BIN_DIR)/$(EX_NAME): $(FILES:%=$(BIN_DIR)/%.cmo) $(BIN_DIR)/$(MAIN_FILE).cmo
@@ -54,14 +60,21 @@ $(SOURCE_DIR)/lexer.ml:	$(SOURCE_DIR)/lexer.mll
 	ocamllex $<
 
 #General rule for compiling
-$(BIN_DIR)/%.cmi $(BIN_DIR)/%.cmo: $(SOURCE_DIR)/%.ml
+$(BIN_DIR)/%.cmi $(BIN_DIR)/%.cmo $(BIN_DIR)/%.cmt: $(SOURCE_DIR)/%.ml
 	$(DIR_GUARD)
 	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(BIN_DIR)/$* -c $<
-	
+
+annot: $(FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt)
+
+$(LOGIC_FILES:%=$(LOGIC_SOURCE_DIR)/%.cmt) $(TOP_FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt): $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(MAIN_FILE:%=$(BIN_DIR)/%.cmt)
+	cp $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(LOGIC_SOURCE_DIR)/
+	cp $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(SOURCE_DIR)/
+	cp $(MAIN_FILE:%=$(BIN_DIR)/%.cmt) $(SOURCE_DIR)/
+
 include .depend
 
 clean:
-	rm -f $(BIN_DIR)/*.cmo $(BIN_DIR)/*.cmi $(BIN_DIR)/*.o $(LOGIC_BIN_DIR)/*.cmo $(LOGIC_BIN_DIR)/*.cmi $(LOGIC_BIN_DIR)/*.o $(SOURCE_DIR)/parser.mli $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/lexer.ml 
+	rm -f $(BIN_DIR)/*.cmo $(BIN_DIR)/*.cmi $(BIN_DIR)/*.o $(LOGIC_BIN_DIR)/*.cmo $(LOGIC_BIN_DIR)/*.cmi $(LOGIC_BIN_DIR)/*.o $(SOURCE_DIR)/parser.mli $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/lexer.ml $(SOURCE_DIR)/*.cmt $(LOGIC_SOURCE_DIR)/*.cmt $(BIN_DIR)/*.cmt $(LOGIC_BIN_DIR)/*.cmt
 
 depend:
 	ocamlfind ocamldep $(OCAMLDEP_FLAGS) $(FILES:%=$(SOURCE_DIR)/%.ml) $(SOURCE_DIR)/lexer.mll $(SOURCE_DIR)/parser.mli |sed -e 's/$(SOURCE_DIR)/$(BIN_DIR)/g' > .depend
@@ -90,4 +103,3 @@ $(RELEASE_DIR)/parser.cmx:	$(SOURCE_DIR)/parser.ml $(RELEASE_DIR)/parser.cmi
 $(RELEASE_DIR)/%.cmi $(RELEASE_DIR)/%.cmx: $(SOURCE_DIR)/%.ml
 	$(DIR_GUARD)
 	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(RELEASE_DIR)/$* -c $<
-	

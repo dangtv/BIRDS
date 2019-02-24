@@ -357,7 +357,7 @@ let
 
   | 22 ->
 # 60 "src/lexer.mll"
-                          ( NE )
+                           ( NE )
 # 362 "src/lexer.ml"
 
   | 23 ->

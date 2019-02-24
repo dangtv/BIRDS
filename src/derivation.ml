@@ -27,7 +27,7 @@ let build_schema_mapping (mapping:vartab) (col_names:colnamtab) (view:rterm) (he
   let cols = Hashtbl.find col_names key in
   let in_v cn v =
     let comp_cn =
-      String.uppercase (pname^"_a"^(string_of_int arity)^
+      String.uppercase_ascii (pname^"_a"^(string_of_int arity)^
                         "_"^cn)
     in
     match v with
@@ -48,7 +48,7 @@ let build_schema_mapping (mapping:vartab) (col_names:colnamtab) (view:rterm) (he
   let cols = Hashtbl.find col_names key in
   let in_v cn v =
     let comp_cn =
-      String.uppercase (pname^"_a"^(string_of_int arity)^
+      String.uppercase_ascii (pname^"_a"^(string_of_int arity)^
                         "_"^cn)
     in
     match v with
@@ -91,7 +91,7 @@ let rename_if_isview (view:rterm) (t:term) =
   | _ -> t;;
 
 let varlist_of_symtkey (key:symtkey) (col_names:colnamtab) =
-  stringlist_to_varlist (List.map (fun str -> String.uppercase ((get_symtkey_predname key^"_a"^(string_of_int (get_symtkey_arity key))^"_")^str)) (Hashtbl.find col_names key))
+  stringlist_to_varlist (List.map (fun str -> String.uppercase_ascii ((get_symtkey_predname key^"_a"^(string_of_int (get_symtkey_arity key))^"_")^str)) (Hashtbl.find col_names key))
 
 let pos_view_head_list (view:rterm) (idb:symtable) (col_names:colnamtab)=
   let extract_literal key rules lst=
