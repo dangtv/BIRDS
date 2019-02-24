@@ -131,23 +131,23 @@ let lean_character_of_operator o = match o with
   | _ -> failwith "unkown symbol of "^o
 
 let lean_stype_of_string str = 
-  try  (int_of_string str; "int") with
+  try  (ignore(int_of_string str); "int") with
     (* try test () with *)
     | Failure e -> 
-        try  (float_of_string str; "real") with
+        try  (ignore(float_of_string str); "real") with
         (* try test () with *)
         | Failure e -> 
-            try  ( bool_of_string str; "Prop") with
+            try  (ignore(bool_of_string str); "Prop") with
             | Failure e | Invalid_argument e ->  if (str = "null") then  "int" else  "string"
 
 let lean_string_of_string str = 
-  try  (int_of_string str; str) with
+  try  (ignore(int_of_string str); str) with
     (* try test () with *)
     | Failure e -> 
-        try  (float_of_string str; str) with
+        try  (ignore(float_of_string str); str) with
         (* try test () with *)
         | Failure e -> 
-            try  ( bool_of_string str; str) with
+            try  (ignore(bool_of_string str); str) with
             | Failure e | Invalid_argument e ->  
             if (str = "null") then  str else "\""^(String.sub str 1 (String.length str -2))^"\""
 
@@ -247,13 +247,13 @@ let z3_character_of_operator o = match o with
   | _ -> failwith "unkown symbol of "^o
 
 let z3_string_of_string str = 
-  try  (int_of_string str; str) with
+  try  (ignore(int_of_string str); str) with
     (* try test () with *)
     | Failure e -> 
-        try  (float_of_string str; str) with
+        try  (ignore(float_of_string str); str) with
         (* try test () with *)
         | Failure e -> 
-            try  ( bool_of_string str; str) with
+            try  (ignore(bool_of_string str); str) with
             | Failure e | Invalid_argument e ->  
             if (str = "null") then  str else "\""^(String.sub str 1 (String.length str -2))^"\""
 
