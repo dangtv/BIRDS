@@ -102,7 +102,7 @@ let import_table_schema (conn:Postgresql.connection) tname =
     let ordpos t = int_of_string (List.nth t 2) in 
     let stuples = List.sort (fun a b -> (ordpos a) - (ordpos b)) tuples in
     let tuple_to_var_and_type t = 
-        let col = (String.uppercase (List.hd t)) in
+        let col = (String.uppercase_ascii (List.hd t)) in
         let type_of_var = type_of_postgrestype (List.nth t 1) in 
         col,type_of_var in
     let col_types = List.map tuple_to_var_and_type stuples in

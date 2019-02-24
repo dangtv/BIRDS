@@ -389,7 +389,7 @@ let stype_of_const c = match c with
     | Real _ -> Sreal 
     | String _ -> Sstring 
     | Bool _ -> Sbool
-    | Null _ -> invalid_arg "Null does not have type"
+    | Null -> invalid_arg "Null does not have type"
 
 (** Take a delta rterm and return a dummy rterm of new source  *)
 let get_new_source_rel_pred del_rterm = match del_rterm with 

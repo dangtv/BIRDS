@@ -16,8 +16,8 @@ LOGIC_BIN_DIR=bin/logic
 RELEASE_DIR = release
 LOGIC_RELEASE_DIR = release/logic
 
-OCAMLC_FLAGS=-bin-annot -I $(BIN_DIR) -I $(LOGIC_BIN_DIR)
-OCAMLOPT_FLAGS=-bin-annot -I $(RELEASE_DIR) -I $(LOGIC_RELEASE_DIR)
+OCAMLC_FLAGS=-bin-annot -w -26 -I $(BIN_DIR) -I $(LOGIC_BIN_DIR)
+OCAMLOPT_FLAGS=-bin-annot -w -26 -I $(RELEASE_DIR) -I $(LOGIC_RELEASE_DIR)
 OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR)
 
 #Name of the files that are part of the project
@@ -35,7 +35,7 @@ TOP_FILES=\
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
     $(TOP_FILES)
-	
+
 .PHONY: all release clean depend annot
 all: $(BIN_DIR)/$(EX_NAME) annot
 
