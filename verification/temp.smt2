@@ -1,0 +1,7 @@
+(declare-sort Any 0)
+(declare-fun lean_int-of_nat (Int) Int)
+(declare-fun lean_0-_fresh-12-127634 (String Int String Int) Bool)
+(declare-fun lean_0-_fresh-12-127629 (String Int String Int) Bool)
+(assert (not (forall ((lean__fresh-10-235423 String)) (forall ((lean__fresh-10-235433 Int)) (forall ((lean__fresh-10-235442 String)) (forall ((lean__fresh-10-235450 Int)) (=> (lean_0-_fresh-12-127634 lean__fresh-10-235423 lean__fresh-10-235433 lean__fresh-10-235442 lean__fresh-10-235450) (=> (not (lean_0-_fresh-12-127629 lean__fresh-10-235423 lean__fresh-10-235433 lean__fresh-10-235442 lean__fresh-10-235450)) (=> (> lean__fresh-10-235450 2) (=> (lean_0-_fresh-12-127629 lean__fresh-10-235423 lean__fresh-10-235433 lean__fresh-10-235442 lean__fresh-10-235450) (=> (not (lean_0-_fresh-12-127634 lean__fresh-10-235423 lean__fresh-10-235433 lean__fresh-10-235442 lean__fresh-10-235450)) (=> (> lean__fresh-10-235450 2) false))))))))))))
+(assert (forall ((lean__fresh-10-235408 Int)) (<= 0 (lean_int-of_nat lean__fresh-10-235408))))
+(check-sat)

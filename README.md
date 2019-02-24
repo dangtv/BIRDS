@@ -7,8 +7,11 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
 ### Compilation
 
 * Dependencies:
-  * ocaml >= 4.02.3: [installation guideline](https://ocaml.org/docs/install.html)
   * GNU Make >= 4.1
+  * ocaml >= 4.07.0: [installation guideline](https://ocaml.org/docs/install.html)
+  * Ocaml package dependencies:
+    * num (>= 1.0): opam install num
+    * postgresql-ocaml (>=4.0.1): opam install postgresql
 
 * Compiling:
   * Clean:
@@ -23,6 +26,55 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     ```bash
     make release
     ```
+
+### Installation
+
+*  Macosx: 
+  * Installing Lean
+    ```bash 
+    brew install lean
+    ```
+  * Compiling Lean package
+  Go to folder verification: `cd verification`
+    ```bash 
+    leanpkg configure
+    leanpkg build
+    ```
+  * Configure for Lean: add new file `/Users/<user_name>/.lean/leanpkg.path` with the following (replace `<path_to_this_folder>` with the path to this souce code)
+  ```bash 
+    builtin_path
+    path <path_to_this_folder>/verification/_target/deps/mathlib/.
+    path <path_to_this_folder>/verification/src
+    path <path_to_this_folder>/verification/_target/deps/super/src
+  ```
+  * Installing z3: download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases), rename the execution file to `z3` and copy it to `/usr/local/bin/` 
+
+  * Installing BIRDS: copy execution file to `/usr/local/bin/`
+
+*  Ubuntu: 
+  * Installing Lean
+    ```bash 
+    apt-get install lean
+    ```
+  * Compiling Lean package
+  Go to folder verification: `cd verification`
+    ```bash 
+    leanpkg configure
+    leanpkg build
+    ```
+  * Configure for Lean: add new file `/root/.lean/leanpkg.path` with the following (replace `<path_to_this_folder>` with the path to this souce code)
+  ```bash 
+    builtin_path
+    path <path_to_this_folder>/verification/_target/deps/mathlib/.
+    path <path_to_this_folder>/verification/src
+    path <path_to_this_folder>/verification/_target/deps/super/src
+  ```
+  * Installing z3:  
+    ```bash 
+    apt-get install z3
+    ```
+  * Installing BIRDS: copy execution file to `/usr/local/bin/`
+
 
 ### Usage
 
@@ -40,54 +92,4 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
 * For example:
     ```bash
     ./bin/birds -s public -f tests/test1_put_rule.dl -o tests/test1.sql
-    ```
-
-## Other Datalog systems
-
-* Datalog source file: *.dl
-* Datalog runtime environment: [Datalog Educational System (DES)](http://des.sourceforge.net), or [DLV System](http://www.dlvsystem.com/dlv/)
-
-### Run a pair of put and get datalog programs by using [DES](http://des.sourceforge.net)
-
-* Go to DES CLI :
-    ```bash
-    des
-    ```
-* put:
-  * load the ground facts:
-    ```bash
-    /consult tests/test1_put_fact.dl
-    ```
-  * load the rules of put (you need to remove the first line from tests/test1_put_rule.dl):
-    ```bash
-    /[+ tests/test1_put_rule.dl ]
-    ```
-  * get the result of tracks1_prime:
-    ```bash
-    tracks1_prime(TRACK,DATE,RATING,ALBUM,QUANTITY)
-    ```
-* get:
-  * load the ground facts:
-    ```bash
-    /consult tests/test1_get_fact.dl
-    ```
-  * load the rules of put:
-    ```bash
-    /[+ tests/test1_get_rule.dl ]
-    ```
-  * get the result of tracks2_prime:
-    ```bash
-    tracks2_prime(TRACK,RATING,ALBUM,QUANTITY)
-    ```
-
-### Run a pair of put and get datalog programs by using [DLV](http://www.dlvsystem.com/dlv/)
-
-* put: (need to remove the first line in test2_put_rule.dl) (test2_put.db is the set of ground fact)
-    ```bash
-    dlv test2_put_rule.dl test2_put.db -filter=tracks2_prime
-    ```
-
-* get: (test2_get.db is the set of ground fact)
-    ```bash
-    dlv test2_get_rule.dl test2_get.db -filter=tracks3_prime
     ```

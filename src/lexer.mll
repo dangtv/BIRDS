@@ -13,15 +13,35 @@
         "NOT", NOT;
         "Not", NOT;
         "not", NOT;
-        "FALSE", BOT;
-        "False", BOT;
-        "false", BOT;
-        "TRUE", TOP;
-        "True", TOP;
-        "true", TOP;
+        "FALSE", FF;
+        "False", FF;
+        "false", FF;
+        "BOT", BOT;
+        "Bot", BOT;
+        "bot", BOT;
+        "TRUE", TT;
+        "True", TT;
+        "true", TT;
+        "TOP", TOP;
+        "Top", TOP;
+        "top", TOP;
         "null", NULL;
         "Null", NULL;
         "NULL", NULL;
+        "int", SINT;
+        "INT", SINT;
+        "real", SREAL;
+        "REAL", SREAL;
+        "string", SSTRING;
+        "STRING", SSTRING;
+        "bool", SBOOL;
+        "BOOL", SBOOL;
+        "source", SMARK;
+        "Source", SMARK;
+        "SOURCE", SMARK;
+        "view", VMARK;
+        "View", VMARK;
+        "VIEW", VMARK;
         ]
 (*		exception Eof
 *)
@@ -47,24 +67,34 @@
             Hashtbl.find keyword_table lxm
         with Not_found -> VARNAME(lxm)
 						}
-    | ":-"          				{ IMPLIEDBY }
+    | "_|_"                                       { BOT }
+    | "%v:"            				{ VMARK }  (* view mark *)
+    | "%s:"                         { SMARK } (* source relation mark *)
+    | ":-"          				{ IMPLIEDBY }  
+    | "<-"          				{ IMPLIEDBY }  
     | "?-"            				{ QMARK }  (* query mark *)
-    | "%v:"            				{ QMARK }  (* query mark *)
-    | "%s:"                         {UMARK} (* updated base relation mark *)
+    | "<>"            				{ NE }
+    | "\\="            				{ NE }
+    | "<="                                      { LE }
+    | ">="                                      { GE }
+    | "||"                                       { CONCAT }
+    | "←"           				{ IMPLIEDBY } 
+    | "¬"           				{ NOT }  
     | '.'            				{ DOT }    (* end of rule or query *)
     | ','            				{ SEP }
     | '('            				{ LPAREN }
     | ')'            				{ RPAREN }
     | '='            				{ EQ }
-    | "<>"            				{ NE }
-    | "\\="            				{ NE }
     | '_'                                       { ANONVAR }
-    | "<="                                      { LE }
-    | ">="                                      { GE }
+    | ':'          				{ TYPING }
+    | "⊥"                                       { BOT }
+    | "⊤"                                       { TOP } 
     | '<'                                       { LT }
     | '>'                                       { GT }
     | '+'                                       { PLUS }
     | '-'                                       { MINUS }
+    | '*'                                       { TIMES }
+    | '/'                                       { DIVIDE }   
 	| eof            { EOF }
-	| _                      { spec_lex_error lexbuf }
-
+    | _                      { spec_lex_error lexbuf }
+	

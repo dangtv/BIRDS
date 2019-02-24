@@ -2,8 +2,8 @@
 
   open Expr ;;
   open Utils ;;
-  
-   (* end preamble *)
+  (* let parse_error (s : string) = spec_parse_error s 1;; *)
+  (* end preamble *)
  %}
   
 
@@ -16,8 +16,9 @@
 %token <string> VARNAME         /* token with string value */
 
   
-%token QMARK UMARK DOT IMPLIEDBY
-%token AND NOT OR BOT TOP
+%token QMARK SMARK VMARK DOT IMPLIEDBY 
+%token TYPING SINT SREAL SSTRING SBOOL
+%token AND NOT OR TT FF BOT TOP
 %token NULL
 %token EQ
 %token NE LE GE LT GT
@@ -54,10 +55,25 @@
   ;
 
   expr: 
+  | integrity_constraint              { $1 }
   | rule	                            { $1 }
   | query	                            { $1 }
-  | update	                            { $1 }
-  | error             { spec_parse_error "invalid syntax for a rule or a declaration of query/base table" 1; }
+  | source	                            { $1 }
+  | view	                            { $1 }
+  | fact				    { failwith "fact: to be implemented" }
+  | error             { spec_parse_error "invalid syntax for a rule or a declaration of query/source/view/constraint" 1; }
+  ;
+  
+  fact:
+  literal                               { $1 }
+  | error             { spec_parse_error "invalid syntax for a fact" 1; }
+  ;
+
+  integrity_constraint:
+  | BOT IMPLIEDBY body DOT					{ Constraint ( get_empty_pred, $3) } 
+  | BOT LPAREN RPAREN IMPLIEDBY body DOT					{ Constraint ( Pred ("⊥", []), $5) }
+  | BOT IMPLIEDBY body EOF					{ spec_parse_error "miss a dot for a constraint" 3; }
+  | error             { spec_parse_error "invalid syntax for a constraint" 1; }
   ;
 
   rule:
@@ -82,11 +98,34 @@
   | error             { spec_parse_error "invalid syntax for a query" 1; }
   ;
 
-  update:
-  | UMARK predicate DOT					{ Base $2 } 
-  | UMARK predicate EOF             { spec_parse_error "miss a dot for a base relation" 3; }
-  | error             { spec_parse_error "invalid syntax for a base relation" 1; }
+  source:
+  | SMARK schema DOT					{ Source (fst $2, snd $2) } 
+  | SMARK schema EOF             { spec_parse_error "miss a dot for a source relation" 3; }
+  | error             { spec_parse_error "invalid syntax for a source relation" 1; }
   ;
+
+  view:
+  | VMARK schema DOT					{ View (fst $2, snd $2) } 
+  | VMARK schema EOF             { spec_parse_error "miss a dot for a view relation" 3; }
+  | error             { spec_parse_error "invalid syntax for a view relation" 1; }
+  ;
+
+  schema:
+  | RELNAME LPAREN vartypelist RPAREN		{ ($1, $3) }
+  | error             { spec_parse_error "invalid syntax for a predicate" 1; }
+  ;
+
+  vartypelist: /* empty */					{ [] }
+  | VARNAME TYPING stype { ($1, $3) :: [] }
+  | VARNAME TYPING stype SEP vartypelist 					{ ($1, $3) :: $5 } /* \!/ rec. on the right */
+  | error             { spec_parse_error "invalid syntax for a list of pairs of column name and its type" 1; }
+  ;
+
+  stype:
+  | SINT { Sint }
+  | SREAL { Sreal }
+  | SSTRING { Sstring }
+  | SBOOL { Sbool }
 
   litlist: /* empty */					{ [] }
   | literal						{ $1 :: [] }
@@ -111,13 +150,46 @@
   ;
 
   equation:	
-  | var_or_agg EQ constant	{ Equal ($1, $3) }
-  | var_or_agg NE constant	{ Ineq ("<>", $1, $3) }
-  | var_or_agg LT constant	{ Ineq ( "<", $1, $3) }
-  | var_or_agg GT constant	{ Ineq ( ">", $1, $3) }
-  | var_or_agg LE constant	{ Ineq ("<=", $1, $3) }
-  | var_or_agg GE constant	{ Ineq (">=", $1, $3) }
+  | value_expression EQ value_expression	{ Equal ($1, $3) }
+  | value_expression NE value_expression	{ Ineq ("<>", $1, $3) }
+  | value_expression LT value_expression	{ Ineq ( "<", $1, $3) }
+  | value_expression GT value_expression	{ Ineq ( ">", $1, $3) }
+  | value_expression LE value_expression	{ Ineq ("<=", $1, $3) }
+  | value_expression GE value_expression	{ Ineq (">=", $1, $3) }
+  | error             { spec_parse_error "invalid syntax for a comparison" 1; }
   ;
+
+  value_expression:
+  | term {$1}
+  | value_expression PLUS term {Sum ($1, $3)}
+  | value_expression CONCAT term {Concat ($1, $3)}
+  | value_expression MINUS term {Diff ($1, $3)}
+  | error             { spec_parse_error "invalid syntax for a arithmetic expression" 1; }
+
+  term:
+  | factor {$1}
+  | term TIMES factor {Times ($1, $3)}
+  | term DIVIDE factor {Div ($1, $3)}
+  | error             { spec_parse_error "invalid syntax for a term" 1; }
+
+  factor:
+  | value_primary {$1}
+  | error             { spec_parse_error "invalid syntax for a factor" 1; }
+
+  value_primary:
+  | parenthesized_value_expression {$1}
+  | MINUS parenthesized_value_expression {Neg $2}
+  | nonparenthesized_value_primary {$1}
+  | error             { spec_parse_error "invalid syntax for a primary number" 1; }
+
+  nonparenthesized_value_primary:
+  | constant {Const $1}
+  | var_or_agg {Var $1}
+  | error             { spec_parse_error "invalid syntax for a primar number" 1; }
+
+  parenthesized_value_expression:
+  | LPAREN value_expression RPAREN {$2}
+  | error             { spec_parse_error "invalid syntax for a parenthesized expression" 1; }
 
   var_or_agg:
   | VARNAME     { NamedVar $1 }
@@ -131,6 +203,9 @@
   | FLOAT               {Real $1}
   | MINUS FLOAT               {Real (-. $2)}
   | STRING            {String $1}
+  | NULL            {Null}
+  | FF             {Bool false}
+  | TT             {Bool true}
   | error             { spec_parse_error "invalid syntax for a constant" 1; }
   ;
 

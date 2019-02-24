@@ -1,0 +1,12 @@
+[package]
+name = "bxdatalog"
+version = "0.0.1"
+lean_version = "3.4.1"
+path = "src"
+
+[dependencies]
+mathlib = {git = "https://github.com/leanprover/mathlib", rev = "74f52f1e7e13c4ec1ba06ace2fbcfea05cf2568e"}
+
+super = {git = "https://github.com/leanprover/super", rev = "717e5f34761fb80a33456eec0b01f8be11432028"}
+
+#smt2_interface = {git = "https://github.com/leanprover/smt2_interface", rev = "985cf270aee985e632d78b12f82bca3ac35165f5"}

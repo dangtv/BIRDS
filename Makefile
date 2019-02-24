@@ -1,4 +1,4 @@
-PACKAGES=str,num 
+PACKAGES=postgresql,str,num 
 
 # create directory if not exist
 DIR_GUARD=@mkdir -p $(@D)
@@ -27,13 +27,15 @@ LOGIC_FILES=\
 
 TOP_FILES=\
     expr utils parser lexer\
-	rule_preprocess derivation\
-    ast2sql\
+    conn_ops\
+	rule_preprocess stratification derivation \
+	ast2fol ast2sql\
+	ast2theorem\
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
     $(TOP_FILES)
-
+	
 .PHONY: all release clean depend annot
 all: $(BIN_DIR)/$(EX_NAME) annot
 
@@ -66,18 +68,21 @@ $(BIN_DIR)/%.cmi $(BIN_DIR)/%.cmo $(BIN_DIR)/%.cmt: $(SOURCE_DIR)/%.ml
 
 annot: $(FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt)
 
-$(LOGIC_FILES:%=$(LOGIC_SOURCE_DIR)/%.cmt) $(TOP_FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt): $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(MAIN_FILE:%=$(BIN_DIR)/%.cmt)
+$(FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt): $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(MAIN_FILE:%=$(BIN_DIR)/%.cmt)
 	cp $(LOGIC_FILES:%=$(LOGIC_BIN_DIR)/%.cmt) $(LOGIC_SOURCE_DIR)/
 	cp $(TOP_FILES:%=$(BIN_DIR)/%.cmt) $(SOURCE_DIR)/
 	cp $(MAIN_FILE:%=$(BIN_DIR)/%.cmt) $(SOURCE_DIR)/
 
-include .depend
+include depend
+
+#Dependencies:
+#$(BIN_DIR)/example.cmo: $(DEP_example:%=$(BIN_DIR)/%.cmo)
 
 clean:
-	rm -f $(BIN_DIR)/*.cmo $(BIN_DIR)/*.cmi $(BIN_DIR)/*.o $(LOGIC_BIN_DIR)/*.cmo $(LOGIC_BIN_DIR)/*.cmi $(LOGIC_BIN_DIR)/*.o $(SOURCE_DIR)/parser.mli $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/lexer.ml $(SOURCE_DIR)/*.cmt $(LOGIC_SOURCE_DIR)/*.cmt $(BIN_DIR)/*.cmt $(LOGIC_BIN_DIR)/*.cmt
+	rm -r -f $(BIN_DIR)/* $(RELEASE_DIR)/* $(SOURCE_DIR)/parser.mli $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/lexer.ml $(SOURCE_DIR)/*.cmt $(LOGIC_SOURCE_DIR)/*.cmt
 
 depend:
-	ocamlfind ocamldep $(OCAMLDEP_FLAGS) $(FILES:%=$(SOURCE_DIR)/%.ml) $(SOURCE_DIR)/lexer.mll $(SOURCE_DIR)/parser.mli |sed -e 's/$(SOURCE_DIR)/$(BIN_DIR)/g' > .depend
+	ocamlfind ocamldep $(OCAMLDEP_FLAGS) $(FILES:%=$(SOURCE_DIR)/%.ml) $(SOURCE_DIR)/lexer.mll $(SOURCE_DIR)/parser.mli |sed -e 's/$(SOURCE_DIR)/$(BIN_DIR)/g' > depend
 
 release: $(RELEASE_DIR)/$(EX_NAME)
 
@@ -85,6 +90,7 @@ release: $(RELEASE_DIR)/$(EX_NAME)
 $(RELEASE_DIR)/$(EX_NAME): $(FILES:%=$(RELEASE_DIR)/%.cmx) $(RELEASE_DIR)/$(MAIN_FILE).cmx
 	$(DIR_GUARD)
 	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -linkpkg $(FILES:%=$(RELEASE_DIR)/%.cmx) $(RELEASE_DIR)/$(MAIN_FILE).cmx -o $(RELEASE_DIR)/$(EX_NAME)
+	rm -f $(RELEASE_DIR)/*.cmx $(RELEASE_DIR)/*.cmi $(RELEASE_DIR)/*.o $(LOGIC_RELEASE_DIR)/*.cmx $(LOGIC_RELEASE_DIR)/*.cmi $(LOGIC_RELEASE_DIR)/*.o 
 
 #Rule for compiling the main file
 $(RELEASE_DIR)/$(MAIN_FILE).cmx: $(FILES:%=$(RELEASE_DIR)/%.cmx) $(SOURCE_DIR)/$(MAIN_FILE).ml
