@@ -296,8 +296,8 @@ let test() =
 
 (** mainly a call to the above main function *)
 let _ =
-  (* try main () with *)
-  try test () with
+  try main () with
+  (* try test () with *)
   | Error e -> prerr_endline (string_of_error e)
   | e -> prerr_endline (Printexc.to_string e)
 ;;
