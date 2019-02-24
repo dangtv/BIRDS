@@ -34,8 +34,7 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     ```bash 
     brew install lean
     ```
-  * Compiling Lean package
-  Go to folder verification: `cd verification`
+  * Compiling Lean package: go to folder verification: `cd verification`
     ```bash 
     leanpkg configure
     leanpkg build
@@ -56,8 +55,7 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     ```bash 
     apt-get install lean
     ```
-  * Compiling Lean package
-  Go to folder verification: `cd verification`
+  * Compiling Lean package: go to folder verification: `cd verification`
     ```bash 
     leanpkg configure
     leanpkg build
@@ -75,21 +73,32 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     ```
   * Installing BIRDS: copy execution file to `/usr/local/bin/`
 
-
 ### Usage
 
 * The execution file is ./bin/birds:
     ```bash
     ./bin/birds [OPTIONS]
-    -db         : print debugging information
-    -f file     : read program from file, if not chosen, read from stdin
-    -o file     : write program out file, if not chosen, print to stdout
-    -s schema_name     : database schema name to connect to (default: public)
-    -help  Display this list of options
-    --help  Display this list of options
+    -db            print debugging information
+    -f file        read program from file, if not chosen, read from stdin
+    -o file        write program out file, if not chosen, print to stdout
+    -l file        write lean verification out file
+    -s schema_name database schema name to connect to (default: public)
+    -h host        database server host (default: "localhost")
+    -c             connect and run sql on database server
+    -import        connect and import data schema from database server
+    -v             verify the well-behavedness
+    -i             optimize update propagation by incremental rewriting rules
+    -e             optimize datalog rules
+    -p port        database server port (default: "5432")
+    -U user        database user (default: "postgres")
+    -w password    database user password (default: 12345678)
+    -d dbname      database name to connect to (default: "datalogdb")
+    -m mode        {1: For putback view update datalog program, 2: For view update datalog program containing view definition, update strategy and integrity constraints, 3: For only view definition datalog program} (default: 1)
+    -help          Display this list of options
+    --help         Display this list of options
     ```
 
 * For example:
     ```bash
-    ./bin/birds -s public -f tests/test1_put_rule.dl -o tests/test1.sql
+    bin/birds -s public -f examples/basic_sample.dl -o examples/basic_sample.sql -v
     ```
