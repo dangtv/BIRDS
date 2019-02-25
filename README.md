@@ -12,6 +12,8 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
   * Ocaml package dependencies:
     * num (>= 1.0): opam install num
     * postgresql-ocaml (>=4.0.1): opam install postgresql
+  * Lean >= 3.4.1
+  * Z3 >= 4.7.1
 
 * Compiling:
   * Clean:
