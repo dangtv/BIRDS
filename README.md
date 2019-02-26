@@ -12,8 +12,6 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
   * Ocaml package dependencies:
     * num (>= 1.0): opam install num
     * postgresql-ocaml (>=4.0.1): opam install postgresql
-  * Lean >= 3.4.1
-  * Z3 >= 4.7.1
 
 * Compiling:
   * Clean:
@@ -30,8 +28,11 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     ```
 
 ### Installation
+* Dependencies:
+  * Lean >= 3.4.1
+  * Z3 >= 4.7.1
 
-* Macosx: 
+* For Macosx: 
   * Installing Lean
     ```bash 
     brew install lean
@@ -52,7 +53,7 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
 
   * Installing BIRDS: copy execution file to `/usr/local/bin/`
 
-* Ubuntu: 
+* For Ubuntu: 
   * Installing Lean
     ```bash 
     apt-get install lean
