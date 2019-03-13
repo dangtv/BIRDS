@@ -1,3 +1,8 @@
+(*******************************************************)
+(**  
+AST-to-SQL functions
+ *)
+(********************************************************)
 (* 
 @author: Vandang Tran
 *)
@@ -7,27 +12,6 @@ open Utils;;
 open Rule_preprocess;;
 open Stratification;;
 open Derivation;;
-
-let get_from_clause (idb:symtable) rterms =
-    if rterms == [] then "" else
-    let idb_alias pname arity n =
-        let pn_a = pname^"_a"^(string_of_int arity) in
-        pn_a^" AS "^pn_a^"_"^(string_of_int n)
-    in
-    let edb_alias pname arity n =
-        pname^" AS "^pname^"_a"^(string_of_int arity)^"_"^(string_of_int n)
-    in
-    let set_alias rterm (a_lst,n) =
-        let pname = get_rterm_predname rterm in
-        let arity = get_arity rterm in
-        let key = symtkey_of_rterm rterm in
-        let alias_f = if Hashtbl.mem idb key then idb_alias else edb_alias in
-        let alias = alias_f pname arity n in
-        (alias::a_lst,n-1)
-    in
-    let len = List.length rterms in
-    let (aliases,_) = List.fold_right set_alias rterms ([],len-1) in
-    "\nFROM "^(String.concat ", " aliases)
 
 (** Given an aggregate function name, checks if it is supported and
   returns it*)
@@ -81,9 +65,7 @@ let sql_of_vterm (vt:vartab) (eqt:eqtab) (expr:vterm)  =
             | BoolNot e ->  (open_paren prec 4)^ "-" ^ (sql_of 5 e)^(close_paren prec 4)
         in sql_of 0 expr;;
 
-(*Given a variable, returns the name of a EDB/IDB column
-  that defines it, or if it is equal to a constant, the
-  value of the constant.*)
+(** Given a variable, returns the name of a EDB/IDB column that defines it, or if it is equal to a constant, the value of the constant.*)
 let var_to_col (vt:vartab) (eqt:eqtab) key (variable:var) =
     (*If the variable appears in a positive rterm, the value
      * is the name of the respective rterm's table column*)
@@ -325,7 +307,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
             let agg_sql = get_aggregation_sql vt cnt head agg_eqs agg_ineqs in
             String.concat " " [select_sql;from_sql;where_sql;agg_sql] in
         let sql_list = List.map (unfold_sql_of_rule idb cnt) rules in
-        String.concat " UNION " sql_list in
+        String.concat (if (get_symtkey_arity goal) = 0 then " UNION ALL " else " UNION ") sql_list in
     let sql = unfold_sql_of_rule_lst idb cnt rule_lst in
     sql
 
@@ -348,6 +330,10 @@ let non_rec_unfold_sql_of_query (dbschema:string) (idb:symtable) (cnt:colnamtab)
         (* by insert the dummy rule to idb, we now find sql for this dummy predicate *)
         non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)) ^") AS "^qrule_alias
 
+(** generate unfolded SQL statement from the ast, the goal is the query predicate of datalog program, the query is a query over source relations, receives a symtable with the database's edb description.
+The result of this function is sql query, whose returned table has colum names of col0, col1,....
+The boolean variable debug indicates whether debugging information should be printed
+*)
 let unfold_query_sql_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
     let query_rt = get_query_rterm (get_query prog) in
     (*Extract and pre-process the IDB from the program*)
@@ -551,8 +537,23 @@ let unfold_delta_sql_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:boo
         ((String.concat "\n\n" deltas)^"") ^ " \n\n" ^ ((String.concat "\n\n" actions)^""))
 ;;
 
+(** SQL for triggers of detecting update on the source relations, which call the action of executing shell script on the view*)
+let source_update_detection_trigger_stt (dbschema:string) (debug:bool) prog =
+    let view_rt = get_schema_rterm (get_view prog) in
+    let view_name = get_rterm_predname view_rt in
+    let all_source = (List.map (fun x -> get_schema_rterm x) (get_source_stts prog)) in 
+    let sql_lst = List.map (fun x  -> 
+        let  source_name = get_rterm_predname x in 
+        "DROP TRIGGER IF EXISTS "^source_name^"_detect_update ON "^dbschema^"."^source_name^";
+        CREATE TRIGGER "^source_name^"_detect_update
+            AFTER INSERT OR UPDATE OR DELETE ON
+            "^dbschema^"."^source_name^" FOR EACH STATEMENT EXECUTE PROCEDURE "^dbschema^"."^view_name^"_delta_exe_shell();")
+        all_source in 
+    String.concat "\n \n" sql_lst
+;;
+
 (** generate trigger for delta predicates on the view *)
-let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:bool) prog =
+let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (sh_script:string) (inc:bool) (optimize:bool) prog =
     let view_rt = get_schema_rterm (get_view prog) in
     let view_name = get_rterm_predname view_rt in
     (* let temporary_view_name = get_rterm_predname (get_temp_rterm view_rt) in *)
@@ -560,12 +561,68 @@ let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (inc:bool) (optimize
     (* convert these cols to string of tuple of these cols *)
     let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (get_temp_rterm view_rt)) )) ^")" in
     let (vardec, delta_sql_stt) = unfold_delta_sql_stt dbschema debug inc optimize prog in
+    let source_trigger_sql = source_update_detection_trigger_stt dbschema debug prog in
     let trigger_pgsql = 
 "
-DROP MATERIALIZED VIEW IF EXISTS "^dbschema^"."^"__dummy__materialized_"^view_name^";
+DROP MATERIALIZED VIEW IF EXISTS "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^";
 
 CREATE  MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^" AS 
 SELECT * FROM "^dbschema^"."^view_name^";
+
+CREATE EXTENSION IF NOT EXISTS plsh;
+
+CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_run_shell(text) RETURNS text AS $$
+"^sh_script^"
+$$ LANGUAGE plsh;
+
+CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_delta_exe_shell()
+RETURNS trigger 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+  DECLARE
+  text_var1 text;
+  text_var2 text;
+  text_var3 text;
+  deletion_data text;
+  insertion_data text;
+  json_data text;
+  result text;
+  BEGIN
+  IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
+    insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^dbschema^"."^view_name^" EXCEPT SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^") as t);
+    IF insertion_data IS NOT DISTINCT FROM NULL THEN 
+        insertion_data := '[]';
+    END IF; 
+    deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^" EXCEPT SELECT * FROM "^dbschema^"."^view_name^") as t);
+    IF deletion_data IS NOT DISTINCT FROM NULL THEN 
+        deletion_data := '[]';
+    END IF; 
+    IF (insertion_data IS DISTINCT FROM '[]') OR (insertion_data IS DISTINCT FROM '[]') THEN 
+        json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertion\": ' , insertion_data , ', ' , '\"deletion\": ' , deletion_data , '}');
+        result := "^dbschema^"."^view_name^"_run_shell(json_data);
+        IF result = 'true' THEN 
+            REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^";
+        ELSE
+            RAISE NOTICE 'result from running the sh script: %', result;
+            RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool';
+        END IF;
+    END IF;
+  END IF;
+  RETURN NULL;
+  EXCEPTION
+    WHEN object_not_in_prerequisite_state THEN
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to source relations of "^dbschema^"."^view_name^"';
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
+                                text_var2 = PG_EXCEPTION_DETAIL,
+                                text_var3 = MESSAGE_TEXT;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of "^dbschema^"."^view_name^" ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RETURN NULL;
+  END;
+$$;
+
+"^source_trigger_sql^"
 
 CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_delta_action()
 RETURNS TRIGGER
@@ -576,6 +633,10 @@ AS $$
   text_var1 text;
   text_var2 text;
   text_var3 text;
+  deletion_data text;
+  insertion_data text;
+  json_data text;
+  result text;
   "^vardec^"
   BEGIN
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
@@ -586,6 +647,25 @@ AS $$
           RAISE check_violation USING MESSAGE = 'Invalid update on view';
         END IF;
         "^delta_sql_stt^"
+
+        insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" EXCEPT SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^") as t);
+        IF insertion_data IS NOT DISTINCT FROM NULL THEN 
+            insertion_data := '[]';
+        END IF; 
+        deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" INTERSECT SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^") as t);
+        IF deletion_data IS NOT DISTINCT FROM NULL THEN 
+            deletion_data := '[]';
+        END IF; 
+        IF (insertion_data IS DISTINCT FROM '[]') OR (insertion_data IS DISTINCT FROM '[]') THEN 
+            json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertion\": ' , insertion_data , ', ' , '\"deletion\": ' , deletion_data , '}');
+            result := "^dbschema^"."^view_name^"_run_shell(json_data);
+            IF result = 'true' THEN 
+                REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^";
+            ELSE
+                RAISE NOTICE 'result from running the sh script: %', result;
+                RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool';
+            END IF;
+        END IF;
     END IF;
     RETURN NULL;
   EXCEPTION

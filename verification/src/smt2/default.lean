@@ -179,6 +179,16 @@ meta def reflect_arith_formula (reflect_base : expr → smt2_m lol.term) : expr 
     then reflect_application (a.get_app_fn) (a.get_app_args) reflect_base
     else fail $ "unsupported arithmetic formula: " ++ to_string a
 
+meta def reflect_string_formula (reflect_base : expr → smt2_m lol.term) : expr → smt2_m lol.term
+| `(%%a ++ %%b) := lol.term.concat <$> reflect_string_formula a <*> reflect_string_formula b
+| a := 
+    if a.is_local_constant
+    then return $ lol.term.var (mangle_name a.local_uniq_name)
+    else if a.is_constant
+    then return $ lol.term.var (mangle_name a.const_name)
+    else
+    lol.term.string <$> eval_expr string `(to_string a:string)
+
 -- /-- Check if the type is an `int` or logically a subtype of an `int` like nat. -/
 meta def is_int (e : expr) : tactic bool :=
 do ty ← infer_type e,
@@ -241,7 +251,7 @@ meta def reflect_prop_formula' : expr → smt2_m lol.term
        else if is_supported_numeric_ty ty
        then reflect_arith_formula reflect_prop_formula' e
        else if is_supported_string_ty ty
-       then lol.term.string <$> eval_expr string `(to_string e:string)
+       then reflect_string_formula reflect_prop_formula' e
        else if e.is_app
        then reflect_application (e.get_app_fn) (e.get_app_args) reflect_prop_formula'
        else tactic.fail $ "unsupported propositional formula : " ++ to_string e

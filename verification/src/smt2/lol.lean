@@ -38,6 +38,7 @@ with term : Type
 | gt : term → term → term
 | gte : term → term → term
 | neg : term → term
+| concat : term → term → term
 | int : int → term
 | string : string → term
 | bool : bool → term
@@ -82,6 +83,8 @@ meta def term.subst (n : string) (subst : term) : term → term
     term.gte (term.subst t) (term.subst u)
 | (term.neg t) :=
     term.neg (term.subst t)
+| (term.concat t u) :=
+    term.concat (term.subst t) (term.subst u)
 | (term.int i) := term.int i
 | (term.string i) := term.string i
 | (term.bool i) := term.bool i
@@ -343,6 +346,7 @@ private meta def compile_term : lol.term → smt2_compiler smt2.term
 | (term.bool i) := return $ smt2.builder.bool_const i
 | (term.forallq n ty body) := smt2.builder.forallq n <$> (compile_type_simple ty) <*> compile_term body
 | (term.neg a) := smt2.builder.neg <$> compile_term a
+| (term.concat t u) := smt2.builder.concat <$> compile_term t <*> compile_term u
 
 -- TODO fix me
 meta def compile_type := compile_type' compile_term

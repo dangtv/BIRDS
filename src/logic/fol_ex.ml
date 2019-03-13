@@ -137,7 +137,7 @@ let lean_stype_of_string str =
         try  (ignore(float_of_string str); "real") with
         (* try test () with *)
         | Failure e -> 
-            try  (ignore(bool_of_string str); "Prop") with
+            try  ( ignore(bool_of_string str); "Prop") with
             | Failure e | Invalid_argument e ->  if (str = "null") then  "int" else  "string"
 
 let lean_string_of_string str = 
@@ -147,7 +147,7 @@ let lean_string_of_string str =
         try  (ignore(float_of_string str); str) with
         (* try test () with *)
         | Failure e -> 
-            try  (ignore(bool_of_string str); str) with
+            try  ( ignore(bool_of_string str); str) with
             | Failure e | Invalid_argument e ->  
             if (str = "null") then  str else "\""^(String.sub str 1 (String.length str -2))^"\""
 
@@ -155,7 +155,7 @@ let lean_string_of_string str =
 let rec lean_string_of_term prec fm =
   match fm with
     Var x -> x
-  | Fn("^",[tm1;tm2]) -> lean_string_of_infix_term true prec 24 "^" tm1 tm2
+  | Fn("^",[tm1;tm2]) -> lean_string_of_infix_term true prec 24 "++" tm1 tm2
   | Fn("/",[tm1;tm2]) -> lean_string_of_infix_term true prec 22 " /" tm1 tm2
   | Fn("*",[tm1;tm2]) -> lean_string_of_infix_term false prec 20 " *" tm1 tm2
   | Fn("-",[tm1;tm2]) -> lean_string_of_infix_term true prec 18 " -" tm1 tm2
@@ -253,7 +253,7 @@ let z3_string_of_string str =
         try  (ignore(float_of_string str); str) with
         (* try test () with *)
         | Failure e -> 
-            try  (ignore(bool_of_string str); str) with
+            try  ( ignore(bool_of_string str); str) with
             | Failure e | Invalid_argument e ->  
             if (str = "null") then  str else "\""^(String.sub str 1 (String.length str -2))^"\""
 
@@ -383,18 +383,62 @@ let rec push_into_subfm conj subfm =
   match subfm with
   (* Push-into-or *)
     Or(_,_) -> 
-      let psi = Prop.list_conj conj in
-      Prop.list_disj (List.map (fun x ->  And(psi, x)) (to_dis_lst subfm))
+      let powerset = allnonemptysubsets conj in 
+      let is_right_candiate cand = 
+        let psi = Prop.list_conj cand in
+        let xi' = Prop.list_disj (List.map (fun x ->  And(psi, x)) (to_dis_lst subfm)) in 
+        is_safe_range xi' in 
+      let right_candidates = List.filter is_right_candiate powerset in
+      let sorted_candiates = Lib.sort (fun a b -> List.length a < List.length b) right_candidates in
+      let final_cand = List.hd sorted_candiates in 
+      let remain = subtract conj final_cand in 
+      let phi_remain = Prop.list_conj remain in
+      let psi = Prop.list_conj final_cand in
+      let xi' = Prop.list_disj (List.map (fun x ->  And(psi, x)) (to_dis_lst subfm)) in 
+      And(phi_remain, xi')
+
   (* Push-into-quantifier *)
-  | Exists(_, _) -> 
-      let psi = Prop.list_conj conj in
+  | Exists(_, _) ->
+    let powerset = allnonemptysubsets conj in 
+    let is_right_candiate cand = 
+      let psi = Prop.list_conj cand in
       let quants, xi = extract_ex_quants subfm in
       let quants' = List.map (fun x -> variant x (fv psi)) quants in
       let subfn = fpf quants (List.map (fun x -> Fol.Var x) quants') in
-      itlist mk_exists quants' ( And(psi, subst subfn xi))
+      let xi' = ( And(psi, subst subfn xi)) in 
+      is_safe_range xi' in 
+    let right_candidates = List.filter is_right_candiate powerset in
+    let sorted_candiates = Lib.sort (fun a b -> List.length a < List.length b) right_candidates in
+    let final_cand = List.hd sorted_candiates in 
+    let remain = subtract conj final_cand in 
+    let phi_remain = Prop.list_conj remain in
+    let psi = Prop.list_conj final_cand in
+    let quants, xi = extract_ex_quants subfm in
+    let quants' = List.map (fun x -> variant x (fv psi)) quants in
+    let subfn = fpf quants (List.map (fun x -> Fol.Var x) quants') in
+    let xi' = And(psi, subst subfn xi) in 
+    And(phi_remain, itlist mk_exists quants' xi')
   (* Push-into-negated-quantifier *)
   | Not(Exists(x, fm)) ->
-      And(Prop.list_conj conj, Not(push_into_subfm conj (Exists(x, fm))))
+    let powerset = allnonemptysubsets conj in 
+    let is_right_candiate cand = 
+      let psi = Prop.list_conj cand in
+      let quants, xi = extract_ex_quants (Exists(x, fm)) in
+      let quants' = List.map (fun x -> variant x (fv psi)) quants in
+      let subfn = fpf quants (List.map (fun x -> Fol.Var x) quants') in
+      let xi' = ( And(psi, subst subfn xi)) in 
+      is_safe_range xi' in 
+    let right_candidates = List.filter is_right_candiate powerset in
+    let sorted_candiates = Lib.sort (fun a b -> List.length a < List.length b) right_candidates in
+    let final_cand = List.hd sorted_candiates in 
+    let phi = Prop.list_conj conj in
+    let psi = Prop.list_conj final_cand in
+    let quants, xi = extract_ex_quants (Exists(x, fm)) in
+    let quants' = List.map (fun x -> variant x (fv psi)) quants in
+    let subfn = fpf quants (List.map (fun x -> Fol.Var x) quants') in
+    let xi' = And(psi, subst subfn xi) in 
+    And(phi, Not (itlist mk_exists quants' xi'))
+      (* And(Prop.list_conj conj, Not(push_into_subfm conj (Exists(x, fm)))) *)
   | _ -> And(Prop.list_conj conj, subfm)
   ;;
 

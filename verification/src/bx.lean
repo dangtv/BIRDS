@@ -136,7 +136,12 @@ meta def preprocess_only_hyps: tactic unit :=
     repeat {do_substs <|> split_hyps <|> eelim /-<|> self_simplify_hyps-/} ]
 
 -- meta def z3
+-- meta def z3_smt : tactic unit := 
+-- `[try{simp only [iff_def],},
+-- try{simp only [not_forall_not.symm, not_not],},
+-- z3 "temp.smt2"]
+
 meta def z3_smt : tactic unit := 
 `[try{simp only [iff_def],},
 try{simp only [not_forall_not.symm, not_not],},
-z3 "temp.smt2"]
+z3]

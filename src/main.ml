@@ -34,6 +34,7 @@ let verification = ref false;;
 let inc = ref false;;
 let optimize = ref false;;
 let inputf = ref "";;
+let inputshell = ref "";;
 let outputf = ref "";;
 let outputlean = ref "";;
 let dbschema = ref "public";;
@@ -43,6 +44,7 @@ let usage = "usage: " ^ Sys.argv.(0) ^ " [OPTIONS]"
 let speclist = [
   ("-db", Arg.Unit (fun () -> debug := true),  " print debugging information");
   ("-f", Arg.String (fun s -> inputf := s),   "file read program from file, if not chosen, read from stdin");
+  ("-sh", Arg.String (fun s -> inputshell := s),   "file shell script from file");
   ("-o", Arg.String (fun s -> outputf := s),   "file write program out file, if not chosen, print to stdout");
   ("-l", Arg.String (fun s -> outputlean := s),   "file write lean verification out file");
   ("-s", Arg.String (fun s -> dbschema := s),  "schema_name database schema name to connect to (default: public)");
@@ -89,6 +91,11 @@ let print_conn_info conn =
 ;;
 
 let main () =
+  (* there are three tasks for the transformation program
+     - derive put datalog program to get datalog program
+     - translate get datalog program to sql language (need a query predicate (view))
+     - translate put datalog program to PL/pgSQL procedure triggers (need update predicates (source tables))
+  *)
   try 
     let chan = if !inputf = "" then stdin else open_in !inputf in
     let lexbuf = Lexing.from_channel chan in 
@@ -97,6 +104,7 @@ let main () =
     (* while true do *)
     try
       let original_ast = Parser.main Lexer.token lexbuf in 
+      let shell_script = if !inputshell = "" then "#!/bin/sh\necho \"true\"" else (String.concat "\n" @@ read_file (!inputshell)) in
       let ast = 
       (* get source schema from database system *)
         if (!importschema) then 
@@ -166,14 +174,14 @@ let main () =
             verify_fo_lean (!debug) lean_code 
           else 0, "" in 
         if not (validity=0) then 
-          (print_endline @@ "The program is not well-behaved \nExit code: " ^ string_of_int validity
+          (print_endline @@ "Well-behavedness is not validated \nExit code: " ^ string_of_int validity
           ^ (if (!debug) then "\nError messange: "^ message else ""); exit 1)
         else
-          (
+          (if (!verification) then print_endline @@ "Program is well-behaved";
           let oc =if !outputf = "" then stdout else open_out !outputf  in 
           let sql = Ast2sql.unfold_view_sql (!dbschema) (!debug) ast2 in
           fprintf oc "%s\n" sql;
-          let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!debug) (!inc) (!optimize) (Expr.constraint2rule ast2) in
+          let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!debug) shell_script (!inc) (!optimize) (Expr.constraint2rule ast2) in
           fprintf oc "%s\n" trigger_sql;
           
           if (!connectdb) then 
@@ -294,9 +302,17 @@ let test() =
     | LexErr msg -> print_endline (msg^":\nError: Illegal characters")
     | ParseErr msg -> print_endline (msg^":\nError: Syntax error")
 
+let small_test() = 
+  let l = [1;2;3] in 
+  let powerset = allnonemptysubsets l in 
+  let sortlst = Lib.sort (fun a b -> List.length a < List.length b) powerset in
+  List.iter (fun x -> List.iter (fun a -> print_int a) x; print_endline "; ") sortlst
+;;
+
 (** mainly a call to the above main function *)
 let _ =
   try main () with
+  (* try small_test () with *)
   (* try test () with *)
   | Error e -> prerr_endline (string_of_error e)
   | e -> prerr_endline (Printexc.to_string e)

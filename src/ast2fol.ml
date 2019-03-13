@@ -43,7 +43,7 @@ let const_of_string str =
         | Failure e -> 
             try  (Bool (bool_of_string str)) with
             (* try test () with *)
-            | Failure e -> if (str = "null") then  Null else  (String str)
+            | Failure e | Invalid_argument e -> if (str = "null") then  Null else  (String str)
 
 (** convert the Fol.term to vterm type*)
 let rec vterm_of_folterm ft =

@@ -31,6 +31,7 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
 * Dependencies:
   * Lean >= 3.4.1
   * Z3 >= 4.7.1
+  * Postgresql database >= 9.6
 
 * For Macosx: 
   * Installing Lean
@@ -49,15 +50,12 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     path <path_to_this_folder>/verification/src
     path <path_to_this_folder>/verification/_target/deps/super/src
   ```
-  * Installing z3: download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases), rename the execution file to `z3` and copy it to `/usr/local/bin/` 
+  * Installing z3: download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases)
 
-  * Installing BIRDS: copy execution file to `/usr/local/bin/`
+  * Installing BIRDS: copy the execution file to `/usr/local/bin/`
 
 * For Ubuntu: 
-  * Installing Lean
-    ```bash 
-    apt-get install lean
-    ```
+  * Installing Lean: 
   * Compiling Lean package: go to folder verification: `cd verification`
     ```bash 
     leanpkg configure
@@ -70,11 +68,8 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     path <path_to_this_folder>/verification/src
     path <path_to_this_folder>/verification/_target/deps/super/src
   ```
-  * Installing z3:  
-    ```bash 
-    apt-get install z3
-    ```
-  * Installing BIRDS: copy execution file to `/usr/local/bin/`
+  * Installing z3: download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases)
+  * Installing BIRDS: copy the execution file to `/usr/local/bin/`
 
 ### Usage
 
@@ -105,3 +100,15 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     ```bash
     bin/birds -s public -f examples/basic_sample.dl -o examples/basic_sample.sql -v
     ```
+
+### Docker
+
+* Build docker image:
+  ```bash 
+    docker build -t "birds" .
+  ```
+
+* Create docker container
+  ```bash 
+    docker run --name "birds1" -ti -p 5432:5432 -p 5050:5050 birds
+  ```

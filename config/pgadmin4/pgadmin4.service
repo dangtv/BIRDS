@@ -1,0 +1,16 @@
+[Unit]
+Description=Pgadmin4 Service
+After=network.target
+ 
+[Service]
+User= root
+Group= root
+# Point to the virtual environment directory
+WorkingDirectory=/root/.pgadmin4
+# Point to the bin folder of your virtual environment
+Environment="PATH=/root/.pgadmin4/bin"
+ExecStart="/root/.pgadmin4/lib/python2.7/site-packages/pgadmin4/pgAdmin4.py"
+PrivateTmp=true
+ 
+[Install]
+WantedBy=multi-user.target

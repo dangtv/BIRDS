@@ -85,6 +85,9 @@ term.apply "mod" [t, u]
 def neg (t : term) : term :=
 term.apply "-" [t]
 
+def concat (t u : term) : term :=
+term.apply "str.++" [t, u]
+
 def ite (c t f : term) : term :=
 term.apply "ite" [c, t, f]
 

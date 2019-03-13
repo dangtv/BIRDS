@@ -1,4 +1,5 @@
-(**  Functions for stratifying a datalog program. Report an error if any of the predicates is indirectly recursive, or it is an incomplete program, which contains references to undefined predicates
+(**  Functions for stratifying a datalog program. Report an error if any of the predicates is indirectly recursive, 
+or it is an incomplete program, which contains references to undefined predicates
  *)
  
 open Expr;;

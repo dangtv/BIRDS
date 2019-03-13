@@ -184,6 +184,11 @@ let get_schema_stts prog = match prog with
     | Prog sttlst -> List.filter (fun x -> match x with Source _ -> true | View _ -> true | _ -> false) sttlst
 ;;
 
+(** Given program return all source statement*)
+let get_source_stts prog = match prog with
+    | Prog sttlst -> List.filter (fun x -> match x with Source _ -> true | _ -> false) sttlst
+;;
+
 (** Given a rule, returns all the positive and negative rterms
  * inside*)
 let get_all_rule_rterms = function
@@ -337,7 +342,7 @@ let string_of_vterm ae =
     | Times(f,g) -> (open_paren prec 2) ^ (str_of 2 f) ^  "*" ^ (str_of 2 g) ^ (close_paren prec 2)
     | Div (f,g) -> (open_paren prec 2)^ (str_of 2 f) ^ "/" ^ (str_of 3 g) ^ (close_paren prec 2)
     | Neg e ->  (open_paren prec 4)^ "-" ^ (str_of 5 e)^(close_paren prec 4)
-    | Concat(f,g) -> (open_paren prec 0)^ (str_of 0 f) ^ "||" ^ (str_of 0 g) ^ (close_paren prec 0)
+    | Concat(f,g) -> (open_paren prec 0)^ (str_of 0 f) ^ "^" ^ (str_of 0 g) ^ (close_paren prec 0)
     | BoolAnd (f,g) -> (open_paren prec 2) ^ (str_of 2 f) ^  "*" ^ (str_of 2 g) ^ (close_paren prec 2)
     | BoolOr (f,g) -> (open_paren prec 0)^ (str_of 0 f) ^ "+" ^ (str_of 0 g) ^ (close_paren prec 0)
     | BoolNot e ->  (open_paren prec 4)^ "-" ^ (str_of 5 e)^(close_paren prec 4)

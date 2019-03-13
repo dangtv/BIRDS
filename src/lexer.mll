@@ -77,7 +77,7 @@
     | "\\="            				{ NE }
     | "<="                                      { LE }
     | ">="                                      { GE }
-    | "||"                                       { CONCAT }
+    | "^"                                       { CONCAT }
     | "←"           				{ IMPLIEDBY } 
     | "¬"           				{ NOT }  
     | '.'            				{ DOT }    (* end of rule or query *)

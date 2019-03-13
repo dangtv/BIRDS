@@ -39,7 +39,7 @@ let spec_lex_error lexbuf =
 type symtkey = (string*int) (* string is predicate name, int is the arity of literal*)
 type symtable = (symtkey, stt list) Hashtbl.t (* each row of a symtable is all the rules which has the same literal in head*)
 
-let hash_max_size = ref 500;;
+(* let hash_max_size = ref 500;; *)
 
 (** Prints a symtable
 *)
@@ -119,7 +119,7 @@ type sqltable = (symtkey, stt list) Hashtbl.t (* each row of a symtable is all t
 (**Takes a program and extracts all rules and places them in a symtable*)
 let extract_idb = function
   | Prog stt_lst ->
-    let idb:symtable = Hashtbl.create !hash_max_size in
+    let idb:symtable = Hashtbl.create (2 * (List.length stt_lst)) in
     let in_stt t = match t with
       | Rule _ -> symt_insert idb t 
       | Constraint _ -> ()
@@ -137,7 +137,7 @@ let idb_query_to_ast (idb:symtable) (query:rterm) =
 (**Takes a program and extracts all base statement and places them in a symtable*)
 let extract_edb = function
   | Prog stt_lst ->
-    let edb:symtable = Hashtbl.create !hash_max_size in
+    let edb:symtable = Hashtbl.create (2 * (List.length stt_lst)) in
     let in_stt t = match t with
       | Rule _ -> ()
       | Constraint _ -> ()
@@ -174,7 +174,7 @@ type colnamtab = (symtkey, (string list)) Hashtbl.t
 (*Extracts from the edb and idb their column names and
  * stores them in a colnamtab, places them in order*)
 let build_colnamtab (edb:symtable) (idb:symtable) =
-  let hs:colnamtab = Hashtbl.create !hash_max_size in
+  let hs:colnamtab = Hashtbl.create (2*(Hashtbl.length edb + Hashtbl.length idb)) in
   let e_cols key rules =
     let rule = List.hd rules in
     let varlist = List.map string_of_var (get_rterm_varlist (rule_head rule)) in
@@ -191,6 +191,41 @@ let build_colnamtab (edb:symtable) (idb:symtable) =
   in
   Hashtbl.iter i_cols idb;
   hs
+
+(** set for rterm  *)
+module RtermSet = Set.Make(struct
+    type t = rterm
+    let compare rt1 rt2 = key_comp (symtkey_of_rterm rt1) (symtkey_of_rterm rt2)
+  end)
+
+type rtermset = RtermSet.t
+
+(** Compares two variables for ordering *)
+let var_comp var1 var2 = String.compare (string_of_var var1) (string_of_var var2)
+
+(** set for variable  *)
+module VarSet = Set.Make(struct
+    type t = var
+    let compare = var_comp
+  end)
+
+type varset = VarSet.t
+
+(** get the set of variables of a term list (maybe a rule body) *)
+let rec get_termlst_varset terms = 
+    let lst = List.fold_right (@) (List.map get_term_varlist terms) [] in 
+    VarSet.of_list lst
+;;
+
+(** get the list of variables of a term list (maybe a rule body) *)
+let rec get_termlst_vars terms = 
+    let lst = List.fold_right (@) (List.map get_term_varlist terms) [] in lst
+;;
+
+(** get the list of variables of a rterm list (maybe a rule body) *)
+let rec get_rtermlst_vars rterms = 
+    let lst = List.fold_right (@) (List.map get_rterm_varlist rterms) [] in lst
+;;
 
 (***********************************************************
  *  Vartab
@@ -221,10 +256,11 @@ let vt_print (vt:vartab) =
     let ap_str = "["^(String.concat ", " alst)^"]" in
     Printf.printf "%s: %s\n" vn ap_str in
   Hashtbl.iter print_el vt
+;;
 
 (** builds a vartab out of a list of rterms and with the colnamtab*)
 let build_vartab (col_names:colnamtab) rterms =
-  let vt:vartab = Hashtbl.create !hash_max_size in
+  let vt:vartab = Hashtbl.create (2*(List.length (get_rtermlst_vars rterms ))) in
   let in_rt n rterm =
     let pname = get_rterm_predname rterm in
     let vlst = get_rterm_varlist rterm in
@@ -272,7 +308,7 @@ type eqtab = (vterm,vterm) Hashtbl.t
     in the provided list.*)
 let build_eqtab eqs =
   let tuples = List.map extract_eq_tuple eqs in
-  let hs:eqtab = Hashtbl.create !hash_max_size in
+  let hs:eqtab = Hashtbl.create (2*(List.length eqs)) in
   let add_rel (e1,e2) = if ((List.length ((get_vterm_varlist e1) @ (get_vterm_varlist e2))) > 0) 
     then Hashtbl.add hs e1 e2
     else invalid_arg "Trying to build_eqtab with equalities containing no varialbe " in
@@ -414,25 +450,6 @@ let str_contains s1 s2 =
   try ignore (Str.search_forward re s1 0); true
   with Not_found -> false
 
-(** set for rterm  *)
-module RtermSet = Set.Make(struct
-    type t = rterm
-    let compare rt1 rt2 = key_comp (symtkey_of_rterm rt1) (symtkey_of_rterm rt2)
-  end)
-
-type rtermset = RtermSet.t
-
-(** Compares two variables for ordering *)
-let var_comp var1 var2 = String.compare (string_of_var var1) (string_of_var var2)
-
-(** set for variable  *)
-module VarSet = Set.Make(struct
-    type t = var
-    let compare = var_comp
-  end)
-
-type varset = VarSet.t
-
 (** print delta predicate list  *)
 let print_deltas dlst = 
   let print_el s = Printf.printf "%s, " (string_of_rterm s) in
@@ -474,17 +491,6 @@ let get_source_rterms e = match e with
 let is_free_var (vt:vartab) (vexp:vterm) = match vexp with 
   | Var variable -> if Hashtbl.mem vt (string_of_var variable) then false else true
   | _ -> false
-
-(** get the set of variables of a term list (maybe a rule body) *)
-let rec get_termlst_varset terms = 
-    let lst = List.fold_right (@) (List.map get_term_varlist terms) [] in 
-    VarSet.of_list lst
-;;
-
-(** get the list of variables of a term list (maybe a rule body) *)
-let rec get_termlst_vars terms = 
-    let lst = List.fold_right (@) (List.map get_term_varlist terms) [] in lst
-;;
 
 let is_delta_pair rt1 rt2 = match (rt1, rt2) with 
     (Deltainsert (pred1, varlst1) , Deltadelete (pred2, varlst2)) -> if (String.compare pred1 pred2 = 0) && ((List.length varlst1) = (List.length varlst2)) then true else false 

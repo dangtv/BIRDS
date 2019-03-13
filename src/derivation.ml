@@ -17,8 +17,6 @@ open Rule_preprocess;;
 open Stratification;;
 open Lib;;
 
-let hash_max_size = ref 500;;
-
 (** Datalog normalization: convert Deltainsert and Deltadelete predicates to normal Pred with name having prefix prefix ^ make"_dummy_delta_insert_" *)
 let deltapred_to_pred prefix = function
   | Prog stt_lst -> 
@@ -51,7 +49,7 @@ let check_neg_view (view:rterm) rule_body = List.mem view rule_body;;
    the list of mapped attribute names (e.g, \[tracks3_prime_a4_col2\]) may be greater than 1 but if so, that list must contain identical elements
    *)
 let build_schema_mapping (mapping:vartab) (col_names:colnamtab) (view:rterm) (head:rterm) =
-  let vt:vartab = Hashtbl.create !hash_max_size in
+  let vt:vartab = Hashtbl.create 100 in
   let pname = get_rterm_predname head in
   let vlst = get_rterm_varlist head in
   let arity = get_arity head in
@@ -214,7 +212,7 @@ let derive (debug:bool) (edb:symtable) prog =
     let idb = extract_idb prog in 
     let view_rt = get_schema_rterm (get_view prog) in
     let cnt = build_colnamtab local_edb idb in
-    let mapping:vartab = Hashtbl.create !hash_max_size in 
+    let mapping:vartab = Hashtbl.create 100 in 
     List.iter (schema_mapping_of_rule cnt mapping view_rt) stt_lst;
     if debug then (
                    print_endline "========mapping===="; vt_print mapping;
@@ -543,8 +541,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
             else ((symtkey_of_rterm head)::inc_key, 
               lst@[
@@ -563,8 +562,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
           else (inc_key, lst@rules)
         | [Rel aa; Rel bb] -> 
@@ -581,8 +581,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
 
           | (false, true) -> 
@@ -594,8 +595,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
           | (true, true) -> 
             ((symtkey_of_rterm head)::inc_key, 
@@ -608,8 +610,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
           )
         | [Rel aa; Not bb] -> 
@@ -626,8 +629,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
 
           | (false, true) -> 
@@ -639,8 +643,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
           | (true, true) -> 
             ((symtkey_of_rterm head)::inc_key, 
@@ -653,8 +658,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
           )
         | (Rel p_rt) :: buitin_t -> 
@@ -668,8 +674,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
           else (inc_key, lst@rules)
         | _ -> invalid_arg "function incrementalize called with not a valid list" 
@@ -690,8 +697,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
 
           | (false, true) -> 
@@ -704,8 +712,9 @@ let incrementalize_by_view (debug:bool) prog =
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
           | (true, true) -> 
             ((symtkey_of_rterm head)::inc_key, 
@@ -713,15 +722,17 @@ let incrementalize_by_view (debug:bool) prog =
                 Rule(get_inc_original head, [Rel (get_inc_original aa)]); 
                 Rule(get_inc_original head, [Rel (get_inc_original bb)]);
                 Rule(get_inc_del head, [Rel (get_inc_del aa); Not(get_inc_original bb); Not(get_inc_ins bb)]);
-                Rule(get_inc_del head, [Rel(get_inc_del bb); Not(get_inc_original aa); Not(get_inc_ins aa)]);
-                Rule(get_inc_del head, [Rel(get_inc_del aa); Rel(get_inc_del bb)]);
+                (* Rule(get_inc_del head, [Rel(get_inc_del bb); Not(get_inc_original aa); Not(get_inc_ins aa)]);
+                Rule(get_inc_del head, [Rel(get_inc_del aa); Rel(get_inc_del bb)]); *)
+                Rule(get_inc_del head, [Rel(get_inc_del bb); Not(aa)]);
                 Rule(get_inc_ins head, [Rel (get_inc_ins aa)]); 
                 Rule(get_inc_ins head, [Rel (get_inc_ins bb)])]@
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
-                [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ]
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
               )
           )
     | _ -> invalid_arg ("function incrementalize called with a list of "^string_of_int (List.length rules)^" elements: \n"^ Expr.string_of_prog (Prog rules) ) in
