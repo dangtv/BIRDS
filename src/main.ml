@@ -25,6 +25,7 @@ open Ast2fol;;
 let host = ref "192.168.56.101";;
 let port = ref 5432;;
 let user = ref "postgres";;
+let dejima_user = ref "dejima";;
 let password = ref "12345678";;
 let dbname = ref "datalogdb";;
 let debug = ref false;;
@@ -44,10 +45,10 @@ let usage = "usage: " ^ Sys.argv.(0) ^ " [OPTIONS]"
 let speclist = [
   ("-db", Arg.Unit (fun () -> debug := true),  " print debugging information");
   ("-f", Arg.String (fun s -> inputf := s),   "file read program from file, if not chosen, read from stdin");
-  ("-sh", Arg.String (fun s -> inputshell := s),   "file shell script from file");
+  ("-b", Arg.String (fun s -> inputshell := s),   "file shell script file specifying the action, which will be executed when there is any update on the view, if not chosen, execute nothing");
   ("-o", Arg.String (fun s -> outputf := s),   "file write program out file, if not chosen, print to stdout");
   ("-l", Arg.String (fun s -> outputlean := s),   "file write lean verification out file");
-  ("-s", Arg.String (fun s -> dbschema := s),  "schema_name database schema name to connect to (default: public)");
+  ("-s", Arg.String (fun s -> dbschema := s),  "schema database schema name to connect to (default: public)");
   ("-h", Arg.String (fun s -> host := s),      "host database server host (default: \"localhost\")");
   ("-c", Arg.Unit (fun () -> connectdb := true),      " connect and run sql on database server");
   ("-import", Arg.Unit (fun () -> importschema := true),      " connect and import data schema from database server");
@@ -56,6 +57,7 @@ let speclist = [
   ("-e", Arg.Unit (fun () -> optimize := true),      " optimize datalog rules");
   ("-p", Arg.Int    (fun d -> port := d),      "port database server port (default: \"5432\")");
   ("-U", Arg.String (fun s -> user := s),      "user database user (default: \"postgres\")");
+  ("-g", Arg.String (fun s -> dejima_user := s),      "user special user for global dejima synchronization (default: \"dejima\")");
   ("-w", Arg.String (fun s -> password := s),  "password database user password (default: 12345678)");
   ("-d", Arg.String (fun s -> dbname := s),    "dbname database name to connect to (default: \"datalogdb\")");
   ("-m", Arg.Int (fun m -> mode := m),         "mode {1: For putback view update datalog program, 2: For view update datalog program containing view definition, update strategy and integrity constraints, 3: For only view definition datalog program} (default: 1)");
@@ -181,7 +183,7 @@ let main () =
           let oc =if !outputf = "" then stdout else open_out !outputf  in 
           let sql = Ast2sql.unfold_view_sql (!dbschema) (!debug) ast2 in
           fprintf oc "%s\n" sql;
-          let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!debug) shell_script (!inc) (!optimize) (Expr.constraint2rule ast2) in
+          let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!debug) shell_script (!dejima_user) (!inc) (!optimize) (Expr.constraint2rule ast2) in
           fprintf oc "%s\n" trigger_sql;
           
           if (!connectdb) then 

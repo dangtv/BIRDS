@@ -544,16 +544,16 @@ let source_update_detection_trigger_stt (dbschema:string) (debug:bool) prog =
     let all_source = (List.map (fun x -> get_schema_rterm x) (get_source_stts prog)) in 
     let sql_lst = List.map (fun x  -> 
         let  source_name = get_rterm_predname x in 
-        "DROP TRIGGER IF EXISTS "^source_name^"_detect_update ON "^dbschema^"."^source_name^";
-        CREATE TRIGGER "^source_name^"_detect_update
+        "DROP TRIGGER IF EXISTS "^source_name^"_detect_update_"^view_name^" ON "^dbschema^"."^source_name^";
+        CREATE TRIGGER "^source_name^"_detect_update_"^view_name^"
             AFTER INSERT OR UPDATE OR DELETE ON
-            "^dbschema^"."^source_name^" FOR EACH STATEMENT EXECUTE PROCEDURE "^dbschema^"."^view_name^"_delta_exe_shell();")
+            "^dbschema^"."^source_name^" FOR EACH STATEMENT EXECUTE PROCEDURE "^dbschema^"."^view_name^"_detect_update();")
         all_source in 
     String.concat "\n \n" sql_lst
 ;;
 
 (** generate trigger for delta predicates on the view *)
-let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (sh_script:string) (inc:bool) (optimize:bool) prog =
+let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (sh_script:string) (dejima_user:string) (inc:bool) (optimize:bool) prog =
     let view_rt = get_schema_rterm (get_view prog) in
     let view_name = get_rterm_predname view_rt in
     (* let temporary_view_name = get_rterm_predname (get_temp_rterm view_rt) in *)
@@ -574,20 +574,22 @@ CREATE EXTENSION IF NOT EXISTS plsh;
 CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_run_shell(text) RETURNS text AS $$
 "^sh_script^"
 $$ LANGUAGE plsh;
-
-CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_delta_exe_shell()
-RETURNS trigger 
-LANGUAGE plpgsql
+"^(
+    let func_body = 
+"LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
   DECLARE
   text_var1 text;
   text_var2 text;
   text_var3 text;
+  func text;
+  tv text;
   deletion_data text;
   insertion_data text;
   json_data text;
   result text;
+  user_name text;
   BEGIN
   IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
     insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^dbschema^"."^view_name^" EXCEPT SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^") as t);
@@ -599,13 +601,26 @@ AS $$
         deletion_data := '[]';
     END IF; 
     IF (insertion_data IS DISTINCT FROM '[]') OR (insertion_data IS DISTINCT FROM '[]') THEN 
-        json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertion\": ' , insertion_data , ', ' , '\"deletion\": ' , deletion_data , '}');
-        result := "^dbschema^"."^view_name^"_run_shell(json_data);
-        IF result = 'true' THEN 
-            REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^";
-        ELSE
-            RAISE NOTICE 'result from running the sh script: %', result;
-            RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool';
+        user_name := (SELECT session_user);
+        IF NOT (user_name = '"^dejima_user^"') THEN 
+            json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertions\": ' , insertion_data , ', ' , '\"deletions\": ' , deletion_data , '}');
+            result := "^dbschema^"."^view_name^"_run_shell(json_data);
+            IF result = 'true' THEN 
+                REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^";
+                FOR func IN (select distinct trigger_schema||'.non_trigger_'||substring(action_statement, 19) as function 
+                from information_schema.triggers where trigger_schema = '"^dbschema^"' and event_object_table='"^view_name^"'
+                and action_timing='AFTER' and (event_manipulation='INSERT' or event_manipulation='DELETE' or event_manipulation='UPDATE')
+                and action_statement like 'EXECUTE PROCEDURE %') 
+                LOOP
+                    EXECUTE 'SELECT ' || func into tv;
+                END LOOP;
+            ELSE
+                -- RAISE LOG 'result from running the sh script: %', result;
+                RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool, result from running the sh script: ' 
+                || result;
+            END IF;
+        ELSE 
+            RAISE LOG 'function of detecting dejima update is called by % , no request sent to dejima proxy', user_name;
         END IF;
     END IF;
   END IF;
@@ -617,10 +632,20 @@ AS $$
         GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
                                 text_var2 = PG_EXCEPTION_DETAIL,
                                 text_var3 = MESSAGE_TEXT;
-        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of "^dbschema^"."^view_name^" ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the function "^dbschema^"."^view_name^"_detect_update() ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
         RETURN NULL;
   END;
-$$;
+$$;" in
+"CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_detect_update()
+RETURNS trigger
+"^
+func_body^"
+
+CREATE OR REPLACE FUNCTION "^dbschema^".non_trigger_"^view_name^"_detect_update()
+RETURNS text 
+"^
+func_body
+)^"
 
 "^source_trigger_sql^"
 
@@ -637,10 +662,11 @@ AS $$
   insertion_data text;
   json_data text;
   result text;
+  user_name text;
   "^vardec^"
   BEGIN
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
-        -- RAISE NOTICE 'execute procedure "^view_name^"_delta_action';
+        -- RAISE LOG 'execute procedure "^view_name^"_delta_action';
         CREATE TEMPORARY TABLE "^view_name^"_delta_action_flag ON COMMIT DROP AS (SELECT true as finish);
         IF EXISTS (" ^ view_constraint_sql_of_stt dbschema debug inc optimize prog^" )
         THEN 
@@ -657,13 +683,19 @@ AS $$
             deletion_data := '[]';
         END IF; 
         IF (insertion_data IS DISTINCT FROM '[]') OR (insertion_data IS DISTINCT FROM '[]') THEN 
-            json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertion\": ' , insertion_data , ', ' , '\"deletion\": ' , deletion_data , '}');
-            result := "^dbschema^"."^view_name^"_run_shell(json_data);
-            IF result = 'true' THEN 
-                REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^";
-            ELSE
-                RAISE NOTICE 'result from running the sh script: %', result;
-                RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool';
+            user_name := (SELECT session_user);
+            IF NOT (user_name = '"^dejima_user^"') THEN 
+                json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertions\": ' , insertion_data , ', ' , '\"deletions\": ' , deletion_data , '}');
+                result := "^dbschema^"."^view_name^"_run_shell(json_data);
+                IF result = 'true' THEN 
+                    REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^";
+                ELSE
+                    -- RAISE LOG 'result from running the sh script: %', result;
+                    RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool, result from running the sh script: ' 
+                    || result;
+                END IF;
+            ELSE 
+                RAISE LOG 'function of detecting dejima update is called by % , no request sent to dejima proxy', user_name;
             END IF;
         END IF;
     END IF;
@@ -692,7 +724,7 @@ AS $$
   BEGIN
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^"' OR table_name = '"^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^"')
     THEN
-        -- RAISE NOTICE 'execute procedure "^view_name^"_materialization';
+        -- RAISE LOG 'execute procedure "^view_name^"_materialization';
         REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt))^";
         CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (get_materialzied_rterm view_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
         CREATE CONSTRAINT TRIGGER __temp__"^view_name^"_trigger_delta_action
@@ -734,9 +766,9 @@ AS $$
   text_var2 text;
   text_var3 text;
   BEGIN
-    -- RAISE NOTICE 'execute procedure "^view_name^"_update';
+    -- RAISE LOG 'execute procedure "^view_name^"_update';
     IF TG_OP = 'INSERT' THEN
-      -- raise notice 'NEW: %', NEW;
+      -- RAISE LOG 'NEW: %', NEW;
       DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
       INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" SELECT (NEW).*; 
     ELSIF TG_OP = 'UPDATE' THEN
@@ -745,7 +777,7 @@ AS $$
       DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
       INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" SELECT (NEW).*; 
     ELSIF TG_OP = 'DELETE' THEN
-      -- raise notice 'OLD: %', OLD;
+      -- RAISE LOG 'OLD: %', OLD;
       DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
       INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" SELECT (OLD).*;
     END IF;
