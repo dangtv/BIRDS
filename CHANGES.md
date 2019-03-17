@@ -1,9 +1,10 @@
-### 2019-02-24:
-* Fix bugs in makefile
-* Add mode option (-m) in commandline-line interface
-* Grammar for arithmetic expression
-* FOL transformation for verification and view derivation
-* Integrate Lean and Z3 for verification
+### 2019-03-17:
+* Add option install in Makefile
+* Fix bugs in Makefile
+* Add option -m in commandline-line interface
+* Grammar for arithmetic expressions
+* FOL transformations for verification and view derivation
+* Integrating with Lean and Z3 for verification
 * Optimization for Datalog
 * New syntax for schema declaration
 

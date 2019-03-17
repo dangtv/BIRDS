@@ -1,10 +1,10 @@
 # BIRDS
 
-More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS/)
+More information about BIRDS is available at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS/)
 
-## Compilation and Usage
+## Installation and Usage
 
-### Compilation
+### Compilation and installation
 
 * Dependencies:
   * GNU Make >= 4.1
@@ -26,54 +26,14 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
     ```bash
     make release
     ```
-
-### Installation
-* Dependencies:
-  * Lean >= 3.4.1
-  * Z3 >= 4.7.1
-  * Postgresql database >= 9.6
-
-* For Macosx: 
-  * Installing Lean
-    ```bash 
-    brew install lean
-    ```
-  * Compiling Lean package: go to folder verification: `cd verification`
-    ```bash 
-    leanpkg configure
-    leanpkg build
-    ```
-  * Configure for Lean: add new file `/Users/<user_name>/.lean/leanpkg.path` with the following (replace `<path_to_this_folder>` with the path to this souce code)
+* Installing:
   ```bash 
-    builtin_path
-    path <path_to_this_folder>/verification/_target/deps/mathlib/.
-    path <path_to_this_folder>/verification/src
-    path <path_to_this_folder>/verification/_target/deps/super/src
+  make install
   ```
-  * Installing z3: download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases)
-
-  * Installing BIRDS: copy the execution file birds to `/usr/local/bin/`
-
-* For Ubuntu: 
-  * Installing Lean: 
-  * Compiling Lean package: go to folder verification: `cd verification`
-    ```bash 
-    leanpkg configure
-    leanpkg build
-    ```
-  * Configure for Lean: add new file `/root/.lean/leanpkg.path` with the following (replace `<path_to_this_folder>` with the path to this souce code)
-  ```bash 
-    builtin_path
-    path <path_to_this_folder>/verification/_target/deps/mathlib/.
-    path <path_to_this_folder>/verification/src
-    path <path_to_this_folder>/verification/_target/deps/super/src
-  ```
-  * Installing z3: download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases)
-  * Installing BIRDS: copy the execution file BIRDS to `/usr/local/bin/`
 
 ### Usage
 
-* The execution file is birds:
+* The execution file is `birds`:
     ```bash
     birds [OPTIONS]
     -db         print debugging information
@@ -100,12 +60,31 @@ More detail at: [https://dangtv.github.io/BIRDS/](https://dangtv.github.io/BIRDS
 
 * For example:
     ```bash
-    bin/birds -s public -f examples/basic_sample.dl -o examples/basic_sample.sql -v
+    birds -s public -f examples/basic_sample.dl -o examples/basic_sample.sql -v
     ```
 
-### Docker
+### Installing underlying systems
 
-* The Docker image is available at: [https://hub.docker.com/r/dangtv/birds](https://hub.docker.com/r/dangtv/birds)
+* BIRDS is integrated with underlying systems including:
+  * Lean >= 3.4.1: Download at [https://github.com/leanprover/lean/releases](https://github.com/leanprover/lean/releases)
+    * Configure for Lean: add a new file `/Users/<user_name>/.lean/leanpkg.path` on Macos or `/root/.lean/leanpkg.path` on Linux with the following content(replace `<path_to_this_folder>` with the path to this souce code):
+      ```bash 
+        builtin_path
+        path <path_to_this_folder>/verification/_target/deps/mathlib/.
+        path <path_to_this_folder>/verification/src
+        path <path_to_this_folder>/verification/_target/deps/super/src
+      ```
+    * Compiling Lean package: go to the folder `verification`: `cd verification`, and run:
+      ```bash 
+      leanpkg configure
+      leanpkg build
+      ```
+  * Z3 >= 4.7.1: Download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases)
+  * Postgresql database >= 9.6: [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
+
+## Docker image
+
+* The Docker image for the entire BIRDS system is available at: [https://hub.docker.com/r/dangtv/birds](https://hub.docker.com/r/dangtv/birds), it can be downloaded by running:
   ```bash
     docker pull dangtv/birds
   ```
