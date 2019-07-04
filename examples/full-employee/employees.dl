@@ -1,0 +1,13 @@
+source residents(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
+source ced(EMP_NAME:string, DEPT_NAME:string).
+view employees(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
+
+% view definition
+% constraint
+_|_ :- employees(E,B,G), ¬ced(E,_).
+
+% update strategy
++residents(E,B,G) :- employees(E,B,G), ¬residents(E,B,G).
+% +ced(E,D) :- employees(E,B,G), ¬ced(E,_), D='unknown'.
+% -residents(E,B,G) :- residents(E,B,G), employees(E,_,_), ¬employees(E,B,G).
+-residents(E,B,G) :- residents(E,B,G), ced(E,_), ¬employees(E,B,G).

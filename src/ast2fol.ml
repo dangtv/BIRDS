@@ -63,7 +63,7 @@ let rec vterm_of_folterm ft =
 this function take a symtkey of a rterm and generate its FO formula recursively (this function is recursive because of unfolding all the idb predicate)*)
 let rec fol_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:symtkey)  =
     let rule_lst = try Hashtbl.find idb goal 
-        with Not_found -> print_endline "Not_found in func fol_of_symtkey"; exit 0;
+        with Not_found -> raise(SemErr( "Not_found in func fol_of_symtkey"))
         in
     (* disjunction of all rules then we have FO formula for a idb predicate*)
     let fol_of_rule_lst (idb:symtable) (cnt:colnamtab) rules =
@@ -82,7 +82,7 @@ and fol_of_rule (idb:symtable) (cnt:colnamtab) rule =
     (* substitute variables of the head to column name of the prediate of the head *)
     let cols =
         try Hashtbl.find cnt (symtkey_of_rterm head) 
-        with Not_found -> print_endline ("Not found in cnt the atom "^string_of_rterm head); exit 0;
+        with Not_found -> raise(SemErr ("Not found in cnt the atom "^string_of_rterm head))
         in
     let varlst = get_rterm_varlist head in
     let subfn = fpf (List.map (fun x -> string_of_var x) varlst) (List.map (fun x -> Fol.Var x) cols) in
@@ -94,12 +94,12 @@ and fol_of_rule (idb:symtable) (cnt:colnamtab) rule =
         hd::bd -> if (List.length bd = 0) then hd else 
             List.fold_left (fun form e -> Formulas.And(form, e)) hd bd 
         | _ -> failwith "the body of rule contains nothing" in 
-    let fm2 = subst subfn fm in
-        itlist mk_exists (List.map string_of_var (VarSet.elements exvars)) fm2
+    let fm2 = itlist mk_exists (List.map string_of_var (VarSet.elements exvars)) fm in
+        subst subfn fm2
 and fol_of_rterm r (idb:symtable) (cnt:colnamtab)= 
     let cols = 
         try Hashtbl.find cnt (symtkey_of_rterm r) 
-        with Not_found -> print_endline ("Not found in cnt the atom "^string_of_rterm r); exit 0;
+        with Not_found -> raise(SemErr ("Not found in cnt the atom "^string_of_rterm r))
         in
     let varlst = get_rterm_varlist r in
     let excols = List.fold_right2 (fun col var l -> if (is_anon var) then col::l else l) cols varlst [] in
@@ -112,8 +112,8 @@ and fol_of_rterm r (idb:symtable) (cnt:colnamtab)=
     else  
     (* if this predicate is of an edb relation, just need to call by its name *)
     Atom(R(get_rterm_predname r, (List.map (fun x -> Fol.Var x) cols))) in
-    let fm2 = subst subfn fm in
-    itlist mk_exists excols fm2
+    let fm2 = itlist mk_exists excols fm in
+    subst subfn fm2
 and fol_of_eq eq = match eq with 
     Equal(exp1, exp2) -> Atom(R("=",[folterm_of_vterm exp1; folterm_of_vterm exp2]))
     | _ -> failwith "not a equality"
@@ -137,7 +137,7 @@ let fol_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) =
         if not (Hashtbl.mem local_cnt key) then
         Hashtbl.add local_cnt key (List.map string_of_var (get_rterm_varlist (rule_head qrule)));
         (try Hashtbl.find local_cnt key
-        with Not_found -> print_endline ("Not found in cnt the atom "^string_of_symtkey key); exit 0;
+        with Not_found -> raise(SemErr("Not found in cnt the atom "^string_of_symtkey key));
         , fol_of_symtkey local_idb local_cnt (symtkey_of_rterm (rule_head qrule)))
 
 (** generate FO formula from the ast, the goal is the view predicate of datalog program, receives a symtable of the database's edb description.
@@ -151,6 +151,11 @@ let fol_of_stt (debug:bool) prog =
     (*Extract and pre-process the IDB from the program*)
     let idb = extract_idb prog in
     preprocess_rules idb; 
+    if debug then (
+        print_endline "_____preprocessed datalog rules_______"; 
+        print_symtable idb; 
+        print_endline "______________\n";
+    ) else ();
     (* print_symtable idb; *)
     (*Build the colnamtab for referencing the table's columns*)
     let cnt = build_colnamtab edb idb in
@@ -168,6 +173,11 @@ let fol_of_program_query (debug:bool) prog =
     (*Extract and pre-process the IDB from the program*)
     let idb = extract_idb prog in
     preprocess_rules idb; 
+    if debug then (
+        print_endline "_____preprocessed datalog rules_______"; 
+        print_symtable idb; 
+        print_endline "______________\n";
+    ) else ();
     (* print_symtable idb; *)
     (*Build the colnamtab for referencing the table's columns*)
     let cnt = build_colnamtab edb idb in
@@ -216,12 +226,24 @@ let sourcestability_sentence_of_stt (debug:bool) prog =
     let idb = extract_idb prog in
     symt_remove idb (symtkey_of_rterm view_rt);
     preprocess_rules idb;
+    if debug then (
+        print_endline "_____preprocessed datalog rules_______"; 
+        print_symtable idb; 
+        print_endline "______________\n";
+    ) else ();
     let cnt = build_colnamtab edb idb in
     let delta_rt_lst = get_delta_rterms prog in
     (* get the emptiness FO sentence of a relation *)
     let emptiness_fo_sentence rel = 
          let cols = List.map string_of_var (get_rterm_varlist rel) in
-        itlist mk_exists cols (snd (fol_of_query idb cnt rel)) in
+         let delta_fm = (snd (fol_of_query idb cnt rel)) in
+         (* minimize the delta of relation *)
+         let min_delta = (match rel with 
+            | Deltadelete (predname,lst) ->  And(delta_fm, Atom(R(predname, (List.map (fun x -> Fol.Var x) (fv delta_fm)))) )
+            | Deltainsert (predname,lst) -> And(delta_fm, Not (Atom(R(predname, (List.map (fun x -> Fol.Var x) (fv delta_fm))))))
+            | _ -> invalid_arg @@ "predicate" ^ string_of_rterm rel ^"is not a delta predicate"
+         ) in
+        itlist mk_exists cols min_delta in
     let delta_fo_sentence_lst = List.map emptiness_fo_sentence delta_rt_lst in 
     Prop.list_disj delta_fo_sentence_lst;;
 ;;
@@ -231,12 +253,24 @@ let getput_sentence_of_stt (debug:bool) prog =
     let edb = extract_edb prog in
     let idb = extract_idb prog in
     preprocess_rules idb;
+    if debug then (
+        print_endline "_____preprocessed datalog rules_______"; 
+        print_symtable idb; 
+        print_endline "______________\n";
+    ) else ();
     let cnt = build_colnamtab edb idb in
     let delta_rt_lst = get_delta_rterms prog in
     (* get the emptiness FO sentence of a relation *)
     let emptiness_fo_sentence rel = 
          let cols = List.map string_of_var (get_rterm_varlist rel) in
-        itlist mk_exists cols (snd (fol_of_query idb cnt rel)) in
+         let delta_fm = (snd (fol_of_query idb cnt rel)) in
+         (* minimize the delta of relation *)
+         let min_delta = (match rel with 
+            | Deltadelete (predname,lst) ->  And(delta_fm, Atom(R(predname, (List.map (fun x -> Fol.Var x) (fv delta_fm)))) )
+            | Deltainsert (predname,lst) -> And(delta_fm, Not (Atom(R(predname, (List.map (fun x -> Fol.Var x) (fv delta_fm))))))
+            | _ -> invalid_arg @@ "predicate" ^ string_of_rterm rel ^"is not a delta predicate"
+         ) in
+        itlist mk_exists cols min_delta in
     let delta_fo_sentence_lst = List.map emptiness_fo_sentence delta_rt_lst in 
     Prop.list_disj delta_fo_sentence_lst;;
 ;;
@@ -252,6 +286,11 @@ let putget_sentence_of_stt (debug:bool) prog =
     let idb = extract_idb putget_prog in
     symt_remove idb (symtkey_of_rterm view_rt);
     preprocess_rules idb;
+    if debug then (
+        print_endline "_____preprocessed datalog rules_______"; 
+        print_symtable idb; 
+        print_endline "______________\n";
+    ) else ();
     let cnt = build_colnamtab edb idb in
     let new_view_rt = rename_rterm "__dummy_new_" view_rt in
     let putget_fm = snd (fol_of_query idb cnt new_view_rt) in
@@ -261,6 +300,7 @@ let putget_sentence_of_stt (debug:bool) prog =
 
 (* take a view update datalog program (containing both get and put directions) and generate FO sentence of all contraints *)
 let constraint_sentence_of_stt (debug:bool) prog =
+    if debug then (print_endline "==> generating constraint involving view";) else ();
     let edb = extract_edb prog in
     let idb = extract_idb prog in 
     if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
@@ -270,6 +310,11 @@ let constraint_sentence_of_stt (debug:bool) prog =
         symt_insert edb (Rule(view_rt,[]));
         symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
+        if debug then (
+        print_endline "_____preprocessed datalog rules_______"; 
+        print_symtable idb; 
+        print_endline "______________\n";
+    ) else ();
         let cnt = build_colnamtab edb idb in
         Imp(snd (fol_of_query idb cnt get_empty_pred), False)
     else True
@@ -289,6 +334,11 @@ let non_view_constraint_sentence_of_stt (debug:bool) prog =
         symt_insert edb (Rule(view_rt,[]));
         symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
+        if debug then (
+        print_endline "_____preprocessed datalog rules_______"; 
+        print_symtable idb; 
+        print_endline "______________\n";
+    ) else ();
         let cnt = build_colnamtab edb idb in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
             Imp(snd (fol_of_query idb cnt get_empty_pred), False)
@@ -309,8 +359,8 @@ let rec ranf2datalog fm freevars (goal_num:int) (last_goal_num:int)=
     | Formulas.Not _ -> datalog_of_conj [fm] freevars goal_num last_goal_num
     | And(p,q) -> datalog_of_conj (to_conj_lst fm) freevars goal_num last_goal_num
     | Or(p,q) -> 
-        let prog1,_,last_goal_num1 =  ranf2datalog p (fv p) goal_num last_goal_num in 
-        let prog2,_,last_goal_num2 = ranf2datalog q (fv p) goal_num last_goal_num1 in
+        let prog1,_,last_goal_num1 =  ranf2datalog p freevars goal_num last_goal_num in 
+        let prog2,_,last_goal_num2 = ranf2datalog q freevars goal_num last_goal_num1 in
 
         (prog1@prog2, (get_goal_predicate freevars goal_num), last_goal_num2)
     | _ -> failwith ("fail to get datalog program of " ^ Fol_ex.string_of_fol_formula fm )
@@ -394,7 +444,7 @@ and datalog_of_conj conj_lst freevars (goal_num:int) (last_goal_num:int)=
 (** transform a safe range FO fomula to datalog program*)
 let fol2datalog freevars fm = 
     if set_eq (setify freevars) (fv fm) then
-        let lst, rt, _ = ranf2datalog (ranf (simplify fm)) freevars 0 0 in 
+        let lst, rt, _ = ranf2datalog (ranf (simplify (normalize_comparison fm))) freevars 0 0 in 
         Prog ((Query rt)::lst)
     else failwith "the list of variables must be exactly the free varilabes in FO formula";;
 
@@ -403,7 +453,7 @@ let view_fol2datalog (debug:bool) schema_stts freevars fm =
     let view_rt = get_schema_rterm (get_view (Prog schema_stts)) in  
     if (debug) then print_endline ("==> generating datalog program of view " ^ string_of_rterm (view_rt)) else ();
     if set_eq (setify freevars) (fv fm) then
-        let lst, rt, _ = ranf2datalog (ranf (simplify fm)) freevars 0 0 in 
+        let lst, rt, _ = ranf2datalog (ranf (simplify (normalize_comparison fm))) freevars 0 0 in 
         Prog (schema_stts@Rule (Pred((get_rterm_predname view_rt), get_rterm_varlist rt ), [Rel rt])::lst)
     else failwith "the list of variables must be exactly the free varilabes in FO formula";;
 
@@ -412,7 +462,7 @@ let fol2datalog (debug:bool) (is_ranf:bool) query schema_stts freevars fm =
     if (debug) then print_endline ("==> generating datalog program of query " ^ string_of_stt (query)) else ();
     let query_rt = get_query_rterm query in  
     if set_eq (setify freevars) (fv fm) then
-        let ranf_fm = if is_ranf then fm else (ranf (simplify fm)) in
+        let ranf_fm = if is_ranf then fm else (ranf (simplify (normalize_comparison fm))) in
         let lst, rt, _ = ranf2datalog ranf_fm freevars 0 0 in 
         Prog (schema_stts@Rule (change_vars query_rt (get_rterm_varlist rt), [Rel rt])::lst@[query])
     else failwith "the list of variables must be exactly the free varilabes in FO formula";;

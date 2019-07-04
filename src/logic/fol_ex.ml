@@ -18,6 +18,23 @@ open Prop;;
 (* Printing of formulas, parametrized by atom printer.                       *)
 (* ------------------------------------------------------------------------- *)
 
+let rec normalize_comparison fm =
+  match fm with
+  Atom(R(r,args)) -> (match r with 
+    | "<>" -> Not(Atom(R("=",args)))
+    | "<=" -> Not(Atom(R(">",args)))
+    | ">=" -> Not(Atom(R("<",args)))
+    | _ -> fm
+    )
+  | Not p ->  (Not(normalize_comparison p))
+  | And(p,q) ->  (And(normalize_comparison p,normalize_comparison q))
+  | Or(p,q) ->  (Or(normalize_comparison p,normalize_comparison q))
+  | Imp(p,q) ->  (Imp(normalize_comparison p,normalize_comparison q))
+  | Iff(p,q) ->  (Iff(normalize_comparison p,normalize_comparison q))
+  | Forall(x,p) -> (Forall(x,normalize_comparison p))
+  | Exists(x,p) -> (Exists(x,normalize_comparison p))
+  | _ -> fm;;
+
 let normal_logic_character name = match name with 
     | "false" -> "false"
     | "true" -> "true"
@@ -193,7 +210,7 @@ let rec lean_string_of_atom prec (R(p,args)) =
   else lean_string_of_fargs p args;;
 
 let lean_string_of_qformula pfn fm =
-    string_of_formula lean_logic_character pfn fm;;
+    string_of_formula lean_logic_character pfn (normalize_comparison fm);;
 
 let lean_string_of_fol_formula = lean_string_of_qformula lean_string_of_atom;;
 

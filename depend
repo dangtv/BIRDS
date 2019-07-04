@@ -14,6 +14,12 @@ bin/ast2theorem.cmo : bin/utils.cmo bin/stratification.cmo \
     bin/rule_preprocess.cmo bin/logic/fol_ex.cmo bin/expr.cmo bin/ast2fol.cmo
 bin/ast2theorem.cmx : bin/utils.cmx bin/stratification.cmx \
     bin/rule_preprocess.cmx bin/logic/fol_ex.cmx bin/expr.cmx bin/ast2fol.cmx
+bin/bx.cmo : bin/utils.cmo bin/logic/skolem.cmo bin/logic/lib.cmo \
+    bin/logic/formulas.cmo bin/logic/fol_ex.cmo bin/logic/fol.cmo \
+    bin/expr.cmo bin/ast2theorem.cmo bin/ast2fol.cmo
+bin/bx.cmx : bin/utils.cmx bin/logic/skolem.cmx bin/logic/lib.cmx \
+    bin/logic/formulas.cmx bin/logic/fol_ex.cmx bin/logic/fol.cmx \
+    bin/expr.cmx bin/ast2theorem.cmx bin/ast2fol.cmx
 bin/conn_ops.cmo : bin/utils.cmo bin/expr.cmo
 bin/conn_ops.cmx : bin/utils.cmx bin/expr.cmx
 bin/derivation.cmo : bin/utils.cmo bin/stratification.cmo \
@@ -26,6 +32,8 @@ bin/derivation.cmx : bin/utils.cmx bin/stratification.cmx \
     bin/expr.cmx
 bin/expr.cmo :
 bin/expr.cmx :
+bin/lexer.cmo : bin/utils.cmo bin/parser.cmi
+bin/lexer.cmx : bin/utils.cmx bin/parser.cmx
 bin/logic/fol.cmo : bin/logic/lib.cmo bin/logic/formulas.cmo
 bin/logic/fol.cmx : bin/logic/lib.cmx bin/logic/formulas.cmx
 bin/logic/fol_ex.cmo : bin/logic/skolem.cmo bin/logic/prop.cmo \
@@ -44,6 +52,9 @@ bin/logic/skolem.cmo : bin/logic/prop.cmo bin/logic/lib.cmo \
     bin/logic/formulas.cmo bin/logic/fol.cmo
 bin/logic/skolem.cmx : bin/logic/prop.cmx bin/logic/lib.cmx \
     bin/logic/formulas.cmx bin/logic/fol.cmx
+bin/parser.cmo : bin/utils.cmo bin/expr.cmo bin/parser.cmi
+bin/parser.cmx : bin/utils.cmx bin/expr.cmx bin/parser.cmi
+bin/parser.cmi : bin/expr.cmo
 bin/rule_preprocess.cmo : bin/utils.cmo bin/logic/lib.cmo bin/expr.cmo
 bin/rule_preprocess.cmx : bin/utils.cmx bin/logic/lib.cmx bin/expr.cmx
 bin/stratification.cmo : bin/utils.cmo bin/expr.cmo

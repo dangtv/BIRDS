@@ -8,6 +8,9 @@ open Printf;;
 (** Semantic error  *)
 exception SemErr of string 
 
+(** Verification fail  *)
+exception ChkErr of string 
+
 (** Grammar error  *)
 exception ParseErr of string
 
@@ -392,6 +395,10 @@ let variablize_rterm(rt:rterm) = match rt with
   | Deltadelete (x, vl) -> Deltadelete (x, (gen_vars 0 (List.length vl)))
 ;;
 
+(** Given a predicate name, returns a new temporary name*)
+let get_temp_name (name:string) = "__temp__"^name
+;;
+
 (** Given a rterm, returns a new temporary rterm*)
 let get_temp_rterm (rt:rterm) = match rt with
   | Pred (x, vl) -> Pred ("__temp__"^x, vl)
@@ -412,9 +419,9 @@ let get_temp_delta_deletion_rterm (rt:rterm) = match rt with
 ;;
 
 (** Given a rterm, returns a materialized of rterm*)
-let get_materialzied_rterm (rt:rterm) = match rt with
+let get_materializied_rterm (rt:rterm) = match rt with
   | Pred (x, vl) -> Pred ("__dummy__materialized_"^x, vl)
-  | _ -> invalid_arg "function get_materialzied_rterm called with not a Pred"
+  | _ -> invalid_arg "function get_materializied_rterm called with not a Pred"
 ;;
 
 (** Given a rterm, rename it by adding its name a prefix*)
@@ -521,8 +528,14 @@ let exe_command command =
   status, message
 
 let verify_fo_lean debug sentence = 
-  if (debug) then print_endline @@"==> verifying by lean"
-  else ();
+  if  debug then (
+    print_endline @@"==> verifying by Lean";
+    print_endline "--------------";
+    print_endline "Lean script:\n";
+    print_endline sentence;
+    print_endline "--------------";
+    flush stdout;
+  ) else ();
   let tmp_file = Filename.temp_file "" ".lean" in
   let ol =  open_out tmp_file in  
   fprintf ol "%s\n" sentence;

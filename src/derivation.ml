@@ -548,7 +548,7 @@ let incrementalize_by_view (debug:bool) prog =
             else ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 Rule(get_inc_original head, [Rel (get_inc_original p_rt)]); 
-                Rule(get_inc_ins head, [Rel (get_inc_ins p_rt); Not (get_inc_original head)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins p_rt)]);
 
                 (* the first way using count*)
                 (* Rule(Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[AggVar("COUNT", string_of_var (List.hd drop_vars)) ]), [Rel (get_inc_del p_rt)]);
@@ -568,7 +568,8 @@ let incrementalize_by_view (debug:bool) prog =
               )
           else (inc_key, lst@rules)
         | [Rel aa; Rel bb] -> 
-          (* join *)
+          (* aa is corresponding to r1, bb is corresponding to r2 *)
+          (* join and selection *)
           ( match (List.mem (symtkey_of_rterm aa) inc_key, List.mem (symtkey_of_rterm bb) inc_key) with 
           (false, false) -> (inc_key, lst@rules)
           | (true, false) -> 
@@ -603,9 +604,9 @@ let incrementalize_by_view (debug:bool) prog =
             ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 Rule(get_inc_original head, [Rel (get_inc_original aa); Rel (get_inc_original bb)]); 
-                Rule(get_inc_del head, [Rel (get_inc_del aa); Rel(get_inc_original bb); Not(get_inc_del bb)]);
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Rel(get_inc_original bb)]);
                 Rule(get_inc_del head, [Rel(get_inc_original aa); Rel(get_inc_del bb)]);
-                Rule(get_inc_ins head, [Rel (get_inc_ins aa); Rel(get_inc_original bb); Not(get_inc_del bb)]); 
+                Rule(get_inc_ins head, [Rel (get_inc_ins aa); Rel(bb)]); 
                 Rule(get_inc_ins head, [Rel (aa); Rel(get_inc_ins bb)])]@
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
@@ -624,7 +625,7 @@ let incrementalize_by_view (debug:bool) prog =
             ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 Rule(get_inc_original head, [Rel (get_inc_original aa); Not (bb)]); 
-                Rule(get_inc_del head, [Rel (get_inc_del aa)]);
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Not(bb)]);
                 Rule(get_inc_ins head, [Rel (get_inc_ins aa); Not(bb)])]@
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
@@ -651,9 +652,9 @@ let incrementalize_by_view (debug:bool) prog =
             ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 Rule(get_inc_original head, [Rel (get_inc_original aa); Not (get_inc_original bb)]); 
-                Rule(get_inc_del head, [Rel (get_inc_del aa)]);
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Not(get_inc_original bb)]);
                 Rule(get_inc_del head, [Rel(get_inc_original aa); Rel(get_inc_ins bb)]);
-                Rule(get_inc_ins head, [Rel (get_inc_ins aa); Not(get_inc_original bb); Not(get_inc_ins bb)]); 
+                Rule(get_inc_ins head, [Rel (get_inc_ins aa); Not(bb)]); 
                 Rule(get_inc_ins head, [Rel (aa); Rel(get_inc_del bb)])]@
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
@@ -664,13 +665,29 @@ let incrementalize_by_view (debug:bool) prog =
               )
           )
         | (Rel p_rt) :: buitin_t -> 
-          (* join a relation with equility*)
+          (* join a relation with equality, not that equality has no delta*)
           if(List.mem (symtkey_of_rterm p_rt) inc_key) then
             ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 Rule(get_inc_original head, Rel (get_inc_original p_rt)::buitin_t); 
                 Rule(get_inc_del head, Rel (get_inc_del p_rt)::buitin_t);
                 Rule(get_inc_ins head, Rel (get_inc_ins p_rt)::buitin_t )]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          else (inc_key, lst@rules)
+        | (Not p_rt) :: buitin_t -> 
+          (* join a relation with equality, note that equality has no delta*)
+          if(List.mem (symtkey_of_rterm p_rt) inc_key) then
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, Not (get_inc_original p_rt)::buitin_t); 
+                Rule(get_inc_del head, Rel (get_inc_ins p_rt)::buitin_t);
+                Rule(get_inc_ins head, Rel (get_inc_del p_rt)::buitin_t )]@
                 if is_delta_or_empty head then
                   [Rule(head,[Rel (get_inc_ins head)]) ]
                 else
@@ -721,7 +738,7 @@ let incrementalize_by_view (debug:bool) prog =
               lst@[
                 Rule(get_inc_original head, [Rel (get_inc_original aa)]); 
                 Rule(get_inc_original head, [Rel (get_inc_original bb)]);
-                Rule(get_inc_del head, [Rel (get_inc_del aa); Not(get_inc_original bb); Not(get_inc_ins bb)]);
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Not(bb)]);
                 (* Rule(get_inc_del head, [Rel(get_inc_del bb); Not(get_inc_original aa); Not(get_inc_ins aa)]);
                 Rule(get_inc_del head, [Rel(get_inc_del aa); Rel(get_inc_del bb)]); *)
                 Rule(get_inc_del head, [Rel(get_inc_del bb); Not(aa)]);
@@ -755,3 +772,19 @@ let incrementalize_by_view (debug:bool) prog =
     let cnt = build_colnamtab edb idb in
     1 *)
 ;;
+
+(* given a program, substitute a predicate in its rules (not schema statements) to a new one *)
+let subst_pred (old_pred:string) (new_pred:string) prog = 
+  match prog with 
+  Prog(stts) ->
+    let subs_rterm (rt:rterm) = match rt with
+      | Pred (name, vl) -> if (name = old_pred) then Pred (new_pred, vl) else rt
+      | _ -> rt in
+    let subs_term t = match t with 
+    | Rel r             -> Rel (subs_rterm r)
+    | Not r            -> Not (subs_rterm  r)
+    | _ -> t in
+    let subs_stt stt = match stt with 
+      | Rule (p, tel) -> Rule(subs_rterm p, List.map (subs_term ) tel)
+      | _ -> stt in
+  Prog(List.map (subs_stt) stts)

@@ -44,25 +44,6 @@ and vterm (* value term *) =
   | Concat of vterm * vterm 
   (* boolean expression *)
   | BoolAnd of vterm * vterm | BoolOr of vterm * vterm | BoolNot of vterm
-
-(* and valexpr (* value expression *) = Armexpr of armexpr | Strexpr of strexpr
-and armexpr (* arithmetic expression *) = ArmConst of const | ArmVar of var  
-and strexpr (* string expression *) = StrConst of const | StrVar of var   *)
-
-(* and armexpr (* arithmetic expression *) = Aterm of aterm | Plus of armexpr * aterm  | Minus of armexpr * aterm 
-and aterm (* arithmetic term *) = Factor of factor | Times of aterm * factor | Div of  aterm * factor 
-and factor (* arithmetic factor *)  =  Const of const | Neg of const |  *)
-
-(* to be continued... *)
-(* need to and arithmetic expression for term of equal and ineq (comparasion) 
-https://ronsavage.github.io/SQL/sql-2003-2.bnf.html#value%20expression
-*)
-(* to add delta relation: delta relation have to be the head of rule
-delta relation have to have the same name as a update of rterm
-when add delta rule to symtable, just convert name of a delta relation by add symbol '+' before its predicate name, we can do that because now we only allow alphabet name for a normal predicate
-we can get the delta rule, delta rterm by match rterm with Deltapred
-we can get pred name of delta relation by change some functions of getting pred name 
- *)
 ;;
 
 (****************************************************
@@ -368,8 +349,8 @@ let string_of_stt st = match st with
     | Rule (p, tel)        -> string_of_rterm p ^ " :- " ^ 
                              String.concat " , " (List.map string_of_term tel) ^ ".\n"
     | Query r            -> "?- " ^ string_of_rterm r ^ ".\n"
-    | Source (name, lst)   -> "source " ^ name ^ "(" ^ String.concat "," (List.map (fun (col,typ) -> col^":"^ (string_of_stype typ)) lst) ^ ").\n" 
-    | View (name, lst)    -> "view " ^ name ^ "(" ^ String.concat "," (List.map (fun (col,typ) -> col^":"^ (string_of_stype typ)) lst) ^ ").\n"
+    | Source (name, lst)   -> "source " ^ name ^ "(" ^ String.concat ", " (List.map (fun (col,typ) -> col^":"^ (string_of_stype typ)) lst) ^ ").\n" 
+    | View (name, lst)    -> "view " ^ name ^ "(" ^ String.concat ", " (List.map (fun (col,typ) -> col^":"^ (string_of_stype typ)) lst) ^ ").\n"
     | Constraint (p, tel)        -> string_of_rterm p ^ " :- " ^ 
                              String.concat " , " (List.map string_of_term tel) ^ ".\n"
 ;;

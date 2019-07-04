@@ -208,6 +208,18 @@ let rule_of_query query (idb:symtable) =
     let dummy = Pred ("__dummy__", get_rterm_varlist q2) in
     Rule (dummy, (Rel q2)::eqs)
 
+(** Given a delta, it returns a 'dummy' idb rule that calculates the desired output, 
+note that we take an difference over deltainsert with its source 
+and take a intersection over deltadelete and its source
+*)
+let rule_of_delta delta (idb:symtable) =
+    let (q2,eqs) = extract_rterm_constants delta in
+    let dummy = Pred ("__dummy__", get_rterm_varlist q2) in
+    match delta with
+        Deltainsert (pname, varlst) -> Rule (dummy, (Rel q2)::(Not (Pred(pname, get_rterm_varlist q2)))::eqs)
+        | Deltadelete (pname, varlst) -> Rule (dummy, (Rel q2)::(Rel (Pred(pname, get_rterm_varlist q2)))::eqs)
+        | _ -> raise (SemErr "the non_rec_unfold_sql_of_update is called without and delta predicate")
+
 (** Takes a list of terms and splits them in positive rterms,
   negative terms, equalities, and inequalities*)
 let split_terms terms =

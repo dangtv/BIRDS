@@ -3,7 +3,7 @@
 %v:tracks3(TRACK:string,RATING:int,ALBUM:string,QUANTITY:int).
 
 % constraints: ⊥
-⊥() :- tracks3(T,R,A,Q), NOT Q>2.
+⊥ :- tracks3(T,R,A,Q), NOT Q>2.
 
 % rule for insertion to tracks2
 +tracks2(TRACK,RATING,ALBUM,QUANTITY) :- tracks3(TRACK,RATING,ALBUM,QUANTITY),

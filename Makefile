@@ -31,6 +31,7 @@ TOP_FILES=\
 	rule_preprocess stratification derivation \
 	ast2fol ast2sql\
 	ast2theorem\
+	bx\
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\

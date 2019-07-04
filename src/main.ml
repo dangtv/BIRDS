@@ -19,6 +19,7 @@ open Derivation;;
 open Arg;;
 open Ast2theorem;;
 open Ast2fol;;
+open Bx;;
 
 (** check for options of command line*)
 (*default values*)
@@ -31,6 +32,7 @@ let dbname = ref "datalogdb";;
 let debug = ref false;;
 let connectdb = ref false;;
 let importschema = ref false;;
+let dejima_ud = ref false;;
 let verification = ref false;;
 let inc = ref false;;
 let optimize = ref false;;
@@ -58,6 +60,7 @@ let speclist = [
   ("-p", Arg.Int    (fun d -> port := d),      "port database server port (default: \"5432\")");
   ("-U", Arg.String (fun s -> user := s),      "user database user (default: \"postgres\")");
   ("-g", Arg.String (fun s -> dejima_user := s),      "user special user for global dejima synchronization (default: \"dejima\")");
+  ("-dejima", Arg.Unit (fun () -> dejima_ud := true),      " detect updates on dejima views to do pre-defined actions in the shell script file");
   ("-w", Arg.String (fun s -> password := s),  "password database user password (default: 12345678)");
   ("-d", Arg.String (fun s -> dbname := s),    "dbname database name to connect to (default: \"datalogdb\")");
   ("-m", Arg.Int (fun m -> mode := m),         "mode {1: For putback view update datalog program, 2: For view update datalog program containing view definition, update strategy and integrity constraints, 3: For only view definition datalog program} (default: 1)");
@@ -99,29 +102,35 @@ let main () =
      - translate put datalog program to PL/pgSQL procedure triggers (need update predicates (source tables))
   *)
   try 
+    if (!importschema) then 
+      (if !debug then print_endline "importing schema from the database"; 
+      let c = new connection ~conninfo () in
+      if !debug then (
+        print_conn_info c; 
+        flush stdout
+      ) else ();
+      let schema = import_dbschema c (!dbschema) in 
+      c#finish; 
+      if (!debug) then (
+        print_endline "------imported DB Schema:--------";
+        print_endline @@ Expr.string_of_prog @@ Prog (schema);
+        print_endline "--------------\n";
+        flush stdout;
+        );
+      let oc =if !outputf = "" then stdout else open_out !outputf  in 
+      fprintf oc "%s\n" (Expr.string_of_prog @@ Prog (schema));
+      close_out oc;
+      exit 0;
+      );
+
     let chan = if !inputf = "" then stdin else open_in !inputf in
     let lexbuf = Lexing.from_channel chan in 
     (* add information of the file name to lexbuf *)
     lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname =  (if !inputf = "" then "stdin" else !inputf)};
     (* while true do *)
-    try
-      let original_ast = Parser.main Lexer.token lexbuf in 
-      let shell_script = if !inputshell = "" then "#!/bin/sh\necho \"true\"" else (String.concat "\n" @@ read_file (!inputshell)) in
-      let ast = 
-      (* get source schema from database system *)
-        if (!importschema) then 
-            (let c = new connection ~conninfo () in
-            if !debug then (
-              print_conn_info c; 
-              flush stdout
-            ) else ();
-            let view_name = Expr.get_rterm_predname (Expr.get_schema_rterm (get_view original_ast)) in
-            let schema = import_dbschema c view_name (!dbschema) in 
-            c#finish; 
-            Expr.add_stts schema original_ast
-            )
-        else original_ast in
-
+    let original_ast = Parser.main Lexer.token lexbuf in 
+    let shell_script = if !inputshell = "" then "#!/bin/sh\necho \"true\"" else (String.concat "\n" @@ read_file (!inputshell)) in
+      let ast =  original_ast in
       let edb = extract_edb ast in 
       (* edb is set of rules whose head is tablename with column, and its body is none*)
       if !debug then (
@@ -153,19 +162,24 @@ let main () =
 
       match !mode with  
       | 1 | 2 -> (
-        let ast2 = if (!mode) = 1 then
-          (let get_ast = Derivation.derive (!debug) edb ast in
-          let get_stts exp = fst (Rule_preprocess.seperate_rules exp) in 
-          let bi_prog = Expr.add_stts (get_stts get_ast) ast in
+        let ast2, view_rules_string = if (!mode) = 1 then
+          (* (let get_ast = Derivation.derive (!debug) edb ast in *)
+          (let get_ast = Bx.derive_get_datalog (!debug) ast in
+          let get_rules exp = fst (Rule_preprocess.seperate_rules exp) in 
+          let bi_prog = Expr.add_stts (get_rules get_ast) ast in
           if !debug then (
             print_endline "_____get&put (bidirectional) datalog program_______"; 
             print_string (Expr.string_of_prog  bi_prog); 
             print_endline "______________\n";
                 ) else ();
-          bi_prog
+          bi_prog, (Expr.string_of_prog (Prog (get_rules get_ast)))
           )
-        else ast in
-        let lean_code = validity_lean_code_of_datalog (!debug) (Expr.constraint2rule ast2) in 
+        else ast, "" in
+        let lean_code = 
+        (
+          if (!mode) = 2 then validity_lean_code_of_bidirectional_datalog (!debug) (Expr.constraint2rule ast2) else
+            gen_lean_code_for_theorems [ (lean_simp_theorem_of_putget (!debug) (Expr.constraint2rule ast2)) ]
+        ) in 
         if not (!outputlean = "") then 
           (let ol =  open_out (!outputlean)  in  
           fprintf ol "%s\n" lean_code;
@@ -176,14 +190,16 @@ let main () =
             verify_fo_lean (!debug) lean_code 
           else 0, "" in 
         if not (validity=0) then 
-          (print_endline @@ "Well-behavedness is not validated \nExit code: " ^ string_of_int validity
-          ^ (if (!debug) then "\nError messange: "^ message else ""); exit 1)
+          (raise (ChkErr ("Well-behavedness is not validated \nExit code: " ^ string_of_int validity
+          ^ (if (!debug) then "\nError messange: "^ message else ""))))
         else
-          (if (!verification) then print_endline @@ "Program is well-behaved";
+          (
+          (* if (!verification) then print_endline @@ "Program is well-behaved"; *)
           let oc =if !outputf = "" then stdout else open_out !outputf  in 
+          if (!mode) = 1 then fprintf oc "/*view definition (get):\n%s*/\n" view_rules_string;
           let sql = Ast2sql.unfold_view_sql (!dbschema) (!debug) ast2 in
           fprintf oc "%s\n" sql;
-          let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!debug) shell_script (!dejima_user) (!inc) (!optimize) (Expr.constraint2rule ast2) in
+          let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!debug) (!dejima_ud) shell_script (!dejima_user) (!inc) (!optimize) (Expr.constraint2rule ast2) in
           fprintf oc "%s\n" trigger_sql;
           
           if (!connectdb) then 
@@ -213,15 +229,17 @@ let main () =
         close_out oc;
         c#finish; 
       )
-      | _ -> print_string "Error: mode has to be in {1,2,3}"
+      | _ -> fprintf stderr "%s\n" "Error: mode has to be in {1,2,3}"; exit 1;
     with
-      SemErr exp -> print_endline ("Semantic error: "^exp)
-    | Parsing.Parse_error ->  print_endline "Syntax error"
-    | LexErr msg -> print_endline (msg^":\nError: Illegal characters")
-    | ParseErr msg -> print_endline (msg^":\nError: Syntax error")
+      SemErr exp -> fprintf stderr "%s\n" ("Semantic error: "^exp); exit 1;
+    | Parsing.Parse_error ->  fprintf stderr "%s\n"  "Syntax error"; exit 1;
+    | LexErr msg -> fprintf stderr "%s\n"  (msg^":\nError: Illegal characters"); exit 1;
+    | ChkErr exp -> fprintf stderr "%s\n"  ("Invalidity: "^exp); exit 1;
+    | ParseErr msg -> fprintf stderr "%s\n"  (msg^":\nError: Syntax error"); exit 1;
+    | Failure msg -> fprintf stderr "%s\n"  msg; exit 1;
+    | Invalid_argument msg -> fprintf stderr "%s\n"  msg; exit 1;
   (* done *)
-  with Eof ->
-    print_string "Lexer.Eof"; exit 0
+    | Eof -> fprintf stderr "%s\n"  "Lexer.Eof"; exit 1;
 ;; 
 
 let test() = 
@@ -236,7 +254,8 @@ let test() =
     lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname =  (if  inputf = "" then "stdin" else  inputf)};
     (* while true do *)
     try
-      let ast = Parser.main Lexer.token lexbuf in 
+      let ast1 = Parser.main Lexer.token lexbuf in 
+      let ast = (Expr.constraint2rule ast1) in
       (* let edb = import_dbschema c ( dbschema) in  *)
       let edb = extract_edb ast in 
       (* edb is set of rules whose head is tablename with column, and its body is none*)
@@ -248,11 +267,14 @@ let test() =
         flush stdout;
       ) else ();
 
-      let idb = extract_idb ast in 
+      (* let idb = extract_idb ast in 
       if  debug then (
                     print_symtable idb;print_endline "______________\n";
+                ) else (); *)
+      if  debug then (
+        print_endline (Expr.string_of_prog ast);
+                    print_endline "______________\n";
                 ) else ();
-
       let oc =if  outputf = "" then stdout else open_out  outputf  in
       let ol =if  outputf = "" then stdout else open_out  outputlean  in
       (* fprintf oc "/*";
@@ -285,21 +307,16 @@ let test() =
       (* let constr_sql = Ast2sql.view_constraint_sql_of_stt "public" debug false ast in *)
          (* fprintf oc "%s\n" constr_sql; *)
 
-      let fm = Ast2fol.sourcestability_sentence_of_stt ( debug) ast in
-      let view_name = Expr.get_rterm_predname (Expr.get_schema_rterm (get_view ast)) in
-      fprintf oc "%s\n" (lean_string_of_fol_formula fm);
-      let phi, lst = ranf2lvnf view_name fm in 
-      fprintf oc "phi: %s\n" (lean_string_of_fol_formula phi);
-
-      List.iter (fun (vars, vfol, phi_i) -> 
-      fprintf oc "conj: %s, " (lean_string_of_fol_formula ((vfol)));
-      fprintf oc " %s \n" (lean_string_of_fol_formula ((phi_i)));
-      ) lst;
+      
+      
+      let get_ast = derive_get_datalog debug ast in
+      fprintf oc "view datalog: %s \n" (Expr.string_of_prog get_ast);
 
       close_out oc;
       close_out ol;
     with
       SemErr exp -> print_endline ("Semantic error: "^exp)
+    | ChkErr exp -> print_endline ("Invalidity: "^exp)
     | Parsing.Parse_error ->  print_endline "Syntax error"
     | LexErr msg -> print_endline (msg^":\nError: Illegal characters")
     | ParseErr msg -> print_endline (msg^":\nError: Syntax error")

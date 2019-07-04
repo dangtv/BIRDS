@@ -1,0 +1,17 @@
+source female(EMP_NAME:string, BIRTH_DATE:string).
+source ced(EMP_NAME:string, DEPT_NAME:string).
+
+view female_dept(DEPT_NAME:string).
+
+female_dept(D) :- ced(E,D), female(E,_).
+
+% A contraint that there exists an tuple ('unknown','0001-01-01') in female
+_|_ :-  not female('unknown','0001-01-01').
+
+% put
+tmp(D) :- ced(E,D), female(E,_).
+% option 1: insert only one E
++ced(E,D) :- female_dept(D), not tmp(D), E='unknown'.
+% % option 2: insert all E in female
+% +ced(E,D) :- female_dept(D), not tmp(D), female(E,_).
+-ced(E,D) :- ced(E,D), female(E,B), not female_dept(D).

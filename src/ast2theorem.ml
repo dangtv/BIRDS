@@ -266,11 +266,12 @@ local attribute [instance] classical.prop_decidable -- make all prop decidable
     intro h,
     try{rw[imp_false] at *},
     try{simp at *},
-    revert h,
-    z3_smt,
+    try{revert h},
+    try{z3_smt},
+    try{super {max_iters := 200, timeout := 200000}}
     end") thms)
 
-let validity_lean_code_of_datalog (debug:bool) prog = 
+let validity_lean_code_of_bidirectional_datalog (debug:bool) prog = 
     gen_lean_code_for_theorems [
         (lean_simp_theorem_of_disjoint_delta ( debug) prog); 
         (lean_simp_theorem_of_getput ( debug) prog);

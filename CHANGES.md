@@ -1,3 +1,5 @@
+# Changelog
+
 ### 2019-03-17:
 * Add option install in Makefile
 * Fix bugs in Makefile

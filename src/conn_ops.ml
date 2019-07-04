@@ -72,8 +72,8 @@ let print_creating_sql (conn:Postgresql.connection) sql =
     let res = (conn#exec sql) in
     print_endline "";
     match res#status with 
-    | Command_ok -> print_endline "creating successfully"
-    | _             -> failwith "error: unexpected status"
+    | Command_ok -> print_endline "-- run SQL successfully"
+    | _             -> failwith "error of executing SQL: unexpected status"
 ;;
 
 let type_of_postgrestype str = match str with 
@@ -111,9 +111,9 @@ let import_table_schema (conn:Postgresql.connection) tname =
 
 (** Looks in the db for the description of all the tables and views (exluding materialized view)
  * and returns a symtable with their descriptions*)
-let import_dbschema (conn:Postgresql.connection) view_name (dbschema:string) =
+let import_dbschema (conn:Postgresql.connection) (dbschema:string) =
     let sql = "SELECT table_name FROM information_schema.tables
-                WHERE table_schema = '"^dbschema^"' AND table_name IS DISTINCT FROM '" ^ view_name^ "';" in
+                WHERE table_schema = '"^dbschema^"';" in
     let _,tuples = get_query_result conn sql in
     let t_names = List.flatten tuples in
     (* let symt:symtable = Hashtbl.create 100 in *)
