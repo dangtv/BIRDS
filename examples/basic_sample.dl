@@ -1,7 +1,9 @@
-%s: s1(X:int).
-%s: s2(X:int).
-%v: v(X:int).
+% schema:
+source s1(X:int,Y:int).
+source s2(X:int,Y:int).
+view v(X:int,Y:int).
 
--s1(X) :- s1(X), not v(X).
--s2(X) :- s2(X), not v(X).
-+s1(X) :- v(X), not s1(X), not s2(X).
+% rules for update strategy:
+-s1(X,Y) :- s1(X,Y), not v(X,Y).
+-s2(X,Y) :- s2(X,Y), not v(X,Y).
++s1(X,Y) :- v(X,Y), not s1(X,Y), not s2(X,Y).

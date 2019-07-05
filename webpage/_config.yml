@@ -1,13 +1,13 @@
 destination: ../docs
-exclude: ['README.md', 'Gemfile.lock', 'Gemfile', 'jekyll-theme-leap-day.gemspec', 'LICENSE']
+exclude: ['README.md', 'Gemfile.lock', 'Gemfile', 'jekyll-theme-slate.gemspec', 'LICENSE']
 show_downloads: false
 execution_downloads: true
 google_analytics:
-theme: jekyll-theme-leap-day
+theme: jekyll-theme-slate
 github:
   repository_name: BIRDS
   repository_folder: BIRDS
-  project_tagline: Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies
+  project_tagline: <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies
   zip_url: https://github.com/dangtv/BIRDS/archive/0.0.2.zip
   tar_url: https://github.com/dangtv/BIRDS/archive/0.0.2.tar.gz
   mac_exe: https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_macos_v0.0.2.zip

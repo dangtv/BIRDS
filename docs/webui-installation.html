@@ -12,7 +12,7 @@
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
 <script type="application/ld+json">
-{"url":"/syntax.html","@type":"WebPage","@context":"http://schema.org"}</script>
+{"url":"/webui-installation.html","@type":"WebPage","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
   </head>
@@ -40,23 +40,9 @@
           <nav>
             <ul></ul>
           </nav>
-        <h2 id="the-datalog-core-syntax">The Datalog core Syntax</h2>
-<p>In Datalog program supported by BIRDS, a predicate <code class="highlighter-rouge">R</code> preceded by a symbol <code class="highlighter-rouge">+</code>/<code class="highlighter-rouge">-</code> (called a delta predicate) corresponds to the set of tuples need to be inserted/deleted into/from table <code class="highlighter-rouge">R</code>.
-The core syntax for Datalog supported by BIRDS is the following:</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;program&gt; ::= {&lt;statement&gt;} &lt;statement&gt;
-&lt;statement&gt; ::= &lt;schema&gt; | &lt;constraint&gt; | &lt;rule&gt;
-&lt;schema&gt; ::= "source:" &lt;predicate&gt; "." | "view:" &lt;predicate&gt; "."
-&lt;rule&gt; ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
-&lt;constraint&gt; ::= ("⊥" | "_|_") ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
-&lt;literal&gt; ::= | &lt;predicate&gt; | ("not" | "¬") &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
-&lt;predicate&gt; ::= [ ("+" | "-") ] &lt;relname&gt; "(" &lt;term&gt; {"," &lt;term&gt;} ")"
-&lt;builtin&gt; ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
-&lt;term&gt; ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
-&lt;varname&gt; ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
-&lt;relname&gt; ::= 'a'|..|'z' { ('a'|..|'z'| '0'|..|'9'|'_') }
-&lt;anonvar&gt; ::= '_'
-&lt;const&gt; ::= &lt;integer&gt; | &lt;float&gt; | &lt;string&gt;
-</code></pre></div></div>
+        <h1 id="birds-web-based-editor">BIRDS Web-based editor</h1>
+
+<p>Web-based interface: TBD</p>
 
       </section>
     </div>

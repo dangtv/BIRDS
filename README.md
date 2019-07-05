@@ -104,4 +104,4 @@ More information about BIRDS is available at: [https://dangtv.github.io/BIRDS/](
   ```bash
     docker pull dangtv/birds
   ```
-* More details in folder `docker/ubuntu`
+ 

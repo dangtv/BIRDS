@@ -16,3 +16,5 @@ src/logic/*.cmt
 temp.smt2
 
 .idea/
+
+webpage/.sass-cache/

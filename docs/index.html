@@ -1,9 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en-US">
+
   <head>
-    <meta charset="utf-8">
+    <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Bidirectional Transformation for Relational view update Datalog-based Strategies (BIRDS)</title>
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" href="assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
+    <script src="assets/js/main.js"></script>
 <!-- Begin Jekyll SEO tag v2.5.0 -->
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
@@ -11,135 +15,83 @@
 {"url":"/","@type":"WebSite","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
-    <link rel="stylesheet" href="assets/css/style.css?v=">
-    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
-    <script src="assets/js/main.js"></script>
-    <!--[if lt IE 9]>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js" integrity="sha256-3Jy/GbSLrg0o9y5Z5n1uw0qxZECH7C6OQpVBgNFYa0g=" crossorigin="anonymous"></script>
-    <![endif]-->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-
   </head>
+
   <body>
 
-      <header>
-        <a href="/BIRDS"> <h1>  BIRDS </h1> </a>
-        <p style="margin-top:0.2em">Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</p>
-        <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
-        
-        
-        <a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_macos_v0.0.2.zip" class="button fork">Download for Macos</a>
-        <a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_ubuntu_v0.0.2.zip" class="button fork">Download for Ubuntu</a>
-        
-      </header>
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          
+            <a id="forkme_banner" href="https://github.com/dangtv/BIRDS">View on GitHub</a>
+          
+          <a id="project_title" href="/BIRDS">BIRDS</a>
+           <!-- <h1 id="project_title">  BIRDS </h1>  -->
+          <h2 id="project_tagline"><b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</h2>
 
-      <!-- <div id="banner">
-        <span id="logo"></span>
+          
+        </header>
+    </div>
 
-        <a href="https://github.com/dangtv/BIRDS" class="button fork"><strong>View On GitHub</strong></a>
-        
-      </div> -->
-      <!-- end banner -->
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer, wrapper">
+      <section id="main_content" class="inner">
+          <!-- <p>Table of Contents</p> -->
+        <h2 id="overview">Overview</h2>
 
-    <div class="wrapper">
-      <nav>
-        <ul></ul>
-      </nav>
-      <section>
-        <h1 id="birds">BIRDS</h1>
+<p>BIRDS (<strong>BI</strong>directional transformation for <strong>R</strong>elational view update <strong>D</strong>atalog-based <strong>S</strong>trategies) is a declarative framework that allows developers to program update strategies on relational views, hence, making views updatable. 
+The framework is based on the theory of (putback-based) bidirectional transformation (BX) but specifically developed for relational database management systems (RDBMS).
+BIRDS supports Datalog, a highly-declarative language, thus frees programmers from the burden of manually</p>
 
-<h2 id="overview">Overview</h2>
+<ul>
+  <li>Checking the correctness of view update strategies with respect to the consistency of views and base relations,</li>
+  <li>Maintaining bidirectional (backward &amp; forward) transformations. In fact, a correct update strategy (backward direction) also captures view definition (forward direction). BIRDS supports automatically deriving the corresponding view definition for a given update strategy.</li>
+  <li>Creating triggers and trigger procedures on updatable views for handling SQL DML statements: UPDATE/INSERT/DELETE.</li>
+</ul>
 
-<p>BIRDS (Putback-based <strong>BI</strong>directional transformation for <strong>R</strong>elational view update <strong>D</strong>atalog-based <strong>S</strong>trategies) is a bidirectional transformation (BX) framework for Relational Database Management Systems (RDBMS). The objective of this framework is to allow programmers to define a relational view in RDBMS by writing an update strategy for it.</p>
+<h2 id="view-update-strategy-how-to-write">View update strategy: How to write?</h2>
+<p>We are given schemas of tables and a view. Traditionally, over the base tables, we write a query that defines the view. However, this defining query is not enough to determine how view updates are propagated to the base tables.</p>
 
-<h2 id="view-update-language-datalog">View Update Language: Datalog</h2>
+<p>BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy is no more than a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation as well as the defining query of the view.</p>
 
-<p>BIRDS employs and extends the power of Datalog, which is a well known query language in RDBMS, in writing arbitrary update strategies for any relational views to source relations. Based on putback-based BX foundations, BIRDS automatically verifies the validity of a Datalog-written update strategy for a view (Putback direction) and then derive the definition of that view (Get direction) as a query over source relations. Finally, both Datalog-written update strategy and derived view definition are translated to a set of SQL statements with PL/pgSQL procedures, which can run directly in a PostgreSQL ORDBMS to create a new view along with its trigger.</p>
+<p>Note that an update strategy should make full use of data on the view in updating the source tables. We must ensure that no information on the view is lost in the updated source.
+BIRDS supports to verify the correctness of the written update strategy.</p>
 
-<!-- The syntax for Datalog in writing relational view update strategies is described in [Update Datalog Syntax](syntax.html) -->
+<p>Update strategies by example: <a href="basic-tutorial.html">The basics</a></p>
 
-<!-- A view should be defined through a view update strategy to the base relations rather than a query over them. -->
-
-<!-- ---
-layout: default
----
-
-## View Update Datalog Syntax
-
-```text
-
-``` -->
-
-<h2 id="datalog-syntax-for-relational-view-update">Datalog Syntax for Relational View Update</h2>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;program&gt; ::= {&lt;statement&gt;}
-&lt;statement&gt; ::= &lt;rule&gt; | &lt;query&gt; | &lt;base_relation&gt;
-&lt;rule&gt; ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
-&lt;base_relation&gt; ::= "%s:" &lt;predicate&gt; "."
-&lt;query&gt; ::= ("%v:" | "?-") &lt;predicate&gt; "."
-&lt;literal&gt; ::= | &lt;predicate&gt; | "not" &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
-&lt;predicate&gt; ::= [ ("+" | "-") ] &lt;relname&gt; "(" &lt;variable&gt; {"," &lt;variable&gt;} ")"
-&lt;builtin&gt; ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
-&lt;variable&gt; ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
-&lt;varname&gt; ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
-&lt;relname&gt; ::= 'a'|..|'z' { ('a'|..|'z'| '0'|..|'9'|'_') }
-&lt;anonvar&gt; ::= '_'
-&lt;const&gt; ::= &lt;integer&gt; | &lt;float&gt; | &lt;string&gt;
-</code></pre></div></div>
+<p>The Datalog core Syntax: <a href="syntax.html">Syntax</a></p>
 
 <h2 id="installation-and-usage">Installation and Usage</h2>
 
-<h3 id="installation">Installation</h3>
+<p>There are two ways to use BIRDS to write and compile Datalog programs of view update strategies</p>
 
 <ul>
-  <li>Download executable files:
-    <ul>
-      <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_macos_v0.0.2.zip">For Macosx</a></li>
-      <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_ubuntu_v0.0.2.zip">For Ubuntu</a>
-<!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) --></li>
-    </ul>
-  </li>
-  <li>Build an executable file from the source code available at <a href="https://github.com/dangtv/BIRDS">https://github.com/dangtv/BIRDS</a> (along with instructions)</li>
+  <li>Command line tool: See the <a href="cli-installation.html">instruction for CLI</a></li>
+  <li>Web-based interface: See the <a href="webui-installation.html">instruction for WebUI editor</a></li>
 </ul>
 
-<h3 id="usage">Usage</h3>
+<p>You can also build from the <a href="https://github.com/dangtv/BIRDS">source code</a> or download the <a href="https://hub.docker.com/r/dangtv/birds">BIRDS’s docker image</a> for using both the command line tool and WebUI editor of BIRDS.</p>
+
+<h2 id="case-studies">Case studies</h2>
 
 <ul>
-  <li>
-    <p>The executable file is <code class="highlighter-rouge">birds</code>:</p>
-
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  birds <span class="o">[</span>OPTIONS]
-  <span class="nt">-db</span>         : print debugging information
-  <span class="nt">-f</span> file     : <span class="nb">read </span>program from file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
-  <span class="nt">-o</span> file     : write program out file, <span class="k">if </span>not chosen, print to stdout
-  <span class="nt">-s</span> schema_name     : database schema name to connect to <span class="o">(</span>default: public<span class="o">)</span>
-  <span class="nt">-help</span>  Display this list of options
-  <span class="nt">--help</span>  Display this list of options
-</code></pre></div>    </div>
-  </li>
-  <li>
-    <p>For example, this command will transform the update strategy described in <code class="highlighter-rouge">test1.dl</code> to sql statements in <code class="highlighter-rouge">test1.sql</code> for creating a view with its triggers</p>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  birds <span class="nt">-s</span> public <span class="nt">-f</span> test1.dl <span class="nt">-o</span> test1.sql
-</code></pre></div>    </div>
-  </li>
-</ul>
-
-<h2 id="tutorials-defining-updatable-views-with-datalog-in-birds">Tutorials: defining updatable views with Datalog in BIRDS</h2>
-
-<ul>
-  <li><a href="basic-tutorial.html">The basics</a></li>
-  <li><a href="music-tutorial.html">Examples on a music schema</a></li>
-  <li><a href="ridesharing-tutorial.html">Examples on a ride-sharing schema</a></li>
+  <li><a href="music-tutorial.html">Music database</a></li>
+  <li><a href="ridesharing-tutorial.html">Ride-sharing system</a></li>
 </ul>
 
 
       </section>
-      <footer>
+    </div>
+    
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p style="margin-bottom:0em"><small>
+          
+          Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
-          <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small></p>
-        
-        <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
-        <p style="margin-bottom:0em"><small>Last updated on 28 Dec 2018</small></p>
+        <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
+        <small>Last updated on 5 Jul 2019</small></p>
       </footer>
     </div>
 

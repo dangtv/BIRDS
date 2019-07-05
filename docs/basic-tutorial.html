@@ -1,9 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en-US">
+
   <head>
-    <meta charset="utf-8">
+    <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Bidirectional Transformation for Relational view update Datalog-based Strategies (BIRDS)</title>
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" href="assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
+    <script src="assets/js/main.js"></script>
 <!-- Begin Jekyll SEO tag v2.5.0 -->
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
@@ -11,191 +15,169 @@
 {"url":"/basic-tutorial.html","@type":"WebPage","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
-    <link rel="stylesheet" href="assets/css/style.css?v=">
-    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
-    <script src="assets/js/main.js"></script>
-    <!--[if lt IE 9]>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js" integrity="sha256-3Jy/GbSLrg0o9y5Z5n1uw0qxZECH7C6OQpVBgNFYa0g=" crossorigin="anonymous"></script>
-    <![endif]-->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-
   </head>
+
   <body>
 
-      <header>
-        <a href="/BIRDS"> <h1>  BIRDS </h1> </a>
-        <p style="margin-top:0.2em">Putback-based <b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</p>
-        <a href="https://github.com/dangtv/BIRDS" class="button fork">View On GitHub</a>
-        
-        
-        <a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_macos_v0.0.2.zip" class="button fork">Download for Macos</a>
-        <a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_ubuntu_v0.0.2.zip" class="button fork">Download for Ubuntu</a>
-        
-      </header>
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          
+            <a id="forkme_banner" href="https://github.com/dangtv/BIRDS">View on GitHub</a>
+          
+          <a id="project_title" href="/BIRDS">BIRDS</a>
+           <!-- <h1 id="project_title">  BIRDS </h1>  -->
+          <h2 id="project_tagline"><b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</h2>
 
-      <!-- <div id="banner">
-        <span id="logo"></span>
+          
+        </header>
+    </div>
 
-        <a href="https://github.com/dangtv/BIRDS" class="button fork"><strong>View On GitHub</strong></a>
-        
-      </div> -->
-      <!-- end banner -->
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer, wrapper">
+      <section id="main_content" class="inner">
+          <!-- <p>Table of Contents</p> -->
+          <nav>
+            <ul></ul>
+          </nav>
+        <h1 id="the-basics">The basics</h1>
 
-    <div class="wrapper">
-      <nav>
-        <ul></ul>
-      </nav>
-      <section>
-        <h1 id="birds-tutorial-basics">BIRDS tutorial: basics</h1>
+<h2 id="schema">Schema</h2>
 
-<h2 id="writing-view-update-strategies-in-datalog">Writing view update strategies in Datalog</h2>
+<p>Example: Two base tables <code class="highlighter-rouge">s1(X,Y)</code> and <code class="highlighter-rouge">s2(X,Y)</code> and a view <code class="highlighter-rouge">v(X,Y)</code></p>
 
+<p>s1</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>X</th>
+      <th>Y</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>s2</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>X</th>
+      <th>Y</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>v</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>X</th>
+      <th>Y</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+</code></pre></div></div>
 <ul>
-  <li>
-    <p>Declare the view and the source relations in Datalog by using two special symbols: <code class="highlighter-rouge">%s:</code> for source relations, <code class="highlighter-rouge">%v:</code> for views. For example, this statement is for a source table <code class="highlighter-rouge">people</code> which has two columns <code class="highlighter-rouge">id</code> and <code class="highlighter-rouge">name</code>:</p>
+  <li>Use the keywords <code class="highlighter-rouge">source</code> and <code class="highlighter-rouge">view</code> to distinguish source tables and view</li>
+  <li>Each column is assigned a data type</li>
+  <li>Supported data types are: integer, float, string.</li>
+</ul>
 
-    <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="err">%</span><span class="ss">s</span><span class="o">:</span> <span class="ss">people</span><span class="p">(</span><span class="nv">ID</span><span class="p">,</span> <span class="nv">NAME</span><span class="p">).</span>
-</code></pre></div>    </div>
+<h3 id="rules-for-update-strategy">Rules for update strategy:</h3>
+<ul>
+  <li>Delta predicate: a delta predicate is a normal predicate following a symbol <code class="highlighter-rouge">+</code> or <code class="highlighter-rouge">-</code>
+    <ul>
+      <li>The predicate <code class="highlighter-rouge">+R</code> corresponds to the delta relation of tuples being inserted into source relation <code class="highlighter-rouge">R</code></li>
+      <li>The predicate <code class="highlighter-rouge">−R</code> corresponds to the delta relation of tuples being deleted from <code class="highlighter-rouge">R</code></li>
+    </ul>
   </li>
   <li>
-    <p>Database modifications (Insertion, Deletion, Updates): we can use Datalog for describing data modifications on a source relation by writing rules for delta relations of this source relation:</p>
-    <ul>
-      <li>Delta predicate: a delta predicate is a normal predicate following a symbol <code class="highlighter-rouge">+</code> or <code class="highlighter-rouge">-</code>
-        <ul>
-          <li>The predicate <code class="highlighter-rouge">+R</code> corresponds to the delta relation of tuples being inserted into source relation <code class="highlighter-rouge">R</code></li>
-          <li>The predicate <code class="highlighter-rouge">−R</code> corresponds to the delta relation of tuples being deleted from <code class="highlighter-rouge">R</code></li>
-          <li>Updates on <code class="highlighter-rouge">R</code> can be represented by using both <code class="highlighter-rouge">+R</code> and <code class="highlighter-rouge">-R</code></li>
-        </ul>
-      </li>
-      <li>
-        <p>Delta rule: a delta rule is a rule for modifying data in a source relation, it is a Datalog rule with a delta predicate in its head. For example, the following rule means any tuple <code class="highlighter-rouge">X</code>, which is in <code class="highlighter-rouge">s1</code> but not in <code class="highlighter-rouge">v</code>, will be deleted from <code class="highlighter-rouge">s1</code>:</p>
+    <p>Delta rule: a delta rule is a rule whose head is a delta predicate of a base table. For example, the following rule means any tuple <code class="highlighter-rouge">(X,Y)</code>, which is in <code class="highlighter-rouge">s1</code> but not in <code class="highlighter-rouge">v</code>, will be deleted from <code class="highlighter-rouge">s1</code>:</p>
 
-        <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">-</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
-</code></pre></div>        </div>
-      </li>
-    </ul>
+    <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="o">-</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">).</span>
+</code></pre></div>    </div>
   </li>
 </ul>
 
-<p>Suppose that a database has two tables <code class="highlighter-rouge">s1</code> and <code class="highlighter-rouge">s2</code>, both have a single column <code class="highlighter-rouge">X</code>, a view <code class="highlighter-rouge">v</code> over these two tables can be defined with the following steps:</p>
+<h2 id="update-strategy">Update strategy</h2>
+
+<p>The following is a full Datalog program for an update strategy on the view <code class="highlighter-rouge">v(X,Y)</code> (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.dl">basic_sample.dl</a>):</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">%</span> <span class="ss">schema</span><span class="o">:</span>
+<span class="ss">source</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+
+<span class="err">%</span> <span class="ss">rules</span> <span class="ss">for</span> <span class="ss">update</span> <span class="ss">strategy</span><span class="o">:</span>
+<span class="o">-</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">).</span>
+<span class="o">-</span><span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">).</span>
+<span class="o">+</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">).</span>
+</code></pre></div></div>
+
+<p>The first two rules say that if a tuple <code class="highlighter-rouge">(X,Y)</code> is in <code class="highlighter-rouge">s1</code> or <code class="highlighter-rouge">s2</code> but not in <code class="highlighter-rouge">v</code>, it will be deleted from <code class="highlighter-rouge">s1</code> or <code class="highlighter-rouge">s2</code>, respectively. The last rule says that if a tuple <code class="highlighter-rouge">(X,Y)</code> is in <code class="highlighter-rouge">v</code> but in neither <code class="highlighter-rouge">s1</code> nor <code class="highlighter-rouge">s2</code>, it will be inserted to <code class="highlighter-rouge">s1</code>.</p>
+
+<h2 id="verifying-and-compiling-into-sql">Verifying and Compiling into SQL</h2>
+
+<p>We verify the correctness of the Datalog program and compile it into SQL by using command line <code class="highlighter-rouge">birds</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="nt">-v</span> <span class="nt">-s</span> public <span class="nt">-f</span> examples/basic_sample.dl <span class="nt">-o</span> examples/basic_sample.sql
+</code></pre></div></div>
+
+<p>The generated SQL file can run directly in a PostgreSQL database to create the corresponding updatable view <code class="highlighter-rouge">v</code> in the database schema <code class="highlighter-rouge">public</code>.</p>
+
+<h2 id="running-in-postgresql">Running in PostgreSQL</h2>
 
 <ol>
-  <li>
-    <p>Write an update strategy on a view v(X) to tables s1(X) and s2(X) by using Datalog (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.dl">basic_sample.dl</a>):</p>
-
-    <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="err">%</span> <span class="ss">describe</span> <span class="ss">the</span> <span class="ss">schema</span> <span class="ss">of</span> <span class="ss">sources</span> <span class="ss">and</span> <span class="ss">views</span>
- <span class="err">%</span><span class="ss">s</span><span class="o">:</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
- <span class="err">%</span><span class="ss">s</span><span class="o">:</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
- <span class="err">%</span><span class="ss">v</span><span class="o">:</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
-
- <span class="err">%</span> <span class="ss">rule</span> <span class="ss">for</span> <span class="ss">deletion</span> <span class="ss">from</span> <span class="ss">sources</span>
- <span class="o">-</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
- <span class="o">-</span><span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
- <span class="err">%</span> <span class="ss">rule</span> <span class="ss">for</span> <span class="ss">insertion</span> <span class="ss">to</span> <span class="ss">sources</span>
- <span class="o">+</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">).</span>
-</code></pre></div>    </div>
-  </li>
-  <li>Derive view definition and transform it with the update strategy to SQL statements (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.sql">basic_sample.sql</a>):
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> birds <span class="nt">-s</span> public <span class="nt">-f</span> examples/basic_sample.dl <span class="nt">-o</span> examples/basic_sample.sql
-</code></pre></div>    </div>
-  </li>
-  <li>
-    <p>The result contains PostgreSQL SQL statements for creating this view <code class="highlighter-rouge">v</code> in the database schema <code class="highlighter-rouge">public</code> and triggers on <code class="highlighter-rouge">v</code>, which make <code class="highlighter-rouge">v</code> updatable with the written update strategy. The SQL result can run directly in a PostgreSQL database:</p>
-
-    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
- <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">VIEW</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span> <span class="k">AS</span> <span class="k">SELECT</span> <span class="n">__dummy__</span><span class="p">.</span><span class="n">col0</span> <span class="k">AS</span> <span class="n">X</span> <span class="k">FROM</span> <span class="p">(...)</span> <span class="k">AS</span> <span class="n">__dummy__</span><span class="p">;</span>
-
- <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="k">public</span><span class="p">.</span><span class="n">v_delta_action</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="k">TRIGGER</span> <span class="k">LANGUAGE</span> <span class="n">plpgsql</span> 
- <span class="k">SECURITY</span> <span class="k">DEFINER</span> <span class="k">AS</span> <span class="err">$$</span>
- <span class="k">DECLARE</span>
- <span class="p">...</span> 
- <span class="k">BEGIN</span>
-     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">v_delta_action_flag</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> <span class="p">(</span><span class="k">SELECT</span> <span class="k">true</span> <span class="k">as</span> <span class="n">finish</span><span class="p">);</span>
-    
-     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__delete__s1</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> 
-     <span class="k">SELECT</span> <span class="p">...</span> <span class="k">FROM</span> <span class="p">(...)</span> <span class="p">;</span>
-     <span class="p">...</span>
-     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__insert__s1</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> 
-     <span class="k">SELECT</span> <span class="p">...</span> <span class="k">FROM</span> <span class="p">(...);</span>
-
-     <span class="k">FOR</span> <span class="n">temprec</span> <span class="k">IN</span> <span class="p">(</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">__dummy__delta__delete__s1</span><span class="p">)</span> <span class="n">LOOP</span> 
-             <span class="k">DELETE</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">WHERE</span> <span class="k">ROW</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span>  <span class="n">temprec</span><span class="p">;</span>
-             <span class="k">END</span> <span class="n">LOOP</span><span class="p">;</span>
-     <span class="k">DROP</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__delete__s1</span><span class="p">;</span>
-     <span class="p">...</span>
-     <span class="k">INSERT</span> <span class="k">INTO</span> <span class="k">public</span><span class="p">.</span><span class="n">s1</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span>  <span class="n">__dummy__delta__insert__s1</span><span class="p">;</span> 
-     <span class="k">DROP</span> <span class="k">TABLE</span> <span class="n">__dummy__delta__insert__s1</span><span class="p">;</span>
-     <span class="k">RETURN</span> <span class="k">NULL</span><span class="p">;</span>
- <span class="n">EXCEPTION</span>
-     <span class="p">...</span>
- <span class="k">END</span><span class="p">;</span>
- <span class="err">$$</span><span class="p">;</span>
-
- <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="k">public</span><span class="p">.</span><span class="n">v_materialization</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="k">TRIGGER</span> <span class="k">LANGUAGE</span> <span class="n">plpgsql</span> 
- <span class="k">SECURITY</span> <span class="k">DEFINER</span> <span class="k">AS</span> <span class="err">$$</span>
- <span class="k">DECLARE</span>
- <span class="p">...</span>
- <span class="k">BEGIN</span>
-     <span class="k">CREATE</span> <span class="k">TEMPORARY</span> <span class="k">TABLE</span> <span class="n">__temp__v</span> <span class="k">WITH</span> <span class="k">OIDS</span> <span class="k">ON</span> <span class="k">COMMIT</span> <span class="k">DROP</span> <span class="k">AS</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span><span class="p">;</span>
-     <span class="k">CREATE</span> <span class="k">CONSTRAINT</span> <span class="k">TRIGGER</span> <span class="n">__temp__peer1_public_trigger_delta_action</span>
-     <span class="k">AFTER</span> <span class="k">INSERT</span> <span class="k">OR</span> <span class="k">UPDATE</span> <span class="k">OR</span> <span class="k">DELETE</span> <span class="k">ON</span> 
-         <span class="n">__temp__v</span> <span class="k">DEFERRABLE</span> <span class="k">INITIALLY</span> <span class="k">DEFERRED</span> 
-         <span class="k">FOR</span> <span class="k">EACH</span> <span class="k">ROW</span> <span class="k">EXECUTE</span> <span class="k">PROCEDURE</span> <span class="k">public</span><span class="p">.</span><span class="n">v_delta_action</span><span class="p">();</span>
-     <span class="k">RETURN</span> <span class="k">NULL</span><span class="p">;</span>
- <span class="n">EXCEPTION</span>
-     <span class="p">...</span>
- <span class="k">END</span><span class="p">;</span>
- <span class="err">$$</span><span class="p">;</span>
-
- <span class="k">DROP</span> <span class="k">TRIGGER</span> <span class="n">IF</span> <span class="k">EXISTS</span> <span class="n">v_trigger_materialization</span> <span class="k">ON</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span><span class="p">;</span>
- <span class="k">CREATE</span> <span class="k">TRIGGER</span> <span class="n">v_trigger_materialization</span>
-     <span class="k">BEFORE</span> <span class="k">INSERT</span> <span class="k">OR</span> <span class="k">UPDATE</span> <span class="k">OR</span> <span class="k">DELETE</span> <span class="k">ON</span>
-     <span class="k">public</span><span class="p">.</span><span class="n">v</span> <span class="k">FOR</span> <span class="k">EACH</span> <span class="k">STATEMENT</span> <span class="k">EXECUTE</span> <span class="k">PROCEDURE</span> <span class="k">public</span><span class="p">.</span><span class="n">v_materialization</span><span class="p">();</span>
-
- <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="k">public</span><span class="p">.</span><span class="n">v_update</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="k">TRIGGER</span> <span class="k">LANGUAGE</span> <span class="n">plpgsql</span> 
- <span class="k">SECURITY</span> <span class="k">DEFINER</span> <span class="k">AS</span> <span class="err">$$</span>
- <span class="k">DECLARE</span>
- <span class="p">...</span>
- <span class="k">BEGIN</span>
-     <span class="n">IF</span> <span class="n">TG_OP</span> <span class="o">=</span> <span class="s1">'INSERT'</span> <span class="k">THEN</span>
-     <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">__temp__v</span> <span class="k">SELECT</span> <span class="p">(</span><span class="k">NEW</span><span class="p">).</span><span class="o">*</span><span class="p">;</span> 
-     <span class="n">ELSIF</span> <span class="n">TG_OP</span> <span class="o">=</span> <span class="s1">'UPDATE'</span> <span class="k">THEN</span>
-     <span class="k">DELETE</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">WHERE</span> <span class="k">ROW</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="k">OLD</span><span class="p">;</span>
-     <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">__temp__v</span> <span class="k">SELECT</span> <span class="p">(</span><span class="k">NEW</span><span class="p">).</span><span class="o">*</span><span class="p">;</span> 
-     <span class="n">ELSIF</span> <span class="n">TG_OP</span> <span class="o">=</span> <span class="s1">'DELETE'</span> <span class="k">THEN</span>
-     <span class="k">DELETE</span> <span class="k">FROM</span> <span class="n">__temp__v</span> <span class="k">WHERE</span> <span class="k">ROW</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">DISTINCT</span> <span class="k">FROM</span> <span class="k">OLD</span><span class="p">;</span>
-     <span class="k">END</span> <span class="n">IF</span><span class="p">;</span>
-     <span class="k">RETURN</span> <span class="k">NULL</span><span class="p">;</span>
- <span class="n">EXCEPTION</span>
-     <span class="p">...</span> 
- <span class="k">END</span><span class="p">;</span>
- <span class="err">$$</span><span class="p">;</span>
-
- <span class="k">DROP</span> <span class="k">TRIGGER</span> <span class="n">IF</span> <span class="k">EXISTS</span> <span class="n">v_trigger_update</span> <span class="k">ON</span> <span class="k">public</span><span class="p">.</span><span class="n">v</span><span class="p">;</span>
- <span class="k">CREATE</span> <span class="k">TRIGGER</span> <span class="n">v_trigger_update</span>
-     <span class="k">INSTEAD</span> <span class="k">OF</span> <span class="k">INSERT</span> <span class="k">OR</span> <span class="k">UPDATE</span> <span class="k">OR</span> <span class="k">DELETE</span> <span class="k">ON</span>
-     <span class="k">public</span><span class="p">.</span><span class="n">v</span> <span class="k">FOR</span> <span class="k">EACH</span> <span class="k">ROW</span> <span class="k">EXECUTE</span> <span class="k">PROCEDURE</span> <span class="k">public</span><span class="p">.</span><span class="n">v_update</span><span class="p">();</span>
-</code></pre></div>    </div>
-  </li>
-</ol>
-
-<h2 id="running-in-postgresql-as-a-backend-database-system">Running in PostgreSQL as a backend database system</h2>
-
-<ol>
-  <li>Load and run the SQL generated by BIRDS in PostgreSQL:
+  <li>Load and run the generated SQL file in PostgreSQL:
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nb">sudo</span> <span class="nt">-u</span> &lt;db_user_name&gt; psql <span class="nt">-d</span> &lt;db_name&gt; <span class="nt">-f</span> &lt;path_to_sql_file&gt;
 </code></pre></div>    </div>
     <p>For example:</p>
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nb">sudo</span> <span class="nt">-u</span> postgres psql <span class="nt">-d</span> my_db <span class="nt">-f</span> examples/basic_sample.sql
 </code></pre></div>    </div>
   </li>
-  <li>Run a UPDATE/INSERT/DELETE statement to modify data on view, for example:
-    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">v</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">6</span><span class="p">);</span>
+  <li>Run an UPDATE/INSERT/DELETE statement to modify data on view, for example:
+    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">v</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">);</span>
 </code></pre></div>    </div>
   </li>
-  <li>Request a complex modification on view by combining all UPDATE/INSERT/DELETE statements in one transaction:
+  <li>Request a bigger modification on view by combining multiple UPDATE/INSERT/DELETE statements in one transaction:
     <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">BEGIN</span><span class="p">;</span>
-     <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">v</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">6</span><span class="p">);</span>
+     <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">v</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">);</span>
      <span class="k">DELETE</span> <span class="k">FROM</span> <span class="n">v</span> <span class="k">where</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
      <span class="k">UPDATE</span> <span class="n">v</span> <span class="k">SET</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">10</span> <span class="k">where</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
  <span class="k">END</span><span class="p">;</span>
@@ -203,14 +185,18 @@
   </li>
 </ol>
 
-
       </section>
-      <footer>
+    </div>
+    
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p style="margin-bottom:0em"><small>
+          
+          Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
-          <p style="margin-bottom:0em"><small>Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small></p>
-        
-        <p style="margin-bottom:0em"><small>Theme based on <a href="https://github.com/pages-themes/leap-day">leap-day</a></small></p>
-        <p style="margin-bottom:0em"><small>Last updated on 28 Dec 2018</small></p>
+        <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
+        <small>Last updated on 5 Jul 2019</small></p>
       </footer>
     </div>
 

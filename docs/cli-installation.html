@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" href="assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
+    <script src="assets/js/main.js"></script>
+<!-- Begin Jekyll SEO tag v2.5.0 -->
+<meta name="generator" content="Jekyll v3.8.3" />
+<meta property="og:locale" content="en_US" />
+<script type="application/ld+json">
+{"url":"/cli-installation.html","@type":"WebPage","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          
+            <a id="forkme_banner" href="https://github.com/dangtv/BIRDS">View on GitHub</a>
+          
+          <a id="project_title" href="/BIRDS">BIRDS</a>
+           <!-- <h1 id="project_title">  BIRDS </h1>  -->
+          <h2 id="project_tagline"><b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</h2>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer, wrapper">
+      <section id="main_content" class="inner">
+          <!-- <p>Table of Contents</p> -->
+          <nav>
+            <ul></ul>
+          </nav>
+        <h1 id="birds-command-line-tool">BIRDS Command Line Tool</h1>
+
+<h2 id="installation">Installation</h2>
+
+<ul>
+  <li>It is necessary to install external tools including Lean &gt;= 3.4.1 and Z3 &gt;= 4.7.1 before installing the command line tool <code class="highlighter-rouge">birds</code>.</li>
+  <li>The tool <code class="highlighter-rouge">birds</code> can be downloaded at:
+    <ul>
+      <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_macos_v0.0.2.zip">For Macosx</a></li>
+      <li><a href="https://github.com/dangtv/BIRDS/releases/download/0.0.2/birds_ubuntu_v0.0.2.zip">For Ubuntu</a>
+<!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) --></li>
+      <li>Or build an executable file from the source code available at <a href="https://github.com/dangtv/BIRDS">https://github.com/dangtv/BIRDS</a> (along with instructions)</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="usage">Usage</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="o">[</span>OPTIONS]
+<span class="nt">-db</span>         print debugging information
+<span class="nt">-f</span> file     <span class="nb">read </span>program from file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
+<span class="nt">-b</span> file     shell script file specifying the action, which will be executed when there is any update on the view, <span class="k">if </span>not chosen, execute nothing
+<span class="nt">-o</span> file     write program out file, <span class="k">if </span>not chosen, print to stdout
+<span class="nt">-l</span> file     write lean verification out file
+<span class="nt">-s</span> schema   database schema name to connect to <span class="o">(</span>default: public<span class="o">)</span>
+<span class="nt">-h</span> host     database server host <span class="o">(</span>default: <span class="s2">"localhost"</span><span class="o">)</span>
+<span class="nt">-c</span>          connect and run sql on database server
+<span class="nt">-import</span>     connect and import data schema from database server
+<span class="nt">-v</span>          verify the well-behavedness
+<span class="nt">-i</span>          optimize update propagation by incremental rewriting rules
+<span class="nt">-e</span>          optimize datalog rules
+<span class="nt">-p</span> port     database server port <span class="o">(</span>default: <span class="s2">"5432"</span><span class="o">)</span>
+<span class="nt">-U</span> user     database user <span class="o">(</span>default: <span class="s2">"postgres"</span><span class="o">)</span>
+<span class="nt">-g</span> user     special user <span class="k">for </span>global dejima synchronization <span class="o">(</span>default: <span class="s2">"dejima"</span><span class="o">)</span>
+<span class="nt">-w</span> password database user password <span class="o">(</span>default: 12345678<span class="o">)</span>
+<span class="nt">-d</span> dbname   database name to connect to <span class="o">(</span>default: <span class="s2">"datalogdb"</span><span class="o">)</span>
+<span class="nt">-m</span> mode     <span class="o">{</span>1: For putback view update datalog program, 2: For view update datalog program containing view definition, update strategy and integrity constraints, 3: For only view definition datalog program<span class="o">}</span> <span class="o">(</span>default: 1<span class="o">)</span>
+<span class="nt">-help</span>       Display this list of options
+<span class="nt">--help</span>      Display this list of options
+</code></pre></div></div>
+
+<p>For example, this command will transform the update strategy described in <code class="highlighter-rouge">test1.dl</code> to sql:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="nt">-s</span> public <span class="nt">-f</span> test1.dl <span class="nt">-o</span> test1.sql
+</code></pre></div></div>
+
+
+      </section>
+    </div>
+    
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p style="margin-bottom:0em"><small>
+          
+          Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
+        
+        <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
+        <small>Last updated on 5 Jul 2019</small></p>
+      </footer>
+    </div>
+
+    
+  </body>
+</html>
