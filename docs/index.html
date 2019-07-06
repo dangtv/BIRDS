@@ -52,7 +52,7 @@ BIRDS supports Datalog, a highly declarative language, thus frees programmers fr
 <h2 id="view-update-strategy-how-to-write-">View update strategy: How to write ?</h2>
 <p>We are given schemas of tables and a view. Traditionally, over the base tables, we write a query that defines the view. However, this defining query is not enough to determine how view updates are propagated to the base tables.</p>
 
-<p>BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy is no more than a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation as well as the defining query of the view.</p>
+<p>BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy is no more than a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view.</p>
 
 <p>Note that an update strategy should make full use of data on the view in updating the source tables. We must ensure that no information on the view is lost in the updated source.
 BIRDS supports us to verify the correctness of the written update strategy.</p>

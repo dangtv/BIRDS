@@ -317,8 +317,7 @@ The view `retired` contains residents, who were retired.
 |-----------------|
 | Saniya Kalloufi|
 
-The update strategy for `retired` is to remove from the `ced` the current department of the persons who are retired (in the view `retired`) and insert a new department for the resident who is not retired but not yet mentioned in `ced`. We also ensure a retired person is a resident as follows
-[retired.dl]({{site.github.repository_url}}/tree/master/examples/employee/retired.dl):
+The update strategy for `retired` is to remove from the `ced` the current departments of people, who are retired (in the view `retired`), and to insert a new department for each resident, who is not retired but is not yet mentioned in `ced`. We also ensure a retired person is a resident as follows ([retired.dl]({{site.github.repository_url}}/tree/master/examples/employee/retired.dl)):
 
 ```prolog
 source residents(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
@@ -334,26 +333,26 @@ Verifying and compiling the update strategy into SQL:
 
 ![insert](assets/images/retired-compilation.png)
 
-For example, if `Parto Bamford` is retired:
+For example, if `Parto Bamford` is now retired:
 
 ```sql
 insert into retired values('Parto Bamford');
 ```
 
-And he will belong to no department:
+He will not be in any department anymore:
 
 ![insert](assets/images/retired-insert.png)
 
 
 ## Update strategy for `voter`
 
-Let `blacklist(EMP_NAME)` is a black list of residents
+Let `blacklist(EMP_NAME)` be a black list of residents
 
 |emp_name     
 |------------------
 | Kyoichi Maliniak
 
-we now define an update strategy for a view `voter(emp_name, birth_date)` containing residents, who has the right to vote at elections, as follows [voter.dl]({{site.github.repository_url}}/tree/master/examples/employee/voter.dl):
+We now define an update strategy for a view `voter(emp_name, birth_date)` containing residents, who has the right to vote at elections, as follows ([voter.dl]({{site.github.repository_url}}/tree/master/examples/employee/voter.dl)):
 
 ```prolog
 source blacklist(EMP_NAME:string).

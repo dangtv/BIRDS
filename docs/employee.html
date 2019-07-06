@@ -618,8 +618,7 @@ The second rule ensures each researcher is a resident by inserting into <code cl
   </tbody>
 </table>
 
-<p>The update strategy for <code class="highlighter-rouge">retired</code> is to remove from the <code class="highlighter-rouge">ced</code> the current department of the persons who are retired (in the view <code class="highlighter-rouge">retired</code>) and insert a new department for the resident who is not retired but not yet mentioned in <code class="highlighter-rouge">ced</code>. We also ensure a retired person is a resident as follows
-<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/retired.dl">retired.dl</a>:</p>
+<p>The update strategy for <code class="highlighter-rouge">retired</code> is to remove from the <code class="highlighter-rouge">ced</code> the current departments of people, who are retired (in the view <code class="highlighter-rouge">retired</code>), and to insert a new department for each resident, who is not retired but is not yet mentioned in <code class="highlighter-rouge">ced</code>. We also ensure a retired person is a resident as follows (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/retired.dl">retired.dl</a>):</p>
 
 <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
 <span class="ss">source</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">DEPT_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
@@ -634,18 +633,18 @@ The second rule ensures each researcher is a resident by inserting into <code cl
 
 <p><img src="assets/images/retired-compilation.png" alt="insert" /></p>
 
-<p>For example, if <code class="highlighter-rouge">Parto Bamford</code> is retired:</p>
+<p>For example, if <code class="highlighter-rouge">Parto Bamford</code> is now retired:</p>
 
 <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">insert</span> <span class="k">into</span> <span class="n">retired</span> <span class="k">values</span><span class="p">(</span><span class="s1">'Parto Bamford'</span><span class="p">);</span>
 </code></pre></div></div>
 
-<p>And he will belong to no department:</p>
+<p>He will not be in any department anymore:</p>
 
 <p><img src="assets/images/retired-insert.png" alt="insert" /></p>
 
 <h2 id="update-strategy-for-voter">Update strategy for <code class="highlighter-rouge">voter</code></h2>
 
-<p>Let <code class="highlighter-rouge">blacklist(EMP_NAME)</code> is a black list of residents</p>
+<p>Let <code class="highlighter-rouge">blacklist(EMP_NAME)</code> be a black list of residents</p>
 
 <table>
   <thead>
@@ -660,7 +659,7 @@ The second rule ensures each researcher is a resident by inserting into <code cl
   </tbody>
 </table>
 
-<p>we now define an update strategy for a view <code class="highlighter-rouge">voter(emp_name, birth_date)</code> containing residents, who has the right to vote at elections, as follows <a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/voter.dl">voter.dl</a>:</p>
+<p>We now define an update strategy for a view <code class="highlighter-rouge">voter(emp_name, birth_date)</code> containing residents, who has the right to vote at elections, as follows (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/voter.dl">voter.dl</a>):</p>
 
 <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">blacklist</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
 <span class="ss">source</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
