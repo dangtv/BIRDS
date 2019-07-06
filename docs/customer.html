@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" href="assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
+    <script src="assets/js/main.js"></script>
+<!-- Begin Jekyll SEO tag v2.5.0 -->
+<meta name="generator" content="Jekyll v3.8.3" />
+<meta property="og:locale" content="en_US" />
+<script type="application/ld+json">
+{"url":"/customer.html","@type":"WebPage","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          
+            <a id="forkme_banner" href="https://github.com/dangtv/BIRDS">View on GitHub</a>
+          
+          <a id="project_title" href="/BIRDS">BIRDS</a>
+           <!-- <h1 id="project_title">  BIRDS </h1>  -->
+          <h2 id="project_tagline"><b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</h2>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer, wrapper">
+      <section id="main_content" class="inner">
+          <!-- <p>Table of Contents</p> -->
+          <nav>
+            <ul></ul>
+          </nav>
+        <h1 id="example-customers-database-schema">Example: customers database schema</h1>
+
+<h2 id="schema">Schema</h2>
+
+<p>The customers database (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/customer/db/customer.sql">customer.sql</a>) contain two base tables <code class="highlighter-rouge">nation(key, name, description)</code> and <code class="highlighter-rouge">customer(key, name, address, phone, nationkey)</code> and a view <code class="highlighter-rouge">jcustomer(key, name, address)</code></p>
+
+<p><code class="highlighter-rouge">nation</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>key</th>
+      <th>name</th>
+      <th>description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>Japan</td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>China</td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Vietnam</td>
+      <td>none</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code class="highlighter-rouge">customer</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>key</th>
+      <th>name</th>
+      <th>address</th>
+      <th>phone</th>
+      <th>nationkey</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>A</td>
+      <td>Tokyo</td>
+      <td>2432</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>B</td>
+      <td>Hanoi</td>
+      <td>5435</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>C</td>
+      <td>Beijing</td>
+      <td>6524</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code class="highlighter-rouge">jcustomer</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>key</th>
+      <th>name</th>
+      <th>address</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>A</td>
+      <td>Tokyo</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="update-strategy-for-jcustomer">Update strategy for <code class="highlighter-rouge">jcustomer</code></h2>
+
+<p>If thinking forwardly, the view <code class="highlighter-rouge">jcustomer</code>, which contains all customers having Japanese citizenship, can be defined by a query over the two base tables as the
+following in Datalog:</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">jcustomer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">customer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">,</span> <span class="nv">P</span><span class="p">,</span> <span class="nv">NK</span><span class="p">),</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">NK</span><span class="p">,</span> <span class="nv">NATION</span><span class="p">,</span> <span class="nv">D</span><span class="p">),</span>
+<span class="nv">NATION</span><span class="o">=</span><span class="ss">'Japan'</span><span class="p">.</span>
+</code></pre></div></div>
+
+<p>Which is a join of tables <code class="highlighter-rouge">customer</code> and <code class="highlighter-rouge">nation</code> on the attribute
+<code class="highlighter-rouge">NATIONKEY</code> with a condition that the nationality is <code class="highlighter-rouge">Japan</code>. We keep
+only three attributes <code class="highlighter-rouge">KEY</code>, <code class="highlighter-rouge">NAME</code> and <code class="highlighter-rouge">ADDRESS</code> from the table
+<code class="highlighter-rouge">customer</code> in the view.</p>
+
+<p>To illustrate the ambiguity of propagating updates on the view
+<code class="highlighter-rouge">jcustomer</code>, let’s consider a simple request to delete tuple ⟨<code class="highlighter-rouge">1, A, Tokyo</code>⟩ from the view
+<code class="highlighter-rouge">jcustomer</code>. Obviously, there are three options for propagating this
+deletion to the source database. The first option is to delete from the
+table <code class="highlighter-rouge">customer</code> the tuple ⟨<code class="highlighter-rouge">1, A, Tokyo, 1234, 1</code>⟩. The second is to
+delete from the table <code class="highlighter-rouge">nation</code> the tuple ⟨<code class="highlighter-rouge">1, Japan, none</code>⟩. The third
+is to perform both deletions in the first and the second options.</p>
+
+<p>Backwardly, we can explicitly specify an update strategy on the view <code class="highlighter-rouge">jcustomer</code> as the following (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/customer/jcustomer.dl">jcustomer.dl</a>):</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">KEY</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">DESCRIPTION</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">customer</span><span class="p">(</span><span class="nv">KEY</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">ADDRESS</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">PHONE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">NATIONKEY</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">jcustomer</span><span class="p">(</span><span class="nv">KEY</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">ADDRESS</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+
+<span class="err">%</span> <span class="ss">constraint</span><span class="o">:</span>
+<span class="err">⊥</span> <span class="p">:-</span> <span class="ss">not</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">_</span><span class="p">,</span> <span class="ss">'Japan'</span><span class="p">,</span> <span class="nv">_</span><span class="p">).</span>
+
+<span class="o">-</span><span class="ss">customer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">,</span> <span class="nv">P</span><span class="p">,</span> <span class="nv">NK</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">customer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">,</span> <span class="nv">P</span><span class="p">,</span> <span class="nv">NK</span><span class="p">),</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">NK</span><span class="p">,</span> <span class="nv">NATION</span><span class="p">,</span> <span class="nv">_</span><span class="p">),</span> <span class="nv">NATION</span> <span class="o">=</span><span class="ss">'Japan'</span><span class="p">,</span> <span class="ss">not</span> <span class="ss">jcustomer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">).</span>
+
+<span class="ss">tmp</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">customer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">,</span> <span class="nv">_</span><span class="p">,</span> <span class="nv">NK</span><span class="p">),</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">NK</span><span class="p">,</span> <span class="ss">'Japan'</span><span class="p">,</span> <span class="nv">_</span><span class="p">).</span>
+<span class="o">+</span><span class="ss">customer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">,</span> <span class="nv">P</span><span class="p">,</span> <span class="nv">NK</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">jcustomer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">tmp</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">),</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">NK</span><span class="p">,</span> <span class="ss">'Japan'</span><span class="p">,</span> <span class="nv">_</span><span class="p">),</span> <span class="ss">customer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">_</span><span class="p">,</span> <span class="nv">_</span><span class="p">,</span> <span class="nv">P</span><span class="p">,</span> <span class="nv">_</span><span class="p">).</span>
+<span class="o">+</span><span class="ss">customer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">,</span> <span class="nv">P</span><span class="p">,</span> <span class="nv">NK</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">jcustomer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">tmp</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">N</span><span class="p">,</span> <span class="nv">A</span><span class="p">),</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">NK</span><span class="p">,</span> <span class="ss">'Japan'</span><span class="p">,</span> <span class="nv">_</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">customer</span><span class="p">(</span><span class="nv">K</span><span class="p">,</span> <span class="nv">_</span><span class="p">,</span> <span class="nv">_</span><span class="p">,</span> <span class="nv">_</span><span class="p">,</span> <span class="nv">_</span><span class="p">),</span> <span class="nv">P</span> <span class="o">=</span> <span class="ss">'unknown'</span><span class="p">.</span>
+</code></pre></div></div>
+
+<p>We assume that in the source table <code class="highlighter-rouge">nation</code> there exists a tuple having
+the attribute <code class="highlighter-rouge">NATION</code> equal to <code class="highlighter-rouge">‘Japan’</code>:
+<code class="highlighter-rouge">∃x, y, nation(x, 'Japan', y)</code>. We express this
+constraint by a special Datalog rule with a truth constant ⊥ in the head <code class="highlighter-rouge">⊥ :- not nation(_, 'Japan', _)</code>.
+The meaning of this rule is a first-order logic sentence
+<code class="highlighter-rouge">(¬∃x, y, nation(x, ‘Japan′, y)) → ⊥</code>,
+which is equivalent to <code class="highlighter-rouge">∃x, y, nation(x, ‘Japan′, y)</code>.
+By this constraint, given an updated view <code class="highlighter-rouge">jcustomer</code>, we keep the table
+<code class="highlighter-rouge">nation</code> unchanged, and update the table <code class="highlighter-rouge">customer</code> to reflect the view
+updates. First, if there is a Japanese customer, who does not appear in
+the view, we choose the option of deleting this customer from the source
+table <code class="highlighter-rouge">customer</code>
+that is more reasonable than deleting the tuple
+<code class="highlighter-rouge">⟨1, ‘Japan′⟩</code> from the table <code class="highlighter-rouge">nation</code>. Second, if there
+is a customer in the view <code class="highlighter-rouge">jcustomer</code> but there is no Japanese customer
+in the source tables having the same values for <code class="highlighter-rouge">KEY, NAME, ADDRESS</code>,
+then we insert a new customer to the table <code class="highlighter-rouge">customer</code> (lines 7, 8 and 9).
+More concretely, to fill the attribute <code class="highlighter-rouge">NATIONKEY</code>, we find a key from
+the table <code class="highlighter-rouge">nation</code> where the nationality is <code class="highlighter-rouge">‘Japan’</code>. Due to the
+constraint on <code class="highlighter-rouge">nation</code> presented before, we can always find such a key.
+To fill in the attribute <code class="highlighter-rouge">PHONE</code>, we search for the existing one in the
+old table <code class="highlighter-rouge">customer</code>. If it is not found, we fill in the attribute
+<code class="highlighter-rouge">PHONE</code> a default string <code class="highlighter-rouge">‘unknown’</code>.</p>
+
+<h2 id="verifying-and-compiling-the-update-strategy-into-sql">Verifying and compiling the update strategy into SQL:</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="nt">-v</span> <span class="nt">-f</span> jcustomer.dl <span class="nt">-o</span> jcustomer.sql
+</code></pre></div></div>
+
+<p><img src="assets/images/jcustomer-compilation.png" alt="insert" /></p>
+
+<p>The defining query of the view is also automatically derived by the above command.</p>
+
+<h2 id="running-in-postgresql">Running in PostgreSQL</h2>
+
+<p>Let’s go to the PostgreSQL database using <code class="highlighter-rouge">psql -U postgres</code> and try an <code class="highlighter-rouge">INSERT</code> statement on the view <code class="highlighter-rouge">jcustomer</code>:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">insert</span> <span class="k">into</span> <span class="n">jcustomer</span> <span class="k">values</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="s1">'D'</span><span class="p">,</span><span class="s1">'Kyoto'</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><img src="assets/images/jcustomer-insert.png" alt="insert" /></p>
+
+<p>And check the base table <code class="highlighter-rouge">customer</code> after the update:</p>
+
+<p><img src="assets/images/jcustomer-insert-result.png" alt="insert-result" /></p>
+
+<p>A new tuple <code class="highlighter-rouge">⟨4, D, Kyoto, unknown, 1⟩</code> was inserted into <code class="highlighter-rouge">customer</code>.</p>
+
+<p>Let’s delete one tuple from <code class="highlighter-rouge">jcustomer</code>:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">delete</span> <span class="k">from</span> <span class="n">jcustomer</span> <span class="k">where</span> <span class="k">key</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>And the result:</p>
+
+<p><img src="assets/images/jcustomer-delete-result.png" alt="delete-result" /></p>
+
+<p>If we insert into <code class="highlighter-rouge">jcustomer</code> a new tuple having the same key <code class="highlighter-rouge">4</code>, then there is a key conflict, the insertion will be rejected:</p>
+
+<p><img src="assets/images/jcustomer-key-conflict.png" alt="key-conflict" /></p>
+
+<p>Obviously, the strategy is based on the constraint that there exists a tuple <code class="highlighter-rouge">(_, 'Japan', _)</code> in the table <code class="highlighter-rouge">nation</code>. The generated SQL code also checks the existence of such a tuple before doing any view update. Thereby, if we delete the tuple <code class="highlighter-rouge">(1,'Japan','none')</code> from <code class="highlighter-rouge">nation</code>:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">delete</span> <span class="k">from</span> <span class="n">nation</span> <span class="k">where</span> <span class="n">name</span><span class="o">=</span><span class="s1">'Japan'</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>That the new table <code class="highlighter-rouge">nation</code> does not have the nation <code class="highlighter-rouge">Japan</code> anymore,</p>
+
+<p><img src="assets/images/updated-nation.png" alt="delete-japan" /></p>
+
+<p>Updates to the view <code class="highlighter-rouge">jcustomer</code> will be rejected with the error messange ‘Invalid view update: constraints on the source relations are violated’:</p>
+
+<p><img src="assets/images/invalid-update-nation.png" alt="invalid-update-nation" /></p>
+
+      </section>
+    </div>
+    
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p style="margin-bottom:0em"><small>
+          
+          Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
+        
+        <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
+        <small>Last updated on 6 Jul 2019</small></p>
+      </footer>
+    </div>
+
+    
+  </body>
+</html>

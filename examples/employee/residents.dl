@@ -1,0 +1,13 @@
+source male(EMP_NAME:string, BIRTH_DATE:string).
+source female(EMP_NAME:string, BIRTH_DATE:string).
+source others(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
+view residents(EMP_NAME:string,BIRTH_DATE:string,GENDER:string).
+
++male(E, B) :- residents(E, B, G), G = 'M', not male(E, B), not others(E, B, G).
+-male(E, B) :- male(E, B), G = 'M', not residents(E, B, G).
+
++female(E, B) :- residents(E, B, G), G = 'F', not female(E, B), not others(E, B, G).
+-female(E, B) :- female(E, B), G = 'F', not residents(E, B, G).
+
++others(E, B, G) :- residents(E, B, G), not G = 'M', not G = 'F', not others(E, B, G).
+-others(E, B, G) :- others(E, B, G), not residents(E, B, G).

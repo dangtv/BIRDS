@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" href="assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
+    <script src="assets/js/main.js"></script>
+<!-- Begin Jekyll SEO tag v2.5.0 -->
+<meta name="generator" content="Jekyll v3.8.3" />
+<meta property="og:locale" content="en_US" />
+<script type="application/ld+json">
+{"url":"/employee.html","@type":"WebPage","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          
+            <a id="forkme_banner" href="https://github.com/dangtv/BIRDS">View on GitHub</a>
+          
+          <a id="project_title" href="/BIRDS">BIRDS</a>
+           <!-- <h1 id="project_title">  BIRDS </h1>  -->
+          <h2 id="project_tagline"><b>BI</b>directional transformation for <b>R</b>elational view update <b>D</b>atalog-based <b>S</b>trategies</h2>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer, wrapper">
+      <section id="main_content" class="inner">
+          <!-- <p>Table of Contents</p> -->
+          <nav>
+            <ul></ul>
+          </nav>
+        <h1 id="example-employees-database-schema">Example: employees database schema</h1>
+
+<h2 id="schema">Schema</h2>
+
+<p>The employees database (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/db/schema.sql">schema.sql</a>) contain five base tables <code class="highlighter-rouge">male(emp_name, birth_date)</code>, <code class="highlighter-rouge">female(emp_name, birth_date)</code>, <code class="highlighter-rouge">others(emp_name, birth_date, gender)</code>, <code class="highlighter-rouge">ed(emp_name, dept_name)</code> and <code class="highlighter-rouge">eed(emp_name, dept_name)</code>.</p>
+
+<p>Table <code class="highlighter-rouge">male</code> contains information about male people</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>birth_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Chirstian Koblick</td>
+      <td>1954-05-01</td>
+    </tr>
+    <tr>
+      <td>Georgi Facello</td>
+      <td>1953-09-02</td>
+    </tr>
+    <tr>
+      <td>Kyoichi Maliniak</td>
+      <td>1955-01-21</td>
+    </tr>
+    <tr>
+      <td>Parto Bamford</td>
+      <td>1959-12-03</td>
+    </tr>
+    <tr>
+      <td>Saniya Kalloufi</td>
+      <td>1958-02-19</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Table <code class="highlighter-rouge">female</code> contains information about female people</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>birth_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Anneke Preusig</td>
+      <td>1953-04-20</td>
+    </tr>
+    <tr>
+      <td>Bezalel Simmel</td>
+      <td>1964-06-02</td>
+    </tr>
+    <tr>
+      <td>Duangkaew Piveteau</td>
+      <td>1963-06-01</td>
+    </tr>
+    <tr>
+      <td>Sumant Peac</td>
+      <td>1952-04-19</td>
+    </tr>
+    <tr>
+      <td>Tzvetan Zielinski</td>
+      <td>1957-05-23</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Table <code class="highlighter-rouge">others</code> contains information of people having other genders</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>birth_date</th>
+      <th>gender</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Table <code class="highlighter-rouge">ed</code> has all historical departments of each person</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>dept_name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Anneke Preusig</td>
+      <td>Development</td>
+    </tr>
+    <tr>
+      <td>Bezalel Simmel</td>
+      <td>Sales</td>
+    </tr>
+    <tr>
+      <td>Chirstian Koblick</td>
+      <td>Production</td>
+    </tr>
+    <tr>
+      <td>Duangkaew Piveteau</td>
+      <td>Production</td>
+    </tr>
+    <tr>
+      <td>Duangkaew Piveteau</td>
+      <td>Quality Management</td>
+    </tr>
+    <tr>
+      <td>Georgi Facello</td>
+      <td>Development</td>
+    </tr>
+    <tr>
+      <td>Kyoichi Maliniak</td>
+      <td>Human Resources</td>
+    </tr>
+    <tr>
+      <td>Parto Bamford</td>
+      <td>Production</td>
+    </tr>
+    <tr>
+      <td>Saniya Kalloufi</td>
+      <td>Development</td>
+    </tr>
+    <tr>
+      <td>Sumant Peac</td>
+      <td>Quality Management</td>
+    </tr>
+    <tr>
+      <td>Tzvetan Zielinski</td>
+      <td>Research</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Table <code class="highlighter-rouge">eed</code> contains only former departments of each person</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>dept_name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Duangkaew Piveteau</td>
+      <td>Production</td>
+    </tr>
+    <tr>
+      <td>Saniya Kalloufi</td>
+      <td>Development</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Several views are expected to be created including <code class="highlighter-rouge">residents(emp_name, birth_date, gender)</code>, <code class="highlighter-rouge">ced(emp_name, dept_name)</code>,
+<code class="highlighter-rouge">residents1962(emp_name, birth_date, gender)</code>, <code class="highlighter-rouge">employees(emp_name, birth_date, gender)</code>, <code class="highlighter-rouge">researchers(emp_name)</code> and <code class="highlighter-rouge">retired(emp_name)</code>.</p>
+
+<h2 id="update-strategy-for-residents">Update strategy for <code class="highlighter-rouge">residents</code></h2>
+
+<p>The view <code class="highlighter-rouge">residents</code> contains all personal information:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>birth_date</th>
+      <th>gender</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Kyoichi Maliniak</td>
+      <td>1955-01-21</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <td>Saniya Kalloufi</td>
+      <td>1958-02-19</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <td>Parto Bamford</td>
+      <td>1959-12-03</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <td>Georgi Facello</td>
+      <td>1953-09-02</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <td>Tzvetan Zielinski</td>
+      <td>1957-05-23</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Bezalel Simmel</td>
+      <td>1964-06-02</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Anneke Preusig</td>
+      <td>1953-04-20</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Duangkaew Piveteau</td>
+      <td>1963-06-01</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Sumant Peac</td>
+      <td>1952-04-19</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Chirstian Koblick</td>
+      <td>1954-05-01</td>
+      <td>M</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>For the view <code class="highlighter-rouge">residents</code>, we use the attribute <code class="highlighter-rouge">GENDER</code> to choose relevant base tables for propagating updated tuples in <code class="highlighter-rouge">residents</code>. More concretely, if there is
+a person in <code class="highlighter-rouge">residents</code> but not in any of the source tables <code class="highlighter-rouge">male</code>,
+<code class="highlighter-rouge">female</code> and <code class="highlighter-rouge">other</code>, we insert this person into the table corresponding
+to his/her <code class="highlighter-rouge">GENDER</code>. In contrast, we delete from the source tables the
+people, who do not appear in the view anymore. The Datalog putback
+program for <code class="highlighter-rouge">residents</code> is the following (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/residents.dl">residents.dl</a>):</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">male</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">female</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">others</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+
+<span class="o">+</span><span class="ss">male</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">),</span> <span class="nv">G</span> <span class="o">=</span> <span class="ss">'M'</span><span class="p">,</span> <span class="ss">not</span> <span class="ss">male</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">others</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">).</span>
+<span class="o">-</span><span class="ss">male</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">male</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">),</span> <span class="nv">G</span> <span class="o">=</span> <span class="ss">'M'</span><span class="p">,</span> <span class="ss">not</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">).</span>
+
+<span class="o">+</span><span class="ss">female</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">),</span> <span class="nv">G</span> <span class="o">=</span> <span class="ss">'F'</span><span class="p">,</span> <span class="ss">not</span> <span class="ss">female</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">others</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">).</span>
+<span class="o">-</span><span class="ss">female</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">female</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">),</span> <span class="nv">G</span> <span class="o">=</span> <span class="ss">'F'</span><span class="p">,</span> <span class="ss">not</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">).</span>
+
+<span class="o">+</span><span class="ss">others</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">G</span> <span class="o">=</span> <span class="ss">'M'</span><span class="p">,</span> <span class="ss">not</span> <span class="nv">G</span> <span class="o">=</span> <span class="ss">'F'</span><span class="p">,</span> <span class="ss">not</span> <span class="ss">others</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">).</span>
+<span class="o">-</span><span class="ss">others</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">others</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">B</span><span class="p">,</span> <span class="nv">G</span><span class="p">).</span>
+</code></pre></div></div>
+
+<p>Verifying and compiling the update strategy into SQL:</p>
+
+<p><img src="assets/images/residents-compilation.png" alt="insert" /></p>
+
+<p>Let’s try an insertion to the view <code class="highlighter-rouge">residents</code>:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">insert</span> <span class="k">into</span> <span class="n">residents</span> <span class="k">values</span> <span class="p">(</span><span class="s1">'A'</span><span class="p">,</span> <span class="s1">'2000-01-02'</span><span class="p">,</span> <span class="s1">'F'</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>The insertion will be propagated to the table <code class="highlighter-rouge">female</code>:</p>
+
+<p><img src="assets/images/residents-insert.png" alt="residents-insert" /></p>
+
+<h2 id="update-strategy-for-ced">Update strategy for <code class="highlighter-rouge">ced</code></h2>
+
+<p>The view <code class="highlighter-rouge">ced</code> contains information about the current departments of
+each employee.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>dept_name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Chirstian Koblick</td>
+      <td>Production</td>
+    </tr>
+    <tr>
+      <td>Duangkaew Piveteau</td>
+      <td>Quality Management</td>
+    </tr>
+    <tr>
+      <td>Parto Bamford</td>
+      <td>Production</td>
+    </tr>
+    <tr>
+      <td>Sumant Peac</td>
+      <td>Quality Management</td>
+    </tr>
+    <tr>
+      <td>Bezalel Simmel</td>
+      <td>Sales</td>
+    </tr>
+    <tr>
+      <td>Tzvetan Zielinski</td>
+      <td>Research</td>
+    </tr>
+    <tr>
+      <td>Kyoichi Maliniak</td>
+      <td>Human Resources</td>
+    </tr>
+    <tr>
+      <td>Anneke Preusig</td>
+      <td>Development</td>
+    </tr>
+    <tr>
+      <td>Georgi Facello</td>
+      <td>Development</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>We express the following update strategy for propagating
+updated data in this view to the base tables <code class="highlighter-rouge">ed</code> and <code class="highlighter-rouge">eed</code>. If a person
+is in a department according to <code class="highlighter-rouge">ed</code> but he/she is currently not in this
+department anymore according to <code class="highlighter-rouge">ced</code>, this department becomes his/her
+previous department, thus need to be added to <code class="highlighter-rouge">eed</code>. If a person used to
+be in a department according to <code class="highlighter-rouge">eed</code>, but he/she come back to this
+department according to <code class="highlighter-rouge">ced</code>, then this department of him/her need to be removed
+from <code class="highlighter-rouge">eed</code>. The update strategy program is as follows (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/ced.dl">ced.dl</a>):</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">ed</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">DEPT_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">eed</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">DEPT_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">DEPT_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+
+<span class="o">+</span><span class="ss">ed</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">),</span> <span class="nv">NOT</span> <span class="ss">ed</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">).</span>
+<span class="o">-</span><span class="ss">eed</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">),</span> <span class="ss">eed</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">).</span>
+<span class="o">+</span><span class="ss">eed</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">ed</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">),</span> <span class="nv">NOT</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">),</span> <span class="nv">NOT</span> <span class="ss">eed</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span> <span class="nv">D</span><span class="p">).</span>
+</code></pre></div></div>
+
+<p>Verifying and compiling the update strategy into SQL:</p>
+
+<p><img src="assets/images/ced-compilation.png" alt="insert" /></p>
+
+<p>Let’s try an update to <code class="highlighter-rouge">ced</code>:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">update</span> <span class="n">ced</span> <span class="k">set</span> <span class="n">dept_name</span> <span class="o">=</span> <span class="s1">'Research'</span> <span class="k">where</span> <span class="n">emp_name</span><span class="o">=</span><span class="s1">'Anneke Preusig'</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Meaning that <code class="highlighter-rouge">Anneke Preusig</code> change her department to <code class="highlighter-rouge">Research</code>. This movement is reflected to the source tables:</p>
+
+<p><img src="assets/images/ced-update-ed.png" alt="update" />
+<img src="assets/images/ced-update-eed.png" alt="update" /></p>
+
+<h2 id="update-strategy-for-residents1962">Update strategy for <code class="highlighter-rouge">residents1962</code></h2>
+
+<p>The view <code class="highlighter-rouge">residents1962</code> contains all residents having a birth date in 1962.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>birth_date</th>
+      <th>gender</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>We define constraints to ensure that in the updated view <code class="highlighter-rouge">residents1962</code>
+there is no tuple having a value of the attribute <code class="highlighter-rouge">BIRTH_DATE</code> not in
+<code class="highlighter-rouge">1962</code>. Any view updates violating these constraints are rejected.
+Interestingly, by having the updatable view <code class="highlighter-rouge">residents</code>, we now can use <code class="highlighter-rouge">residents</code> as the source table of the view <code class="highlighter-rouge">residents1962</code> and write an update strategy more easily.</p>
+
+<p>By this way, our update strategy is to insert into the source table <code class="highlighter-rouge">residents</code>
+any new tuples appearing in <code class="highlighter-rouge">residents1962</code> but not yet in <code class="highlighter-rouge">residents</code>.
+On the other hand, we delete only tuples in <code class="highlighter-rouge">residents</code> having
+<code class="highlighter-rouge">BIRTH_DATE</code> in 1962, if they do not appear in <code class="highlighter-rouge">residents1962</code> anymore.
+The strategy is as follows (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/residents1962.dl">residents1962.dl</a>):</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">residents1962</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+
+<span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">residents1962</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="nv">B</span> <span class="o">&gt;</span> <span class="ss">'1962-12-31'</span><span class="p">.</span>
+<span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">residents1962</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="nv">B</span> <span class="o">&lt;</span> <span class="ss">'1962-01-01'</span><span class="p">.</span>
+
+<span class="o">+</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents1962</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="err">¬</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">).</span>
+<span class="o">-</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="nv">B</span> <span class="o">&gt;=</span> <span class="ss">'1962-01-01'</span><span class="p">,</span> <span class="nv">B</span> <span class="o">&lt;=</span> <span class="ss">'1962-12-31'</span><span class="p">,</span> <span class="err">¬</span> <span class="ss">residents1962</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">).</span>
+</code></pre></div></div>
+
+<p>Verifying and compiling the update strategy into SQL:</p>
+
+<p><img src="assets/images/residents1962-compilation.png" alt="insert" /></p>
+
+<p>Let’s try an update to <code class="highlighter-rouge">residents1962</code>:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">INSERT</span> <span class="k">INTO</span> <span class="k">public</span><span class="p">.</span><span class="n">residents1962</span> <span class="p">(</span><span class="n">emp_name</span><span class="p">,</span> <span class="n">birth_date</span><span class="p">,</span> <span class="n">gender</span><span class="p">)</span> <span class="k">VALUES</span><span class="p">(</span><span class="s1">'new resident 3'</span><span class="p">,</span> <span class="s1">'1962-01-01'</span><span class="p">,</span> <span class="s1">'M'</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><img src="assets/images/residents1962-insert.png" alt="insert" /></p>
+
+<p>The generated SQL also has a fragment of code that checks whether the defined constraints on the view are satisfied when having view updates. Let’s try to insert a resident not born in <code class="highlighter-rouge">1962</code> to the view:</p>
+
+<p><img src="assets/images/residents1962-invalid-insert.png" alt="invalid-insert" /></p>
+
+<p>The insertion is rejected with error message ‘Invalid view update: constraints on the view are violated’</p>
+
+<h2 id="update-strategy-for-employees">Update strategy for <code class="highlighter-rouge">employees</code></h2>
+
+<p>The view <code class="highlighter-rouge">employees</code> contains residents, who are underemployment</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+      <th>birth_date</th>
+      <th>gender</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Anneke Preusig</td>
+      <td>1953-04-20</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Bezalel Simmel</td>
+      <td>1964-06-02</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Chirstian Koblick</td>
+      <td>1954-05-01</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <td>Duangkaew Piveteau</td>
+      <td>1963-06-01</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Georgi Facello</td>
+      <td>1953-09-02</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <td>Kyoichi Maliniak</td>
+      <td>1955-01-21</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <td>Parto Bamford</td>
+      <td>1959-12-03</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <td>Sumant Peac</td>
+      <td>1952-04-19</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <td>Tzvetan Zielinski</td>
+      <td>1957-05-23</td>
+      <td>F</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>For these views, we use the two views <code class="highlighter-rouge">residents</code> and <code class="highlighter-rouge">ced</code> defined before as the
+source relations. This is possible because both <code class="highlighter-rouge">residents</code> and <code class="highlighter-rouge">ced</code>
+are all updatable, thus they can be treated as base tables.</p>
+
+<p>More interestingly, by using constraints, we can specify more
+complicated restrictions of updates on these views. As an example, we
+define a constraint on the view <code class="highlighter-rouge">residents</code> by the following Datalog
+rule: <code class="highlighter-rouge">⊥ :- employees(E,B,G), ¬ ced(E,_)</code>. That means there is no
+tuple ⟨<code class="highlighter-rouge">E,B,G</code>⟩ in the updated view <code class="highlighter-rouge">employees</code> having the value <code class="highlighter-rouge">E</code> of
+the attribute <code class="highlighter-rouge">EMP_NAME</code>, which cannot be found in any tuples of <code class="highlighter-rouge">ced</code>.
+By the constraint, we do not allow inserting into <code class="highlighter-rouge">employees</code> a really
+new employee, who is not mentioned in the source relation <code class="highlighter-rouge">ced</code>. The following is the update strategy for <code class="highlighter-rouge">employees</code> (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/employees.dl">employees.dl</a>):</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">DEPT_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">employees</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+
+<span class="err">%</span> <span class="ss">constraint</span>
+<span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">employees</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="err">¬</span><span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">_</span><span class="p">).</span>
+
+<span class="err">%</span> <span class="ss">update</span> <span class="ss">strategy</span>
+<span class="o">+</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">employees</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="err">¬</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">).</span>
+<span class="o">-</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="err">¬</span><span class="ss">employees</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">).</span>
+</code></pre></div></div>
+
+<p>Verifying and compiling the update strategy into SQL:</p>
+
+<p><img src="assets/images/employee-compilation.png" alt="insert" /></p>
+
+<p>Let’s try updating the birth date of an employee:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">UPDATE</span> <span class="n">employees</span> <span class="k">SET</span> <span class="n">birth_date</span><span class="o">=</span><span class="s1">'1953-04-21'</span> <span class="k">WHERE</span> <span class="n">emp_name</span><span class="o">=</span><span class="s1">'Anneke Preusig'</span>
+</code></pre></div></div>
+
+<p>The source tables will be updated:</p>
+
+<p><img src="assets/images/employees-update.png" alt="update" /></p>
+
+<h2 id="update-strategy-for-researchers">Update strategy for <code class="highlighter-rouge">researchers</code></h2>
+
+<p>The view <code class="highlighter-rouge">researchers</code> shows only employees, who are doing research.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Tzvetan Zielinski</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>For this view, an update strategy is as the following
+<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/researchers.dl">researchers.dl</a>:</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">DEPT_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">researchers</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+
+<span class="o">-</span><span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">D</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">D</span><span class="p">),</span> <span class="nv">D</span> <span class="o">=</span> <span class="ss">'Research'</span><span class="p">,</span> <span class="err">¬</span><span class="ss">researchers</span><span class="p">(</span><span class="nv">E</span><span class="p">).</span> 
+<span class="o">+</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">researchers</span><span class="p">(</span><span class="nv">E</span><span class="p">),</span> <span class="err">¬</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="nv">B</span><span class="o">=</span><span class="ss">'0001-01-01'</span><span class="p">,</span> <span class="nv">G</span><span class="o">=</span><span class="ss">'unknown'</span><span class="p">.</span>
+<span class="o">+</span><span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">D</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">researchers</span><span class="p">(</span><span class="nv">E</span><span class="p">),</span> <span class="nv">D</span> <span class="o">=</span> <span class="ss">'Research'</span><span class="p">.</span>
+</code></pre></div></div>
+
+<p>The first two rules means if a resident is a researcher but not in the view <code class="highlighter-rouge">researchers</code> anymore, we deleted the current department <code class="highlighter-rouge">Research</code> of this resident.
+By contrast, by the third rule, if a new researcher appears in the view, we need to put this department information to the table <code class="highlighter-rouge">ced</code>, which contains information about the current departments. 
+The second rule ensures each researcher is a resident by inserting into <code class="highlighter-rouge">residents</code> if a researcher is not yet a resident.</p>
+
+<p>Verifying and compiling the update strategy into SQL:</p>
+
+<p><img src="assets/images/researchers-compilation.png" alt="insert" /></p>
+
+<p>Let’s try to remove a researcher:</p>
+
+<pre><code class="language-SQL">DELETE FROM researchers WHERE emp_name='Anneke Preusig';
+</code></pre>
+
+<p>And <code class="highlighter-rouge">Anneke Preusig</code> will no longer belong to the department <code class="highlighter-rouge">Research</code></p>
+
+<p><img src="assets/images/researcher-delete.png" alt="delete" /></p>
+
+<h2 id="update-strategy-for-retired">Update strategy for <code class="highlighter-rouge">retired</code></h2>
+
+<p>The view <code class="highlighter-rouge">retired</code> contains residents, who were retired.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Saniya Kalloufi</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The update strategy for <code class="highlighter-rouge">retired</code> is to remove from the <code class="highlighter-rouge">ced</code> the current department of the persons who are retired (in the view <code class="highlighter-rouge">retired</code>) and insert a new department for the resident who is not retired but not yet mentioned in <code class="highlighter-rouge">ced</code>. We also ensure a retired person is a resident as follows
+<a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/retired.dl">retired.dl</a>:</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">DEPT_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">retired</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+
+<span class="o">-</span><span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">D</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">D</span><span class="p">),</span> <span class="ss">retired</span><span class="p">(</span><span class="nv">E</span><span class="p">).</span>
+<span class="o">+</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">retired</span><span class="p">(</span><span class="nv">E</span><span class="p">),</span> <span class="err">¬</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="nv">B</span><span class="o">=</span><span class="ss">'0001-01-01'</span><span class="p">,</span> <span class="nv">G</span><span class="o">=</span><span class="ss">'unknown'</span><span class="p">.</span>
+<span class="o">+</span><span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">D</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="err">¬</span><span class="ss">retired</span><span class="p">(</span><span class="nv">E</span><span class="p">),</span> <span class="err">¬</span><span class="ss">ced</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">_</span><span class="p">)</span> <span class="p">,</span> <span class="nv">D</span><span class="o">=</span><span class="ss">'unknown'</span><span class="p">.</span>
+</code></pre></div></div>
+
+<p>Verifying and compiling the update strategy into SQL:</p>
+
+<p><img src="assets/images/retired-compilation.png" alt="insert" /></p>
+
+<p>For example, if <code class="highlighter-rouge">Parto Bamford</code> is retired:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">insert</span> <span class="k">into</span> <span class="n">retired</span> <span class="k">values</span><span class="p">(</span><span class="s1">'Parto Bamford'</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>And he will belong to no department:</p>
+
+<p><img src="assets/images/retired-insert.png" alt="insert" /></p>
+
+<h2 id="update-strategy-for-voter">Update strategy for <code class="highlighter-rouge">voter</code></h2>
+
+<p>Let <code class="highlighter-rouge">blacklist(EMP_NAME)</code> is a black list of residents</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>emp_name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Kyoichi Maliniak</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>we now define an update strategy for a view <code class="highlighter-rouge">voter(emp_name, birth_date)</code> containing residents, who has the right to vote at elections, as follows <a href="https://github.com/dangtv/BIRDS/tree/master/examples/employee/voter.dl">voter.dl</a>:</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">blacklist</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">GENDER</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">voter</span><span class="p">(</span><span class="nv">EMP_NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span> <span class="nv">BIRTH_DATE</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+
+<span class="err">⊥</span> <span class="p">:-</span> <span class="ss">voter</span><span class="p">(</span><span class="nv">NAME</span><span class="p">,</span><span class="nv">BIRTH_DATE</span><span class="p">),</span> <span class="ss">blacklist</span><span class="p">(</span><span class="nv">NAME</span><span class="p">).</span>
+
+<span class="o">+</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">voter</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">),</span> <span class="nv">G</span><span class="o">=</span><span class="ss">'unknown'</span><span class="p">,</span>  <span class="err">¬</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">_</span><span class="p">).</span>
+<span class="o">-</span><span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">residents</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">G</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">blacklist</span><span class="p">(</span><span class="nv">E</span><span class="p">),</span> <span class="err">¬</span> <span class="ss">voter</span><span class="p">(</span><span class="nv">E</span><span class="p">,</span><span class="nv">B</span><span class="p">).</span>
+</code></pre></div></div>
+
+<p>The constraint <code class="highlighter-rouge">⊥ :- voter(NAME,BIRTH_DATE), blacklist(NAME).</code> ensures that no person in the black list can be inserted to the view <code class="highlighter-rouge">voter</code>. Updated data in the view <code class="highlighter-rouge">voter</code> is reflected to the source relation <code class="highlighter-rouge">residents</code> by the last two rules.</p>
+
+<p>Verifying and compiling the update strategy into SQL:</p>
+
+<p><img src="assets/images/voter-compilation.png" alt="voter-compile" /></p>
+
+<p>If there is an attempt to insert <code class="highlighter-rouge">Kyoichi Maliniak</code> into <code class="highlighter-rouge">voter</code>:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">voter</span> <span class="k">values</span><span class="p">(</span><span class="s1">'Kyoichi Maliniak'</span><span class="p">,</span> <span class="s1">'1955-01-21'</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>The attempt will be rejected:</p>
+
+<p><img src="assets/images/voter-invalid-insert.png" alt="voter-insert" /></p>
+
+      </section>
+    </div>
+    
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p style="margin-bottom:0em"><small>
+          
+          Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
+        
+        <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
+        <small>Last updated on 6 Jul 2019</small></p>
+      </footer>
+    </div>
+
+    
+  </body>
+</html>
