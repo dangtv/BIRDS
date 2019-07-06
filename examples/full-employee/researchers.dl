@@ -1,7 +1,0 @@
-source residents(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
-source ced(EMP_NAME:string, DEPT_NAME:string).
-view researchers(EMP_NAME:string).
-
--ced(E,D) :- residents(E,B,G), ced(E,D), D = 'Research', ¬researchers(E). 
-+residents(E,B,G) :- researchers(E), ¬residents(E,_,_), B='0001-01-01', G='unknown'.
-+ced(E,D) :- researchers(E), D = 'Research'.

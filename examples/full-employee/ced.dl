@@ -1,7 +1,0 @@
-source ed(EMP_NAME:string,DEPT_NAME:string).
-source eed(EMP_NAME:string,DEPT_NAME:string).
-view ced(EMP_NAME:string, DEPT_NAME:string).
-
-+ed(E, D) :- ced(E, D), NOT ed(E, D).
--eed(E, D) :- ced(E, D), eed(E, D).
-+eed(E, D) :- ed(E, D), NOT ced(E, D), NOT eed(E, D).

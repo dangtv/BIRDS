@@ -18,9 +18,9 @@ CREATE TABLE peer1_vehicle
   vehicle_id int NOT NULL PRIMARY KEY,
   current_location int NOT NULL,
   seat_count int NOT NULL,
-  request_id int DEFAULT NULL,
-  pickup_location int DEFAULT NULL,
-  dropoff_location int DEFAULT NULL
+  request_id int NOT NULL,
+  pickup_location int NOT NULL,
+  dropoff_location int NOT NULL
 );
 
 CREATE TABLE peer2_vehicle
@@ -28,9 +28,9 @@ CREATE TABLE peer2_vehicle
   vehicle_id int NOT NULL PRIMARY KEY,
   current_location int NOT NULL,
   seat_count int NOT NULL,
-  request_id int DEFAULT NULL,
-  pickup_location int DEFAULT NULL,
-  dropoff_location int DEFAULT NULL
+  request_id int NOT NULL,
+  pickup_location int NOT NULL,
+  dropoff_location int NOT NULL
 );
 
 INSERT INTO area
@@ -53,20 +53,21 @@ VALUES
 
 
 -- local source 1
-INSERT INTO peer1_vehicle VALUES (1, 200, 0, 3, 200, 300);
-INSERT INTO peer1_vehicle VALUES (2, 50, 4, NULL, NULL, NULL);
-INSERT INTO peer1_vehicle VALUES (3, 100, 4, NULL, NULL, NULL);
-INSERT INTO peer1_vehicle VALUES (4, 300, 4, NULL, NULL, NULL);
-INSERT INTO peer1_vehicle VALUES (5, 500, 4, NULL, NULL, NULL);
-INSERT INTO peer1_vehicle VALUES (6, 600, 4, NULL, NULL, NULL);
-INSERT INTO peer1_vehicle VALUES (7, 400, 4, NULL, NULL, NULL);
+INSERT INTO peer1_vehicle VALUES (1, 200, 4, 3, 200, 300);
+INSERT INTO peer1_vehicle VALUES (2, 50, 4, -1, -1, -1);
+INSERT INTO peer1_vehicle VALUES (3, 100, 4, -1, -1, -1);
+INSERT INTO peer1_vehicle VALUES (4, 300, 4, -1, -1, -1);
+INSERT INTO peer1_vehicle VALUES (5, 500, 4, -1, -1, -1);
+INSERT INTO peer1_vehicle VALUES (6, 600, 4, -1, -1, -1);
+INSERT INTO peer1_vehicle VALUES (7, 400, 4, -1, -1, -1);
 
 -- local source 2
-INSERT INTO peer2_vehicle VALUES (1, 600, 0, 5, 600, 700);
-INSERT INTO peer2_vehicle VALUES (3, 300, 4, NULL, NULL, NULL);
-INSERT INTO peer2_vehicle VALUES (10, 400, 4, NULL, NULL, NULL);
-INSERT INTO peer2_vehicle VALUES (2, 800, 4, NULL, NULL, NULL);
-INSERT INTO peer2_vehicle VALUES (11, 100, 4, NULL, NULL, NULL);
-INSERT INTO peer2_vehicle VALUES (12, 50, 4, NULL, NULL, NULL);
-INSERT INTO peer2_vehicle VALUES (13, 700, 4, NULL, NULL, NULL);
-INSERT INTO peer2_vehicle VALUES (23, 200, 4, NULL, NULL, NULL);
+INSERT INTO peer2_vehicle VALUES (1, 600, 4, 5, 600, 700);
+INSERT INTO peer2_vehicle VALUES (3, 300, 4, -1, -1, -1);
+INSERT INTO peer2_vehicle VALUES (10, 400, 4, -1, -1, -1);
+INSERT INTO peer2_vehicle VALUES (2, 800, 4, -1, -1, -1);
+INSERT INTO peer2_vehicle VALUES (11, 100, 4, -1, -1, -1);
+INSERT INTO peer2_vehicle VALUES (12, 50, 4, -1, -1, -1);
+INSERT INTO peer2_vehicle VALUES (13, 700, 4, -1, -1, -1);
+INSERT INTO peer2_vehicle VALUES (23, 200, 4, -1, -1, -1);
+

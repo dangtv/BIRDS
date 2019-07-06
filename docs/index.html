@@ -40,22 +40,22 @@
         <h2 id="overview">Overview</h2>
 
 <p>BIRDS (<strong>BI</strong>directional transformation for <strong>R</strong>elational view update <strong>D</strong>atalog-based <strong>S</strong>trategies) is a declarative framework that allows developers to program update strategies on relational views, hence, making views updatable. 
-The framework is based on the theory of (putback-based) bidirectional transformation (BX) but specifically developed for relational database management systems (RDBMS).
-BIRDS supports Datalog, a highly-declarative language, thus frees programmers from the burden of manually</p>
+The framework is based on the theory of (putback-based) bidirectional transformation (BX) but specifically developed for relational database management systems (RDBMSs).
+BIRDS supports Datalog, a highly declarative language, thus frees programmers from the burden of manually</p>
 
 <ul>
   <li>Checking the correctness of view update strategies with respect to the consistency of views and base relations,</li>
-  <li>Maintaining bidirectional (backward &amp; forward) transformations. In fact, a correct update strategy (backward direction) also captures view definition (forward direction). BIRDS supports automatically deriving the corresponding view definition for a given update strategy.</li>
+  <li>Maintaining bidirectional (backward &amp; forward) transformations. In fact, a correct update strategy (backward direction) also captures the view definition (forward direction). BIRDS supports users to automatically derive the corresponding view definition for a given update strategy in which there is no self-join or projection on the view.</li>
   <li>Creating triggers and trigger procedures on updatable views for handling SQL DML statements: UPDATE/INSERT/DELETE.</li>
 </ul>
 
-<h2 id="view-update-strategy-how-to-write">View update strategy: How to write?</h2>
+<h2 id="view-update-strategy-how-to-write-">View update strategy: How to write ?</h2>
 <p>We are given schemas of tables and a view. Traditionally, over the base tables, we write a query that defines the view. However, this defining query is not enough to determine how view updates are propagated to the base tables.</p>
 
 <p>BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy is no more than a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation as well as the defining query of the view.</p>
 
 <p>Note that an update strategy should make full use of data on the view in updating the source tables. We must ensure that no information on the view is lost in the updated source.
-BIRDS supports to verify the correctness of the written update strategy.</p>
+BIRDS supports us to verify the correctness of the written update strategy.</p>
 
 <p>Update strategies by example: <a href="basic-tutorial.html">The basics</a></p>
 
@@ -75,8 +75,11 @@ BIRDS supports to verify the correctness of the written update strategy.</p>
 <h2 id="case-studies">Case studies</h2>
 
 <ul>
-  <li><a href="music-tutorial.html">Music database</a></li>
+  <li><a href="basic-tutorial.html">The basics</a></li>
+  <li><a href="customer.html">Customers database</a></li>
+  <li><a href="employee.html">Employees database</a></li>
   <li><a href="ridesharing-tutorial.html">Ride-sharing system</a></li>
+  <li><a href="music-tutorial.html">Music database</a></li>
 </ul>
 
 
@@ -91,7 +94,7 @@ BIRDS supports to verify the correctness of the written update strategy.</p>
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 5 Jul 2019</small></p>
+        <small>Last updated on 6 Jul 2019</small></p>
       </footer>
     </div>
 

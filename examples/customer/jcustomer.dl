@@ -2,10 +2,7 @@ source nation(KEY:int,NAME:string,DESCRIPTION:string).
 source customer(KEY:int,NAME:string,ADDRESS:string,PHONE:string,NATIONKEY:int).
 view jcustomer(KEY:int,NAME:string,ADDRESS:string).
 
-% view definition
-jcustomer(K, N, A) :- customer(K, N, A, P, NK), nation(NK, NATION, D), NATION='Japan'.
-
-% constraint on source:
+% constraint:
 _|_ :- not nation(_, 'Japan', _).
 
 -customer(K, N, A, P, NK) :- customer(K, N, A, P, NK), nation(NK, NATION, _), NATION ='Japan', not jcustomer(K, N, A).

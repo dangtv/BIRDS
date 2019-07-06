@@ -43,4 +43,3 @@ For example, this command will transform the update strategy described in `test1
 ```bash
 birds -s public -f test1.dl -o test1.sql
 ```
-

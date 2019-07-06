@@ -73,21 +73,25 @@ The first two rules say that if a tuple `(X,Y)` is in `s1` or `s2` but not in `v
 We verify the correctness of the Datalog program and compile it into SQL by using command line `birds`:
 
 ```bash
-birds -v -s public -f examples/basic_sample.dl -o examples/basic_sample.sql
+birds -v -f basic_sample.dl -o basic_sample.sql
 ```
 
-The generated SQL file can run directly in a PostgreSQL database to create the corresponding updatable view `v` in the database schema `public`.
+Where the option `-v` enables verification process, `-f` is for the input Datalog program and `-o` is for the output SQL file.
+
+![basic-compilation](assets/images/basic-compilation.png)
+
+The generated SQL file can run directly in a PostgreSQL database to create the corresponding updatable view `v` in the database.
 
 
 ## Running in PostgreSQL
 
 1. Load and run the generated SQL file in PostgreSQL:
     ```bash
-    sudo -u <db_user_name> psql -d <db_name> -f <path_to_sql_file>
+    psql -U <db_user_name> -d <db_name> -f <path_to_sql_file>
     ```
     For example:
     ```bash
-    sudo -u postgres psql -d my_db -f examples/basic_sample.sql
+    psql -U postgres -d sample_db -f examples/basic_sample.sql
     ```
 
 1. Run an UPDATE/INSERT/DELETE statement to modify data on view, for example:

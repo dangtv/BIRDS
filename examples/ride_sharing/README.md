@@ -1,1 +1,1 @@
-Examples from ride-sharing data schema
+Examples from ride-sharing system

@@ -1,6 +1,6 @@
-%s:peer1_vehicle(VEHICLE_ID:int , CURRENT_LOCATION:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
-%s:area(ORIGINAL_NODE:int , AREA_NODE:int).
-%v:peer1_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+source peer1_vehicle(VEHICLE_ID:int , CURRENT_LOCATION:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+source area(ORIGINAL_NODE:int , AREA_NODE:int).
+view peer1_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
 
 %constraints
 % primary key VEHICLE_ID on peer1_vehicle
@@ -22,7 +22,7 @@ _|_ :- peer1_public (V, L1, S1, R1, P1, D1), peer1_public (V, L2, S2, R2, P2, D2
 
 % prevent update on the column CURRENT_AREA
 _|_ :-peer1_vehicle (V, L, S, R, P, D), area (L,A1), peer1_public (V, A2, _, _, _, _), NOT A1 = A2.
-% prevent insertion or deletion a new vehicle id
+% prevent insertion or deletion of a new vehicle id
 all_id(V) :- peer1_vehicle (V, L, _, _, _, _), area (L,_).
 _|_ :- all_id(V), NOT peer1_public (V, _, _, _, _, _).
 _|_ :-peer1_public (V, _, _, _, _, _), NOT all_id(V).

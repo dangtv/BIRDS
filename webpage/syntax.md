@@ -20,3 +20,5 @@ The core syntax for Datalog supported by BIRDS is the following:
 <anonvar> ::= '_'
 <const> ::= <integer> | <float> | <string>
 ```
+
+In general, the verification in BIRDS is sound. BIRDS guarantees the completeness of verification if all Datalog rules are negation guarded. 

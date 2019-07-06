@@ -156,19 +156,23 @@
 
 <p>We verify the correctness of the Datalog program and compile it into SQL by using command line <code class="highlighter-rouge">birds</code>:</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="nt">-v</span> <span class="nt">-s</span> public <span class="nt">-f</span> examples/basic_sample.dl <span class="nt">-o</span> examples/basic_sample.sql
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="nt">-v</span> <span class="nt">-f</span> basic_sample.dl <span class="nt">-o</span> basic_sample.sql
 </code></pre></div></div>
 
-<p>The generated SQL file can run directly in a PostgreSQL database to create the corresponding updatable view <code class="highlighter-rouge">v</code> in the database schema <code class="highlighter-rouge">public</code>.</p>
+<p>Where the option <code class="highlighter-rouge">-v</code> enables verification process, <code class="highlighter-rouge">-f</code> is for the input Datalog program and <code class="highlighter-rouge">-o</code> is for the output SQL file.</p>
+
+<p><img src="assets/images/basic-compilation.png" alt="basic-compilation" /></p>
+
+<p>The generated SQL file can run directly in a PostgreSQL database to create the corresponding updatable view <code class="highlighter-rouge">v</code> in the database.</p>
 
 <h2 id="running-in-postgresql">Running in PostgreSQL</h2>
 
 <ol>
   <li>Load and run the generated SQL file in PostgreSQL:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nb">sudo</span> <span class="nt">-u</span> &lt;db_user_name&gt; psql <span class="nt">-d</span> &lt;db_name&gt; <span class="nt">-f</span> &lt;path_to_sql_file&gt;
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> psql <span class="nt">-U</span> &lt;db_user_name&gt; <span class="nt">-d</span> &lt;db_name&gt; <span class="nt">-f</span> &lt;path_to_sql_file&gt;
 </code></pre></div>    </div>
     <p>For example:</p>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nb">sudo</span> <span class="nt">-u</span> postgres psql <span class="nt">-d</span> my_db <span class="nt">-f</span> examples/basic_sample.sql
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> psql <span class="nt">-U</span> postgres <span class="nt">-d</span> sample_db <span class="nt">-f</span> examples/basic_sample.sql
 </code></pre></div>    </div>
   </li>
   <li>Run an UPDATE/INSERT/DELETE statement to modify data on view, for example:
@@ -196,7 +200,7 @@
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 5 Jul 2019</small></p>
+        <small>Last updated on 6 Jul 2019</small></p>
       </footer>
     </div>
 
