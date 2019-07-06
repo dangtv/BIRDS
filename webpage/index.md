@@ -9,7 +9,7 @@ The framework is based on the theory of (putback-based) bidirectional transforma
 BIRDS supports Datalog, a highly declarative language, thus frees programmers from the burden of manually
 
 * Checking the correctness of view update strategies with respect to the consistency of views and base relations,
-* Maintaining bidirectional (backward & forward) transformations. In fact, a correct update strategy (backward direction) also captures the view definition (forward direction). BIRDS supports users to automatically derive the corresponding view definition for a given update strategy in which there is no self-join or projection on the view.
+* Maintaining bidirectional (backward & forward) transformations. In fact, a correct update strategy (backward direction) also captures the view definition (forward direction). BIRDS supports users to automatically derive the corresponding view definition for a given update strategy having no self-join or projection over the view.
 * Creating triggers and trigger procedures on updatable views for handling SQL DML statements: UPDATE/INSERT/DELETE.
 
 ## View update strategy: How to write ?
