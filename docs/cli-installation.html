@@ -60,23 +60,23 @@
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="o">[</span>OPTIONS]
 <span class="nt">-db</span>         print debugging information
-<span class="nt">-f</span> file     <span class="nb">read </span>program from file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
-<span class="nt">-b</span> file     shell script file specifying the action, which will be executed when there is any update on the view, <span class="k">if </span>not chosen, execute nothing
-<span class="nt">-o</span> file     write program out file, <span class="k">if </span>not chosen, print to stdout
-<span class="nt">-l</span> file     write lean verification out file
+<span class="nt">-f</span> file     input program file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
+<span class="nt">-b</span> file     shell script file specifying the action, which will be executed when there is an update on the view, <span class="k">if </span>not chosen, execute nothing
+<span class="nt">-o</span> file     output SQL file, <span class="k">if </span>not chosen, print to stdout
+<span class="nt">-l</span> file     output verification file <span class="o">(</span>optional<span class="o">)</span>
 <span class="nt">-s</span> schema   database schema name to connect to <span class="o">(</span>default: public<span class="o">)</span>
 <span class="nt">-h</span> host     database server host <span class="o">(</span>default: <span class="s2">"localhost"</span><span class="o">)</span>
-<span class="nt">-c</span>          connect and run sql on database server
-<span class="nt">-import</span>     connect and import data schema from database server
-<span class="nt">-v</span>          verify the well-behavedness
-<span class="nt">-i</span>          optimize update propagation by incremental rewriting rules
+<span class="nt">-c</span>          connect and run the generated SQL on the database server
+<span class="nt">-v</span>          <span class="nb">enable </span>verifications
+<span class="nt">-i</span>          optimize the update propagation by incremental rewriting rules
 <span class="nt">-e</span>          optimize datalog rules
 <span class="nt">-p</span> port     database server port <span class="o">(</span>default: <span class="s2">"5432"</span><span class="o">)</span>
 <span class="nt">-U</span> user     database user <span class="o">(</span>default: <span class="s2">"postgres"</span><span class="o">)</span>
-<span class="nt">-g</span> user     special user <span class="k">for </span>global dejima synchronization <span class="o">(</span>default: <span class="s2">"dejima"</span><span class="o">)</span>
+<span class="nt">-g</span> user     the special user <span class="k">for </span>global dejima synchronization <span class="o">(</span>default: <span class="s2">"dejima"</span><span class="o">)</span>
+<span class="nt">-dejima</span>     detect updates on dejima views to perform pre-defined actions <span class="k">in </span>the shell script file
 <span class="nt">-w</span> password database user password <span class="o">(</span>default: 12345678<span class="o">)</span>
 <span class="nt">-d</span> dbname   database name to connect to <span class="o">(</span>default: <span class="s2">"datalogdb"</span><span class="o">)</span>
-<span class="nt">-m</span> mode     <span class="o">{</span>1: For putback view update datalog program, 2: For view update datalog program containing view definition, update strategy and integrity constraints, 3: For only view definition datalog program<span class="o">}</span> <span class="o">(</span>default: 1<span class="o">)</span>
+<span class="nt">-m</span> mode     1: put, 2: get &amp; put, 3: get <span class="o">(</span>default: 1<span class="o">)</span>
 <span class="nt">-help</span>       Display this list of options
 <span class="nt">--help</span>      Display this list of options
 </code></pre></div></div>
@@ -96,7 +96,7 @@
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 6 Jul 2019</small></p>
+        <small>Last updated on 7 Jul 2019</small></p>
       </footer>
     </div>
 

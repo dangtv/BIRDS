@@ -21,4 +21,4 @@ The core syntax for Datalog supported by BIRDS is the following:
 <const> ::= <integer> | <float> | <string>
 ```
 
-In general, the verification in BIRDS is sound. BIRDS guarantees the completeness of verification if all Datalog rules are negation guarded. 
+In general, the verification in BIRDS is sound. BIRDS guarantees the completeness of the verification if all Datalog rules are negation guarded. 

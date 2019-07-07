@@ -5,7 +5,7 @@ layout: index
 ## Overview
 
 BIRDS (**BI**directional transformation for **R**elational view update **D**atalog-based **S**trategies) is a declarative framework that allows developers to program update strategies on relational views, hence, making views updatable. 
-The framework is based on the theory of (putback-based) bidirectional transformation (BX) but specifically developed for relational database management systems (RDBMSs).
+The framework is based on the theory of (putback-based) bidirectional transformations (BX) but specifically developed for relational database management systems (RDBMSs).
 BIRDS supports Datalog, a highly declarative language, thus frees programmers from the burden of manually
 
 * Checking the correctness of view update strategies with respect to the consistency of views and base relations,

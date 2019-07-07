@@ -102,10 +102,10 @@ RUN BUILD_PKGS="git" \
  && rm -rf /var/lib/apt/lists/*
 
 # installing BIRDS web-based editor
-#COPY webui /usr/lib/birds/webui
-#WORKDIR /usr/lib/birds/webui/
-#RUN scripts/build.sh && rm -rf client && rm -rf scripts && rm -rf node_modules \
-# && rm package.json package-lock.json .travis.yml
+# COPY webui /usr/lib/birds/webui
+# WORKDIR /usr/lib/birds/webui/
+# RUN scripts/build.sh && rm -rf client && rm -rf scripts && rm -rf node_modules \
+#  && rm package.json package-lock.json .travis.yml
 
 # installing BIRDS
 COPY src /root/birds/src
@@ -114,10 +114,10 @@ WORKDIR /root/
 RUN BUILD_PKGS="wget build-essential git make opam m4" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
- && wget http://caml.inria.fr/pub/distrib/ocaml-4.07/ocaml-4.07.0.tar.gz \
- && tar -xzvf ocaml-4.07.0.tar.gz && cd ocaml-4.07.0 && ./configure && make world.opt && umask 022 && make install \ 
+ && wget https://github.com/ocaml/ocaml/archive/4.07.0.tar.gz \
+ && tar -xzvf 4.07.0.tar.gz && cd ocaml-4.07.0 && ./configure && make world.opt && umask 022 && make install \ 
  && rm -rf /root/ocaml-4.07.0 \
- && rm /root/ocaml-4.07.0.tar.gz \
+ && rm /root/4.07.0.tar.gz \
  && echo "y" | opam init && eval `opam config env` \
  && opam install -y num postgresql \
  && cd /root/birds && make depend && make release \

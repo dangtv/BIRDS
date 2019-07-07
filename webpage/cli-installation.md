@@ -18,23 +18,23 @@ layout: default
 ```bash
 birds [OPTIONS]
 -db         print debugging information
--f file     read program from file, if not chosen, read from stdin
--b file     shell script file specifying the action, which will be executed when there is any update on the view, if not chosen, execute nothing
--o file     write program out file, if not chosen, print to stdout
--l file     write lean verification out file
+-f file     input program file, if not chosen, read from stdin
+-b file     shell script file specifying the action, which will be executed when there is an update on the view, if not chosen, execute nothing
+-o file     output SQL file, if not chosen, print to stdout
+-l file     output verification file (optional)
 -s schema   database schema name to connect to (default: public)
 -h host     database server host (default: "localhost")
--c          connect and run sql on database server
--import     connect and import data schema from database server
--v          verify the well-behavedness
--i          optimize update propagation by incremental rewriting rules
+-c          connect and run the generated SQL on the database server
+-v          enable verifications
+-i          optimize the update propagation by incremental rewriting rules
 -e          optimize datalog rules
 -p port     database server port (default: "5432")
 -U user     database user (default: "postgres")
--g user     special user for global dejima synchronization (default: "dejima")
+-g user     the special user for global dejima synchronization (default: "dejima")
+-dejima     detect updates on dejima views to perform pre-defined actions in the shell script file
 -w password database user password (default: 12345678)
 -d dbname   database name to connect to (default: "datalogdb")
--m mode     {1: For putback view update datalog program, 2: For view update datalog program containing view definition, update strategy and integrity constraints, 3: For only view definition datalog program} (default: 1)
+-m mode     1: put, 2: get & put, 3: get (default: 1)
 -help       Display this list of options
 --help      Display this list of options
 ```
