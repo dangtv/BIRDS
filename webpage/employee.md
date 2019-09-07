@@ -352,7 +352,7 @@ Let `blacklist(EMP_NAME)` be a black list of residents
 |------------------
 | Kyoichi Maliniak
 
-We now define an update strategy for a view `voter(emp_name, birth_date)` containing residents, who has the right to vote at elections, as follows ([voter.dl]({{site.github.repository_url}}/tree/master/examples/employee/voter.dl)):
+We now define an update strategy for a view `voter(emp_name, birth_date)` containing residents, who have the right to vote at elections, as follows ([voter.dl]({{site.github.repository_url}}/tree/master/examples/employee/voter.dl)):
 
 ```prolog
 source blacklist(EMP_NAME:string).

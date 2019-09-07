@@ -126,6 +126,7 @@ let extract_idb = function
     let in_stt t = match t with
       | Rule _ -> symt_insert idb t 
       | Constraint _ -> ()
+      | Pk _ -> ()
       | Query _ -> ()
       | Source _ -> ()
       | View _ -> () in            
@@ -144,6 +145,7 @@ let extract_edb = function
     let in_stt t = match t with
       | Rule _ -> ()
       | Constraint _ -> ()
+      | Pk _ -> ()
       | Query rt -> ()
       | View _ -> ()
       | Source _ -> symt_insert edb (Rule (get_schema_rterm t,[])) in            
@@ -525,9 +527,9 @@ let exe_command command =
   let tmp_file = Filename.temp_file "" ".txt" in
   let status = Sys.command @@ command ^" > " ^ tmp_file in
   let message = String.concat "\n" @@ read_file tmp_file in 
-  status, message
+  status, message;;
 
-let verify_fo_lean debug sentence = 
+let verify_fo_lean debug timeout sentence = 
   if  debug then (
     print_endline @@"==> verifying by Lean";
     print_endline "--------------";
@@ -540,7 +542,27 @@ let verify_fo_lean debug sentence =
   let ol =  open_out tmp_file in  
   fprintf ol "%s\n" sentence;
   close_out ol;
-  let status, message = exe_command @@ "lean "^tmp_file in 
+  let status, message = exe_command @@ "timeout "^ (string_of_int timeout) ^" lean "^tmp_file in 
   if (debug && (status = 0)) then print_endline @@">>> verified by lean: correct";
-  status, message
+  status, message;;
 
+let constraint2rule prog = match prog with 
+    | Prog stt_lst ->
+    let trans_stt t lst= match t with
+      | Rule _ -> t::lst
+      | Constraint _ -> (rule_of_constraint t)::lst
+      | Pk (relname, attrlst) -> 
+        (* generate datalog rules for a primary key *)
+        let schema_stt = 
+          try (List.find (fun x -> relname = (get_schema_name x)) (get_schema_stts prog) )
+          with Not_found ->  raise (SemErr ("Not found the relation "^relname^ " in the primary key constraint \n"^ string_of_stt t))
+        in
+        let allattrlst = get_schema_attrs schema_stt in 
+        let allattrlst2 = List.map (fun x -> if (List.mem x attrlst) then x else x^"2") allattrlst in
+        let nonkeyattrlst = List.filter (fun x -> not (List.mem x attrlst)) allattrlst in 
+        (List.map (fun x -> Rule(get_empty_pred, [Rel (Pred(relname, List.map (fun t -> NamedVar t) allattrlst)); Rel (Pred(relname, List.map (fun t -> NamedVar t) allattrlst2)); Equal(Var (NamedVar x), Var (NamedVar (x^"2")))] )) nonkeyattrlst )@lst
+      | Query _ -> t::lst
+      | Source _ -> t::lst
+      | View _ -> t::lst in 
+    Prog(List.fold_right trans_stt stt_lst [])         
+;;

@@ -31,7 +31,7 @@ There are two ways to use BIRDS to write and compile Datalog programs of view up
 * Command line tool: See the [instruction for CLI](cli-installation.html)
 * Web-based interface: See the [instruction for WebUI editor](webui-installation.html)
 
-You can also build from the [source code](https://github.com/dangtv/BIRDS) or download the [BIRDS's docker image](https://hub.docker.com/r/dangtv/birds) for using both the command line tool and WebUI editor of BIRDS.
+You can also build from the [source code](https://github.com/dangtv/BIRDS) or download [BIRDS's docker image](https://hub.docker.com/r/dangtv/birds) for using both the command line tool and WebUI editor of BIRDS. The PostgreSQL database in [BIRDS's docker image](https://hub.docker.com/r/dangtv/birds) runs on port 5432 and has a default user `postgres` (password: `12345678`)
 
 ## Case studies
 

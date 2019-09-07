@@ -1,0 +1,28 @@
+{
+  "name": "birds-editor-project",
+  "version": "0.0.3",
+  "private": true,
+  "devDependencies": {
+    "husky": "^1.3.1",
+    "lint-staged": "^8.1.5",
+    "prettier": "^1.16.4"
+  },
+  "prettier": {
+    "singleQuote": true
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,json,css}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "scripts": {
+    "fixlint": "npm run fixlint --prefix client && npm run fixlint --prefix server && prettier --write '**/*.js'",
+    "lint": "npm run lint --prefix client && npm run lint --prefix server && prettier --check '**/*.js'"
+  }
+}

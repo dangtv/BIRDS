@@ -38,7 +38,7 @@ view v(X:int, Y:int).
 ```
 * Use the keywords `source` and `view` to distinguish source tables and view
 * Each column is assigned a data type
-* Supported data types are: integer, float, string.
+* Supported data types are: `integer`, `real` and `string`.
 
 ### Rules for update strategy:
 * Delta predicate: a delta predicate is a normal predicate following a symbol `+` or `-`

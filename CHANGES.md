@@ -1,5 +1,12 @@
 # Changelog
 
+### 0.0.3 (2019-09-07)
+* New WebUI
+* Add a new option timeout for the verification
+* Fix bugs of the data type real 
+* Add a new option for speed-up with parallel verification
+* Remove the option -m mode, it will be automatically detected 
+
 ### 2019-03-17:
 * Add option install in Makefile
 * Fix bugs in Makefile

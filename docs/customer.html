@@ -176,7 +176,7 @@ constraint by a special Datalog rule with a truth constant ⊥ in the head <code
 The meaning of this rule is a first-order logic sentence
 <code class="highlighter-rouge">(¬∃x, y, nation(x, ‘Japan′, y)) → ⊥</code>,
 which is equivalent to <code class="highlighter-rouge">∃x, y, nation(x, ‘Japan′, y)</code>.
-By this constraint, given an updated view <code class="highlighter-rouge">jcustomer</code>, we keep the table
+Given an updated view <code class="highlighter-rouge">jcustomer</code>, our update strategy is to keep the table
 <code class="highlighter-rouge">nation</code> unchanged, and update the table <code class="highlighter-rouge">customer</code> to reflect the view
 updates. First, if there is a Japanese customer, who does not appear in
 the view, we choose the option of deleting this customer from the source
@@ -193,7 +193,7 @@ To fill in the attribute <code class="highlighter-rouge">PHONE</code>, we search
 old table <code class="highlighter-rouge">customer</code>. If it is not found, we fill in the attribute
 <code class="highlighter-rouge">PHONE</code> a default string <code class="highlighter-rouge">‘unknown’</code>.</p>
 
-<h2 id="verifying-and-compiling-the-update-strategy-into-sql">Verifying and compiling the update strategy into SQL:</h2>
+<h2 id="verifying-and-compiling-the-update-strategy-to-sql">Verifying and compiling the update strategy to SQL:</h2>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="nt">-v</span> <span class="nt">-f</span> jcustomer.dl <span class="nt">-o</span> jcustomer.sql
 </code></pre></div></div>
@@ -239,7 +239,7 @@ old table <code class="highlighter-rouge">customer</code>. If it is not found, w
 
 <p><img src="assets/images/updated-nation.png" alt="delete-japan" /></p>
 
-<p>Updates to the view <code class="highlighter-rouge">jcustomer</code> will be rejected with the error messange ‘Invalid view update: constraints on the source relations are violated’:</p>
+<p>Updates to the view <code class="highlighter-rouge">jcustomer</code> will be rejected with the error message ‘Invalid view update: constraints on the source relations are violated’:</p>
 
 <p><img src="assets/images/invalid-update-nation.png" alt="invalid-update-nation" /></p>
 
@@ -254,7 +254,7 @@ old table <code class="highlighter-rouge">customer</code>. If it is not found, w
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 7 Jul 2019</small></p>
+        <small>Last updated on 7 Sep 2019</small></p>
       </footer>
     </div>
 

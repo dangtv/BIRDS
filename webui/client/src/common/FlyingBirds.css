@@ -1,0 +1,309 @@
+/*  https://codepen.io/Mark_Bowley/pen/HbgLI */
+
+/* body {
+	background: #00b4ff;
+	color: #333;
+	font: 100% Lato, Arial, Sans Serif;
+	height: 100vh;
+	margin: 0;
+	padding: 0;
+	overflow-x: hidden;
+} */
+
+/* #background-wrap {
+    bottom: 0;
+	left: 0;
+	position: fixed;
+	right: 0;
+	top: 0;
+	z-index: -1;
+} */
+
+.flying-birds-background-wrap {
+  width: 100%;
+  height: 100%;
+  margin: 10px auto;
+  background: #00b4ff;
+	color: #333;
+	font: 100% Lato, Arial, Sans Serif;
+	/* margin: 0; */
+	padding: 0;
+	overflow-x: hidden;
+}
+
+/* KEYFRAMES */
+
+@-webkit-keyframes animateBird {
+    0% {
+        margin-left: -400px;
+    }
+    100% {
+        margin-left: 100%;
+    }
+}
+
+@-moz-keyframes animateBird {
+    0% {
+        margin-left: -400px;
+    }
+    100% {
+        margin-left: 100%;
+    }
+}
+
+@keyframes animateBird {
+    0% {
+        margin-left: -400px;
+    }
+    100% {
+        margin-left: 100%;
+    }
+}
+
+@-webkit-keyframes upDown {
+    0% {
+        margin-top: 0px;
+    }
+    100% {
+        margin-top: 10px;
+    }
+}
+
+@-moz-keyframes upDown {
+    0% {
+        margin-top: 0px;
+    }
+    100% {
+        margin-top: 10px;
+    }
+}
+
+@keyframes upDown {
+    0% {
+        margin-top: 0px;
+    }
+    100% {
+        margin-top: 10px;
+    }
+}
+
+@-webkit-keyframes wing { 
+    0% { 
+        bottom: 30px;
+    }
+    100% { 
+        bottom: 40px;
+    }
+}
+
+@-moz-keyframes wing { 
+    0% { 
+        bottom: 30px;
+    }
+    100% { 
+        bottom: 40px;
+    }
+}
+
+@keyframes wing { 
+    0% { 
+        bottom: 30px;
+    }
+    100% { 
+        bottom: 40px;
+    }
+}
+
+@-webkit-keyframes beakTop {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(-15deg);
+    }
+}
+
+@-moz-keyframes beakTop {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(-15deg);
+    }
+}
+
+@keyframes beakTop {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(-15deg);
+    }
+}
+
+@-webkit-keyframes beakBottom {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(15deg);
+    }
+}
+
+@-moz-keyframes beakBottom {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(15deg);
+    }
+}
+
+@keyframes beakBottom {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(15deg);
+    }
+}
+
+/* ANIMATIONS */
+
+.x1 {
+	-webkit-animation: animateBird 35s linear infinite, upDown 1s ease-in-out infinite alternate;
+	-moz-animation: animateBird 35s linear infinite, upDown 1s ease-in-out infinite alternate;
+	animation: animateBird 35s linear infinite, upDown 1s ease-in-out infinite alternate;
+	
+	-webkit-transform: scale(1);
+	-moz-transform: scale(1);
+	transform: scale(1);
+}
+
+.x2 {
+	-webkit-animation: animateBird 20s linear infinite, upDown 1s ease-in-out infinite alternate;
+	-moz-animation: animateBird 20s linear infinite, upDown 1s ease-in-out infinite alternate;
+	animation: animateBird 20s linear infinite, upDown 1s ease-in-out infinite alternate;
+	
+	-webkit-transform: scale(0.6);
+	-moz-transform: scale(0.6);
+	transform: scale(0.6);
+}
+
+.x3 {
+	-webkit-animation: animateBird 30s linear infinite, upDown 1s ease-in-out infinite alternate;
+	-moz-animation: animateBird 30s linear infinite, upDown 1s ease-in-out infinite alternate;
+	animation: animateBird 30s linear infinite, upDown 1s ease-in-out infinite alternate;
+	
+	-webkit-transform: scale(0.8);
+	-moz-transform: scale(0.8);
+	transform: scale(0.8);
+}
+
+.x4 {
+	-webkit-animation: animateBird 18s linear infinite, upDown 1s ease-in-out infinite alternate;
+	-moz-animation: animateBird 18s linear infinite, upDown 1s ease-in-out infinite alternate;
+	animation: animateBird 18s linear infinite, upDown 1s ease-in-out infinite alternate;
+	
+	-webkit-transform: scale(0.4);
+	-moz-transform: scale(0.4);
+	transform: scale(0.4);
+}
+
+.x5 {
+	-webkit-animation: animateBird 25s linear infinite, upDown 1s ease-in-out infinite alternate;
+	-moz-animation: animateBird 25s linear infinite, upDown 1s ease-in-out infinite alternate;
+	animation: animateBird 25s linear infinite, upDown 1s ease-in-out infinite alternate;
+	
+	-webkit-transform: scale(1);
+	-moz-transform: scale(1);
+	transform: scale(1);
+}
+
+/* OBJECTS */
+
+.bird {
+	background: #fff;
+
+	-webkit-border-radius: 50%;
+	-moz-border-radius: 50%;
+	border-radius: 50%;
+
+	-webkit-box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+	-moz-box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+
+	height: 120px;
+	position: relative;
+	width: 120px;
+}
+
+.bird:before, .bird:after {
+	content: "";
+	position: absolute;
+}
+
+.bird:before {
+    -webkit-animation: wing 0.2s ease-in-out infinite alternate;
+	-moz-animation: wing 0.2s ease-in-out infinite alternate;
+	animation: wing 0.2s ease-in-out infinite alternate;
+
+    background: #f3f3f3;
+
+	-webkit-border-radius: 50% 0 50% 50%;
+	-moz-border-radius: 50% 0 50% 50%;
+	border-radius: 50% 0 50% 50%;
+
+	height: 20px;
+	left: 20px;
+	width: 35px;
+}
+
+.bird:after {
+    background: #fff;
+	height: 20px;
+
+	-webkit-border-radius: 50%;
+	-moz-border-radius: 50%;
+	border-radius: 50%;
+
+	-webkit-box-shadow: 5px 10px 0 #555 inset;
+	-moz-box-shadow: 5px 10px 0 #555 inset;
+	box-shadow: 5px 10px 0 #555 inset;
+
+	right: 30px;
+	top: 30px;
+	width: 20px;
+}
+
+.beak:before, .beak:after {
+    content: "";
+    position: absolute;
+	z-index: -1;
+}
+
+.beak:before {
+    -webkit-animation: beakTop 0.3s ease-in-out infinite alternate;
+	-moz-animation: beakTop 0.3s ease-in-out infinite alternate;
+	animation: beakTop 0.3s ease-in-out infinite alternate;
+
+	border-bottom: 30px solid #ffde00;
+	border-right: 30px solid transparent;
+	height: 0;
+	right: -10px;
+    top: 30px;
+	width: 0;
+}
+
+.beak:after {
+    -webkit-animation: beakBottom 0.3s ease-in-out infinite alternate;
+	-moz-animation: beakBottom 0.3s ease-in-out infinite alternate;
+	animation: beakBottom 0.3s ease-in-out infinite alternate;
+
+    border-top: 30px solid #ff9200;
+	border-right: 30px solid transparent;
+	height: 0;
+	right: -10px;
+    top: 60px;
+	width: 0;
+}

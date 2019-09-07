@@ -44,16 +44,18 @@ More information about BIRDS is available at: [https://dangtv.github.io/BIRDS/](
     -s schema   database schema name to connect to (default: public)
     -h host     database server host (default: "localhost")
     -c          connect and run the generated SQL on the database server
+    -import     connect and import the data schema from database server
     -v          enable verifications
     -i          optimize the update propagation by incremental rewriting rules
     -e          optimize datalog rules
+    -u          speed up the verifications
     -p port     database server port (default: "5432")
     -U user     database user (default: "postgres")
     -g user     the special user for global dejima synchronization (default: "dejima")
     -dejima     detect updates on dejima views to perform pre-defined actions in the shell script file
     -w password database user password (default: 12345678)
     -d dbname   database name to connect to (default: "datalogdb")
-    -m mode     1: put, 2: get & put, 3: get (default: 1)
+    -t timeout  timeout (second) (default: 120s)
     -help       Display this list of options
     --help      Display this list of options
     ```

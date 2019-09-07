@@ -6,6 +6,7 @@ import .tactic
 import .attributes
 import .lol
 import init.data.option.basic
+import data.rat
 
 declare_trace smt2
 
@@ -13,7 +14,7 @@ open tactic
 open smt2.builder
 open native
 
-constant real:Type
+constant simpreal:Type
 
 meta structure smt2_state : Type :=
 (ctxt : lol.context)
@@ -65,7 +66,8 @@ do st ← get,
    | none := do
      lty ← match ty with
      | `(int) := pure $ lol.type.int
-     | `(real) := pure $ lol.type.any
+     | `(simpreal) := pure $ lol.type.any
+     | `(rat) := pure $ lol.type.rat
      | `(string) := pure $ lol.type.string
      | `(nat) := pure $ lol.type.refinement lol.type.int (fun x, lol.term.lte (lol.term.int 0) (lol.term.var x))
      | `(bool) := pure $ lol.type.bool
@@ -139,7 +141,7 @@ meta def reflect_application (fn : expr) (args : list expr) (callback : expr →
 -- meta def is_supported_head_symbol (e : expr) : bool := true
 
 meta def is_supported_numeric_ty (ty : expr) : bool :=
-(ty = `(int) ∨ ty = `(nat))
+(ty = `(int) ∨ ty = `(nat) ∨ ty = `(rat))
 
 meta def is_supported_string_ty (ty : expr) : bool :=
 (ty = `(string))
@@ -150,7 +152,12 @@ meta def reflect_arith_formula (reflect_base : expr → smt2_m lol.term) : expr 
 | `(%%a + %%b) := lol.term.add <$> reflect_arith_formula a <*> reflect_arith_formula b
 | `(%%a - %%b) := lol.term.sub <$> reflect_arith_formula a <*> reflect_arith_formula b
 | `(%%a * %%b) := lol.term.mul <$> reflect_arith_formula a <*> reflect_arith_formula b
-| `(%%a / %%b) := lol.term.div <$> reflect_arith_formula a <*> reflect_arith_formula b
+| `(%%a / %%b) := 
+     do tya ← infer_type a,
+     do tyb ← infer_type a,
+     if (tya = `(rat)) || (tyb = `(rat)) then
+          lol.term.frac <$> reflect_arith_formula a <*> reflect_arith_formula b
+     else lol.term.div <$> reflect_arith_formula a <*> reflect_arith_formula b
 | `(%%a % %%b) := lol.term.mod <$> reflect_arith_formula a <*> reflect_arith_formula b
 | `(- %%a) := lol.term.neg <$> reflect_arith_formula a
 -- /- Constants -/
@@ -159,16 +166,24 @@ meta def reflect_arith_formula (reflect_base : expr → smt2_m lol.term) : expr 
 | `(bit0 %%Bits) :=
   do ty ← infer_type Bits,
      if is_supported_numeric_ty ty
+     then if (ty = `(int))
      then lol.term.int <$> eval_expr int `(bit0 %%Bits : int)
      else if (ty = `(nat))
      then lol.term.int <$> int.of_nat <$> eval_expr nat `(bit0 %%Bits : nat)
+     else if (ty = `(rat))
+     then lol.term.rat <$> eval_expr rat `(bit0 %%Bits : rat)
+     else fail $ "unknown numeric literal: " ++ (to_string ```(bit0 %%Bits : int))
      else fail $ "unknown numeric literal: " ++ (to_string ```(bit0 %%Bits : int))
 | `(bit1 %%Bits) :=
   do ty ← infer_type Bits,
      if is_supported_numeric_ty ty
+     then if (ty = `(int))
      then lol.term.int <$> eval_expr int `(bit1 %%Bits : int)
      else if (ty = `(nat))
      then lol.term.int <$> (int.of_nat <$> eval_expr nat `(bit1 %%Bits : nat))
+     else if (ty = `(rat))
+     then lol.term.rat <$> eval_expr rat `(bit1 %%Bits : rat)
+     else fail $ "unknown numeric literal: " ++ (to_string `(bit1 %%Bits : int))
      else fail $ "unknown numeric literal: " ++ (to_string `(bit1 %%Bits : int))
 | a :=
     if a.is_local_constant
@@ -190,16 +205,16 @@ meta def reflect_string_formula (reflect_base : expr → smt2_m lol.term) : expr
     lol.term.string <$> eval_expr string `(to_string a:string)
 
 -- /-- Check if the type is an `int` or logically a subtype of an `int` like nat. -/
-meta def is_int (e : expr) : tactic bool :=
+meta def is_number (e : expr) : tactic bool :=
 do ty ← infer_type e,
-   return $ (ty = `(int)) || (ty = `(nat))
+   return $ (ty = `(int)) || (ty = `(nat)) || (ty = `(rat))
 
 meta def unsupported_ordering_on {α : Type} (elem : expr) : tactic α :=
 do ty ← infer_type elem,
    tactic.fail $ "unable to translate orderings for values of type: " ++ to_string ty
 
 meta def reflect_ordering (reflect_arith : expr → smt2_m lol.term) (R : lol.term → lol.term → lol.term) (P Q : expr) : smt2_m lol.term :=
-do is ← is_int P, -- NB: P and Q should have the same type.
+do is ← is_number P, -- NB: P and Q should have the same type.
    if is
    then R <$> (reflect_arith P) <*> (reflect_arith Q)
    else unsupported_ordering_on P
@@ -208,6 +223,7 @@ meta def supported_pi_binder (ty : expr) : bool :=
 match ty with
 | `(int) := tt
 | `(nat) := tt
+| `(rat) := tt
 | `(Prop) := tt
 | `(string) := tt
 | `(bool) := tt
@@ -267,6 +283,7 @@ meta def is_builtin_type : expr → bool
 | `(string) := tt
 | `(bool) := tt
 | `(int) := tt
+| `(rat) := tt
 | `(Prop) := tt
 | `(nat) := tt
 | _ := ff

@@ -77,7 +77,7 @@ constraint by a special Datalog rule with a truth constant ⊥ in the head `⊥ 
 The meaning of this rule is a first-order logic sentence
 `(¬∃x, y, nation(x, ‘Japan′, y)) → ⊥`,
 which is equivalent to `∃x, y, nation(x, ‘Japan′, y)`.
-By this constraint, given an updated view `jcustomer`, we keep the table
+Given an updated view `jcustomer`, our update strategy is to keep the table
 `nation` unchanged, and update the table `customer` to reflect the view
 updates. First, if there is a Japanese customer, who does not appear in
 the view, we choose the option of deleting this customer from the source
@@ -94,7 +94,7 @@ To fill in the attribute `PHONE`, we search for the existing one in the
 old table `customer`. If it is not found, we fill in the attribute
 `PHONE` a default string `‘unknown’`.
 
-## Verifying and compiling the update strategy into SQL:
+## Verifying and compiling the update strategy to SQL:
 
 ```bash
 birds -v -f jcustomer.dl -o jcustomer.sql
@@ -144,6 +144,6 @@ That the new table `nation` does not have the nation `Japan` anymore,
 
 ![delete-japan](assets/images/updated-nation.png)
 
-Updates to the view `jcustomer` will be rejected with the error messange 'Invalid view update: constraints on the source relations are violated':
+Updates to the view `jcustomer` will be rejected with the error message 'Invalid view update: constraints on the source relations are violated':
 
 ![invalid-update-nation](assets/images/invalid-update-nation.png)

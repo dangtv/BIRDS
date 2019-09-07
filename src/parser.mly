@@ -16,14 +16,14 @@
 %token <string> VARNAME         /* token with string value */
 
   
-%token QMARK SMARK VMARK DOT IMPLIEDBY 
+%token QMARK SMARK VMARK DOT IMPLIEDBY PK
 %token TYPING SINT SREAL SSTRING SBOOL
 %token AND NOT OR TT FF BOT TOP
 %token NULL
 %token EQ
 %token NE LE GE LT GT
 %token PLUS MINUS TIMES DIVIDE CONCAT
-%token LPAREN RPAREN SEP
+%token LPAREN RPAREN LBRACKET RBRACKET SEP
 %token EOP
 %token EOF
 %token ANONVAR /* anonymous variable */
@@ -55,6 +55,7 @@
   ;
 
   expr: 
+  | primary_key              { $1 }
   | integrity_constraint              { $1 }
   | rule	                            { $1 }
   | query	                            { $1 }
@@ -67,6 +68,18 @@
   fact:
   literal                               { $1 }
   | error             { spec_parse_error "invalid syntax for a fact" 1; }
+  ;
+
+  primary_key:
+  | PK LPAREN RELNAME SEP LBRACKET attrlist RBRACKET RPAREN	DOT	{ Pk ($3, $6) }
+  | PK LPAREN RELNAME SEP LBRACKET attrlist RBRACKET RPAREN EOF					{ spec_parse_error "miss a dot for a primary key" 3; }
+  | error             { spec_parse_error "invalid syntax for a primary key" 1; }
+  ;
+
+  attrlist: /* empty */					{ [] }
+  | VARNAME				    				{ $1 :: [] }
+  | VARNAME SEP attrlist 					{ $1 :: $3 } /* \!/ rec. on the right */
+  | error             { spec_parse_error "invalid syntax for a list of attributes" 1; }
   ;
 
   integrity_constraint:
@@ -111,14 +124,14 @@
   ;
 
   schema:
-  | RELNAME LPAREN vartypelist RPAREN		{ ($1, $3) }
+  | RELNAME LPAREN attrtypelist RPAREN		{ ($1, $3) }
   | error             { spec_parse_error "invalid syntax for a predicate" 1; }
   ;
 
-  vartypelist: /* empty */					{ [] }
+  attrtypelist: /* empty */					{ [] }
   | VARNAME TYPING stype { ($1, $3) :: [] }
-  | VARNAME TYPING stype SEP vartypelist 					{ ($1, $3) :: $5 } /* \!/ rec. on the right */
-  | error             { spec_parse_error "invalid syntax for a list of pairs of column name and its type" 1; }
+  | VARNAME TYPING stype SEP attrtypelist 					{ ($1, $3) :: $5 } /* \!/ rec. on the right */
+  | error             { spec_parse_error "invalid syntax for a list of pairs of an attribute and its type" 1; }
   ;
 
   stype:

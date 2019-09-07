@@ -81,7 +81,9 @@ let type_of_postgrestype str = match str with
     | "integer"	-> Sint
     | "bigint"	-> Sint
     | "decimal variable" -> Sreal
+    | "decimal" -> Sreal
     | "numeric variable" -> Sreal 
+    | "numeric" -> Sreal 
     | "real" -> Sreal 
     | "double precision" -> Sreal 
     | "smallserial"	-> Sint

@@ -1,3 +1,4 @@
+import data.rat
 namespace smt2
 
 @[reducible] def symbol : Type := string
@@ -5,6 +6,7 @@ namespace smt2
 
 inductive special_constant : Type
 | number : int → special_constant
+| ratnumber : rat → special_constant
 | bitvec : nat → int → special_constant
 | string : string → special_constant
 | bool : bool → special_constant
@@ -22,6 +24,7 @@ def to_hex : nat → string
 
 def special_constant.to_string : special_constant → string
 | (special_constant.number i)   := to_string i
+| (special_constant.ratnumber i)   := to_string i
 | (special_constant.string str) := str
 | (special_constant.bitvec bitsz num) :=
   let unum := if num < 0 then 2^bitsz - num.nat_abs + 1 else num.to_nat in

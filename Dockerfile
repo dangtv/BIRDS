@@ -73,7 +73,7 @@ WORKDIR /root/
 RUN BUILD_PKGS="wget" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
- && wget https://nodejs.org/dist/latest-v8.x/node-v8.16.0-linux-x64.tar.gz \
+ && wget https://nodejs.org/dist/v8.16.0/node-v8.16.0-linux-x64.tar.gz \
  && tar xvfz node-v8.16.0-linux-x64.tar.gz \
  && mkdir -p /usr/local/nodejs \
  && mv node-v8.16.0-linux-x64/* /usr/local/nodejs \
@@ -102,10 +102,15 @@ RUN BUILD_PKGS="git" \
  && rm -rf /var/lib/apt/lists/*
 
 # installing BIRDS web-based editor
-# COPY webui /usr/lib/birds/webui
-# WORKDIR /usr/lib/birds/webui/
-# RUN scripts/build.sh && rm -rf client && rm -rf scripts && rm -rf node_modules \
-#  && rm package.json package-lock.json .travis.yml
+COPY webui /usr/lib/birds/webui
+WORKDIR /usr/lib/birds/webui/
+RUN BUILD_PKGS="python build-essential make" \
+ && RUNTIME_PKGS="" \
+ && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
+ && scripts/build.sh && rm -rf client && rm -rf scripts && rm -rf node_modules \
+ && rm package.json package-lock.json .travis.yml \
+ && apt-get purge -y --auto-remove ${BUILD_PKGS} \
+ && rm -rf /var/lib/apt/lists/*
 
 # installing BIRDS
 COPY src /root/birds/src

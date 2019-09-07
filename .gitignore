@@ -18,3 +18,13 @@ temp.smt2
 .idea/
 
 webpage/.sass-cache/
+
+webui/client/build/
+webui/server/public
+webui/coverage/
+webui/db/
+webui/dbtest/
+webui/node_modules/
+webui/client/node_modules/
+webui/server/node_modules/
+leanpkg.path

@@ -123,7 +123,8 @@ let extract_rterm_constants ?(pos = 0) rt = match rt with
  *)
 let extract_rule_constants = function
     | Query _    -> invalid_arg "function extract_rule_constants called with a query"
-    | Constraint _    -> invalid_arg "function extract_rule_constants called with a query"
+    | Constraint _    -> invalid_arg "function extract_rule_constants called with a Constraint"
+    | Pk _    -> invalid_arg "function extract_rule_constants called with a Primary key"
     | Source _    -> invalid_arg "function extract_rule_constants called with a source schema"
     | View _ -> invalid_arg "function extract_rule_constants called with a view schema"
     | Rule(h, b) -> 
@@ -146,7 +147,8 @@ let seperate_rules exp = match exp with
 (** Given a rule, replace AnonVar to a NamedVar*)
 let anonvar2namedvar = function
     | Query _    -> invalid_arg "function anonvar2namedvar called with a query"
-    | Constraint _    -> invalid_arg "function anonvar2namedvar called with a query"
+    | Constraint _    -> invalid_arg "function anonvar2namedvar called with a Constraint"
+    | Pk _    -> invalid_arg "function anonvar2namedvar called with a Pk"
     | Source _    -> invalid_arg "function anonvar2namedvar called with a source schema"
     | View _ -> invalid_arg "function anonvar2namedvar called with a view schema"
     | Rule(h, b) -> 

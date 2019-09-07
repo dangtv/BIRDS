@@ -173,6 +173,7 @@ let transform_rule (view:rterm) (cnt:colnamtab) (rule:stt) lst=
   match rule with
   | Query _ -> lst
   | Constraint _ -> lst
+  | Pk _ -> lst
   | Source _ -> rule::lst
   | View _ -> rule::lst
   | Rule(h, body) ->
@@ -265,7 +266,7 @@ let datalog_of_new_view (debug:bool) prog =
   List.fold_right (fun x lst -> x@lst) new_rule_lst_lst []
 ;;
 
-(** take a view update datalog program and remove all the constraint involving views in the proramg  *)
+(** take a view update datalog program and remove all the constraint not involving views in the program  *)
 let remove_constraint_of_view (debug:bool) prog = 
   let view_sch = get_view prog in
   let view_rt = get_schema_rterm view_sch in
@@ -281,11 +282,17 @@ let remove_constraint_of_view (debug:bool) prog =
         List.mem (symtkey_of_rterm view_rt) strat in
     let constr_of_non_view_lst = List.filter (non is_constr_of_view) constr_rules in 
     List.iter (symt_insert idb) constr_of_non_view_lst;
-    Prog((get_schema_stts prog)@ (rules_of_symt idb))
+    let non_view_cstr_prog = Prog((get_schema_stts prog)@ (rules_of_symt idb)) in 
+    if debug then (
+      print_endline "_____constraints not involing view_______"; 
+      print_string (Expr.string_of_prog  non_view_cstr_prog); 
+      print_endline "______________\n";
+    ) else ();
+    non_view_cstr_prog
   else prog
 ;;
 
-(** take a view update datalog program and remove all the constraint not involving views in the proramg  *)
+(** take a view update datalog program and remove all the constraint involving views in the program  *)
 let keep_only_constraint_of_view (debug:bool) prog = 
   let view_sch = get_view prog in
   let view_rt = get_schema_rterm view_sch in
@@ -301,7 +308,13 @@ let keep_only_constraint_of_view (debug:bool) prog =
       List.mem (symtkey_of_rterm view_rt) strat in
     let constr_of_view_lst = List.filter (is_constr_of_view) constr_rules in 
     List.iter (symt_insert idb) constr_of_view_lst;
-    Prog((get_schema_stts prog)@ (rules_of_symt idb))
+    let view_cstr_prog = Prog((get_schema_stts prog)@ (rules_of_symt idb)) in 
+    if debug then (
+      print_endline "_____constraints involing view_______"; 
+      print_string (Expr.string_of_prog  view_cstr_prog); 
+      print_endline "______________\n";
+    ) else ();
+    view_cstr_prog
   else prog
 ;;
 
@@ -319,7 +332,8 @@ let datalog_of_putget (debug:bool) prog =
 (** given a rule, extract projection opetor of the rule and do the projections in other rules  *)
 let extract_projection stt ind= match stt with
     | Query _    -> invalid_arg "function extract_projection called with a query"
-    | Constraint _    -> invalid_arg "function extract_projection called with a query"
+    | Constraint _    -> invalid_arg "function extract_projection called with a Constraint"
+    | Pk _    -> invalid_arg "function extract_projection called with a Pk"
     | Source _    -> invalid_arg "function extract_projection called with a source schema"
     | View _ -> invalid_arg "function extract_projection called with a view schema"
     | Rule(h, b) -> 
@@ -380,7 +394,8 @@ let extract_projection_expr (debug:bool) prog =
 (** given a rule, extract projection opetor of the rule and do the projections in other rules  *)
 let binarize stt ind= match stt with
     | Query _    -> invalid_arg "function extract_projection called with a query"
-    | Constraint _    -> invalid_arg "function extract_projection called with a query"
+    | Constraint _    -> invalid_arg "function extract_projection called with a Constraint"
+    | Pk _    -> invalid_arg "function extract_projection called with a Pk"
     | Source _    -> invalid_arg "function extract_projection called with a source schema"
     | View _ -> invalid_arg "function extract_projection called with a view schema"
     | Rule(h, b) -> 

@@ -151,7 +151,7 @@ let lean_stype_of_string str =
   try  (ignore(int_of_string str); "int") with
     (* try test () with *)
     | Failure e -> 
-        try  (ignore(float_of_string str); "real") with
+        try  (ignore(float_of_string str); "rat") with
         (* try test () with *)
         | Failure e -> 
             try  ( ignore(bool_of_string str); "Prop") with

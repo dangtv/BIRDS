@@ -102,7 +102,8 @@ let stype_to_lean_type st = match st with
     (* | Sint -> "ℤ" *)
     | Sint -> "int"
     (* | Sreal -> "ℝ" *)
-    | Sreal -> "real"
+    (* | Sreal -> "real" *)
+    | Sreal -> "rat"
     | Sbool -> "Prop"
     | Sstring -> "string"
 
@@ -122,6 +123,7 @@ let source_to_lean_func_types prog = match prog with
         Rule _ -> funcs
         | Query _ -> funcs
         | Constraint _ -> funcs 
+        | Pk _ -> funcs 
         | View _ -> funcs 
         | Source (name, lst) -> ( name ^ ": " ^ String.concat " → " ( List.map (fun (col,typ) -> stype_to_lean_type typ) lst) ^ " → Prop" )::funcs in
     List.fold_left p_el [] sttlst;;
@@ -134,6 +136,7 @@ let source_to_z3_func_types prog = match prog with
         Rule _ -> funcs
         | Query _ -> funcs
         | Constraint _ -> funcs 
+        | Pk _ -> funcs 
         | View _ -> funcs 
         | Source (name, lst) -> ( "(declare-fun " ^name ^ " (" ^ 
         String.concat " " ( List.map (fun (col,typ) -> stype_to_z3_type typ) lst) ^ ") Bool)" )::funcs in
@@ -147,6 +150,7 @@ let source_view_to_lean_func_types prog =match prog with
         Rule _ -> funcs
         | Query _ -> funcs
         | Constraint _ -> funcs 
+        | Pk _ -> funcs 
         | Source (name, lst)  
         | View (name, lst) -> ( name ^ ": " ^ String.concat " → " ( List.map (fun (col,typ) -> stype_to_lean_type typ) lst) ^ " → Prop" )::funcs in
     List.fold_left p_el [] sttlst;;
@@ -159,6 +163,7 @@ let source_view_to_z3_func_types prog =match prog with
         Rule _ -> funcs
         | Query _ -> funcs
         | Constraint _ -> funcs 
+        | Pk _ -> funcs 
         | Source (name, lst)  
         | View (name, lst) -> ( "(declare-fun " ^name ^ " (" ^ 
         String.concat " " ( List.map (fun (col,typ) -> stype_to_z3_type typ) lst) ^ ") Bool)" )::funcs in
@@ -248,28 +253,15 @@ let lean_simp_sourcestability_theorem_of_stt (debug:bool) prog =
     "theorem sourcestability " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^ ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp(Ast2fol.sourcestability_sentence_of_stt debug prog, False)));;
 
 let gen_lean_code_for_theorems thms = 
-    "import logic.basic
-import tactic.basic
-import tactic.finish
-import tactic.interactive
-import bx
-import super
-import smt2
-universe u
-open int
-open auto
+    "import bx
 
-local attribute [instance] classical.prop_decidable -- make all prop decidable
+local attribute [instance] classical.prop_decidable
 
 " ^ String.concat "\n\n" (List.map (fun x ->  x ^ ":= 
     begin
-    intro h,
-    try{rw[imp_false] at *},
-    try{simp at *},
-    try{revert h},
     try{z3_smt},
-    try{super {max_iters := 200, timeout := 200000}}
     end") thms)
+    (* try{super {max_iters := 200, timeout := 200000}} *)
 
 let validity_lean_code_of_bidirectional_datalog (debug:bool) prog = 
     gen_lean_code_for_theorems [

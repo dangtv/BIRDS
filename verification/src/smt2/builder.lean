@@ -79,6 +79,9 @@ term.apply "*" [t, u]
 def div (t u : term) : term :=
 term.apply "div" [t, u]
 
+def frac (t u : term) : term :=
+term.apply "/" [t, u]
+
 def mod (t u : term) : term :=
 term.apply "mod" [t, u]
 
@@ -93,6 +96,9 @@ term.apply "ite" [c, t, f]
 
 def int_const (i : int) : term :=
 term.const $ special_constant.number i
+
+def rat_const (i : rat) : term :=
+term.const $ special_constant.ratnumber i
 
 def string_const (s : string) : term :=
 term.const $ special_constant.string s

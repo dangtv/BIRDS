@@ -7,11 +7,11 @@ layout: default
 ## Installation
 
 * It is necessary to install external tools including Lean >= 3.4.1 and Z3 >= 4.7.1 before installing the command line tool `birds`. 
-* The tool `birds` can be downloaded at:
-  * [For Macosx]({{ site.github.mac_exe }})
-  * [For Ubuntu]({{ site.github.ubuntu_exe }})
+* The tool `birds` can be downloaded at [https://github.com/dangtv/BIRDS/releases](https://github.com/dangtv/BIRDS/releases),
+  <!-- * [For Macosx]({{ site.github.mac_exe }}) -->
+  <!-- * [For Ubuntu]({{ site.github.ubuntu_exe }}) -->
   <!-- * [Older versions](https://github.com/dangtv/BIRDS/releases) -->
-  * Or build an executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
+or build an executable file from the source code available at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) (along with instructions)
 
 ## Usage
 
@@ -25,16 +25,18 @@ birds [OPTIONS]
 -s schema   database schema name to connect to (default: public)
 -h host     database server host (default: "localhost")
 -c          connect and run the generated SQL on the database server
+-import     connect and import the data schema from database server
 -v          enable verifications
 -i          optimize the update propagation by incremental rewriting rules
 -e          optimize datalog rules
+-u          speed up the verifications
 -p port     database server port (default: "5432")
 -U user     database user (default: "postgres")
 -g user     the special user for global dejima synchronization (default: "dejima")
 -dejima     detect updates on dejima views to perform pre-defined actions in the shell script file
 -w password database user password (default: 12345678)
 -d dbname   database name to connect to (default: "datalogdb")
--m mode     1: put, 2: get & put, 3: get (default: 1)
+-t timeout  timeout (second) (default: 120s)
 -help       Display this list of options
 --help      Display this list of options
 ```

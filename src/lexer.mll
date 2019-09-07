@@ -42,6 +42,11 @@
         "view", VMARK;
         "View", VMARK;
         "VIEW", VMARK;
+        "pk", PK;
+        "Pk", PK;
+        "PK", PK;
+        "pK", PK;
+        "primarykey", PK;
         ]
 (*		exception Eof
 *)
@@ -84,6 +89,8 @@
     | ','            				{ SEP }
     | '('            				{ LPAREN }
     | ')'            				{ RPAREN }
+    | '['            				{ LBRACKET }
+    | ']'            				{ RBRACKET }
     | '='            				{ EQ }
     | '_'                                       { ANONVAR }
     | ':'          				{ TYPING }

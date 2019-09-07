@@ -12,6 +12,7 @@ and stt =
   | Source of string * (string * stype) list (* the predicate of edb relation which is Source relation want to update*)
   | View of string * (string * stype) list
   | Constraint of rterm * term list
+  | Pk of string * string list (*primary key*)
 and rterm =  (* rterm is literal *)
   | Pred of string * var list (* string is name of predicate, var list is a list of variables*)
   | Deltainsert of string * var list (* delta predicate for insertion*)
@@ -85,6 +86,7 @@ let get_rule_predname r = match r with
     | Source _    -> invalid_arg "function get_rule_predname called with a source schema"
     | View _ -> invalid_arg "function get_rule_predname called with a view schema"
     | Constraint _ -> invalid_arg "function get_rule_predname called with a constraint"
+    | Pk _ -> invalid_arg "function get_rule_predname called with a Pk"
 ;;
 
 (** get a rule's head pred *)
@@ -94,6 +96,7 @@ let rule_head r = match r with
     | Source _    -> invalid_arg "function rule_head called with a source schema"
     | View _    -> invalid_arg "function rule_head called with a view schema"
     | Constraint _    -> invalid_arg "function rule_head called with a constraint"
+    | Pk _    -> invalid_arg "function rule_head called with a Pk"
 ;;
 
 (** get a rule's body list of terms *)
@@ -103,6 +106,7 @@ let rule_body r = match r with
     | Source _    -> invalid_arg "function rule_body called with a source schema"
     | View _ -> invalid_arg "function rule_body called with a view schema"
     | Constraint _ -> invalid_arg "function rule_body called with a constraint"
+    | Pk _ -> invalid_arg "function rule_body called with a Pk"
 ;;
 
 (** get rterm varlist *)
@@ -146,6 +150,13 @@ let get_schema_rterm (r:stt) = match r with
     | _ -> invalid_arg "function get_schema_rterm called without an schema"
 ;;
 
+(** Given a schema declaration (source and view), returns the attribute list*)
+let get_schema_attrs (r:stt) = match r with
+    | Source (name, lst) 
+    | View (name, lst)  -> List.map (fun (col,typ) ->  col) lst
+    | _ -> invalid_arg "function get_schema_rterm called without an schema"
+;;
+
 (** Given a schema declaration (source and view), returns the list of column:typ  *)
 let get_schema_col_typs (r:stt) = match r with
     | Source (name, lst) -> lst
@@ -183,6 +194,7 @@ let get_all_rule_rterms = function
     | Source _    -> invalid_arg "function get_all_rule_rterms called with a source schema"
     | View _ -> invalid_arg "function get_all_rule_rterms called with a view schema"
     | Constraint _ -> invalid_arg "function get_all_rule_rterms called with a constraint"
+    | Pk _ -> invalid_arg "function get_all_rule_rterms called with a Pk"
 
 (** Given a rule, returns all the negative rterms
  * inside*)
@@ -196,6 +208,7 @@ let get_all_negative_rule_rterms = function
     | Source _    -> invalid_arg "function get_all_rule_rterms called with a source schema"
     | View _ -> invalid_arg "function get_all_rule_rterms called with a view schema"
     | Constraint _ -> invalid_arg "function get_all_rule_rterms called with a constraint"
+    | Pk _ -> invalid_arg "function get_all_rule_rterms called with a Pk"
 
 (** Given a rule, returns all the negative rterms
  * inside*)
@@ -209,6 +222,7 @@ let get_all_positive_rule_rterms = function
     | Source _    -> invalid_arg "function get_all_rule_rterms called with a source schema"
     | View _    -> invalid_arg "function get_all_rule_rterms called with a view schema"
     | Constraint _    -> invalid_arg "function get_all_rule_rterms called with a Constraint"
+    | Pk _    -> invalid_arg "function get_all_rule_rterms called with a Pk"
 
 (** Given an equality, returns the (var,const) tuple that defines it *)
 let extract_eq_tuple = function
@@ -278,7 +292,7 @@ let is_agg_inequality = function
 (** support function for smart stringify of the AST - see to_string below *)
 let rec string_of_const t = match t with 
     | Int x -> string_of_int x 
-    | Real x -> string_of_float x
+    | Real x -> if (x = floor x) then (string_of_float x)^"0" else (string_of_float x)
     | String x -> x
     | Bool x -> string_of_bool x
     | Null -> "null"
@@ -353,6 +367,7 @@ let string_of_stt st = match st with
     | View (name, lst)    -> "view " ^ name ^ "(" ^ String.concat ", " (List.map (fun (col,typ) -> col^":"^ (string_of_stype typ)) lst) ^ ").\n"
     | Constraint (p, tel)        -> string_of_rterm p ^ " :- " ^ 
                              String.concat " , " (List.map string_of_term tel) ^ ".\n"
+    | Pk(relname, attrlst) -> "PK(" ^ relname ^ ", [" ^ String.concat ", " attrlst ^ "]).\n" 
 ;;
 
 (** smart stringify for AST *)
@@ -388,23 +403,13 @@ let get_source_rel_pred del_rterm = match del_rterm with
 (** take a constraint and return an equivalent rule *)
 let rule_of_constraint c = match c with
     | Constraint (h,b)    -> Rule(h,b)
+    | Pk _ -> invalid_arg "function rule_of_constraint called with a primary key"
     | Rule _ -> invalid_arg "function rule_of_constraint called with a rule"
     | Query _    -> invalid_arg "function rule_of_constraint called with a query"
     | Source _    -> invalid_arg "function rule_of_constraint called with a source schema"
     | View _    -> invalid_arg "function rule_of_constraint called with a view schema"
 
 let get_empty_pred = Pred ("⊥", [])
-;;
-
-let constraint2rule prog = match prog with 
-    | Prog stt_lst ->
-    let trans_stt t = match t with
-      | Rule _ -> t 
-      | Constraint _ -> rule_of_constraint t
-      | Query _ -> t
-      | Source _ -> t
-      | View _ -> t in   
-    Prog(List.map trans_stt stt_lst)         
 ;;
 
 (** add a list of stt to a program *)
@@ -419,7 +424,7 @@ let is_rule_of_predname predname stt = match stt with
     | Query _   
     | Source _    
     | View _ 
-    | Constraint _ -> false
+    | Constraint _ | Pk _ -> false
 
 (** delete all rule of a predname *)
 let delete_rule_of_predname predname prog = match prog with
@@ -427,4 +432,11 @@ let delete_rule_of_predname predname prog = match prog with
         (* print_endline ("delete rule of "^predname); 
         print_endline (string_of_prog (Prog (List.filter (fun x -> not (is_rule_of_predname predname x)) sttlst)) );  *)
         Prog (List.filter (fun x -> not (is_rule_of_predname predname x)) sttlst)
+;;
+
+(** check whether a predicate is defined in the program*)
+let is_defined_pred predname prog = match prog with
+    | Prog sttlst -> 
+      let all_rules =  (List.filter (fun x -> (is_rule_of_predname predname x)) sttlst) in 
+      (List.length all_rules) > 0
 ;;

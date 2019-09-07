@@ -1,5 +1,6 @@
 import smt2.syntax
 import smt2.builder
+import data.rat
 open native
 namespace lol
 
@@ -12,6 +13,7 @@ with type : Type
 | string : type
 | bool : type
 | int : type
+| rat : type
 | var : string → type
 | fn : list type → type → type
 | refinement : type → (string → term) → type
@@ -32,6 +34,7 @@ with term : Type
 | sub : term → term → term
 | mul : term → term → term
 | div : term → term → term
+| frac : term → term → term
 | mod : term → term → term
 | lt : term → term → term
 | lte : term → term → term
@@ -40,6 +43,7 @@ with term : Type
 | neg : term → term
 | concat : term → term → term
 | int : int → term
+| rat : rat → term
 | string : string → term
 | bool : bool → term
 | forallq : string → type → term → term
@@ -71,6 +75,8 @@ meta def term.subst (n : string) (subst : term) : term → term
     term.mul (term.subst t) (term.subst u)
 | (term.div t u) :=
     term.div (term.subst t) (term.subst u)
+| (term.frac t u) :=
+    term.frac (term.subst t) (term.subst u)
 | (term.mod t u) :=
     term.mod (term.subst t) (term.subst u)
 | (term.lt t u) :=
@@ -86,6 +92,7 @@ meta def term.subst (n : string) (subst : term) : term → term
 | (term.concat t u) :=
     term.concat (term.subst t) (term.subst u)
 | (term.int i) := term.int i
+| (term.rat i) := term.rat i
 | (term.string i) := term.string i
 | (term.bool i) := term.bool i
 | (term.forallq n ty body) := term.forallq n ty body
@@ -155,6 +162,7 @@ with type.to_string : type → string
 | (type.any) := "any"
 | (type.string) := "string"
 | (type.int) := "int"
+| (type.rat) := "rat"
 | (type.bool) := "bool"
 | (type.var s) := s
 | (type.refinement t ref) := type.to_string t ++ " { x | }" -- thid doesn't work
@@ -237,6 +245,7 @@ private meta def compile_type_simple : type → smt2_compiler smt2.sort
 | (type.string) := return "String"
 | (type.bool) := return "Bool"
 | (type.int) := return "Int"
+| (type.rat) := return "Real"
 | (type.var s) := return s
 | (type.fn [] rt) := compile_type_simple rt
 -- There is a bug here.
@@ -266,6 +275,7 @@ meta def compile_type'
 | (type.string) := return ([], "String", refinements.empty)
 | (type.bool) := return ([], "Bool", refinements.empty)
 | (type.int) := return ([], "Int", refinements.empty)
+| (type.rat) := return ([], "Real", refinements.empty)
 | (type.fn args ret) :=
     do args' ← monad.mapm compile_type_simple args,
        ret' ← compile_type_simple ret,
@@ -336,12 +346,14 @@ private meta def compile_term : lol.term → smt2_compiler smt2.term
 | (term.sub a b) := smt2.builder.sub <$> compile_term a <*> compile_term b
 | (term.mul a b) := smt2.builder.mul <$> compile_term a <*> compile_term b
 | (term.div a b) := smt2.builder.div <$> compile_term a <*> compile_term b
+| (term.frac a b) := smt2.builder.frac <$> compile_term a <*> compile_term b
 | (term.lt a b) := smt2.builder.lt <$> compile_term a <*> compile_term b
 | (term.lte a b) := smt2.builder.lte <$> compile_term a <*> compile_term b
 | (term.gt a b) := smt2.builder.gt <$> compile_term a <*> compile_term b
 | (term.gte a b) := smt2.builder.gte <$> compile_term a <*> compile_term b
 | (term.mod a b) := smt2.builder.mod <$> compile_term a <*> compile_term b
 | (term.int i) := return $ smt2.builder.int_const i
+| (term.rat i) := return $ smt2.builder.rat_const i
 | (term.string i) := return $ smt2.builder.string_const i
 | (term.bool i) := return $ smt2.builder.bool_const i
 | (term.forallq n ty body) := smt2.builder.forallq n <$> (compile_type_simple ty) <*> compile_term body
@@ -360,6 +372,7 @@ do match ty with
    | type.any := return ()
    | type.string := return ()
    | type.int := return ()
+   | type.rat := return ()
    | type.bool := return ()
    | type.var _ := return ()
    | type.refinement t ref := return ()
