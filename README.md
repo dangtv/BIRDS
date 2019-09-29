@@ -68,7 +68,7 @@ More information about BIRDS is available at: [https://dangtv.github.io/BIRDS/](
 ### Installing underlying systems
 
 * BIRDS is integrated with underlying systems including:
-  * Lean >= 3.4.1: Download at [https://github.com/leanprover/lean/releases](https://github.com/leanprover/lean/releases)
+  * Lean >= 3.4.2: Download at [https://github.com/leanprover/lean/releases](https://github.com/leanprover/lean/releases)
     * Configure for Lean: add a new file `/Users/<user_name>/.lean/leanpkg.path` on Macos or `/root/.lean/leanpkg.path` on Linux with the following content(replace `<path_to_this_folder>` with the path to this souce code):
       ```bash 
         builtin_path
@@ -76,7 +76,7 @@ More information about BIRDS is available at: [https://dangtv.github.io/BIRDS/](
         path <path_to_this_folder>/verification/src
         path <path_to_this_folder>/verification/_target/deps/super/src
       ```
-    * Compiling Lean package: go to the folder `verification`: `cd verification`, and run:
+    * Compiling Lean package of BIRDS: go to the folder `verification`: `cd verification`, and run:
       ```bash 
       leanpkg configure
       leanpkg build
@@ -84,6 +84,7 @@ More information about BIRDS is available at: [https://dangtv.github.io/BIRDS/](
   * Z3 >= 4.7.1: Download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases)
   * Postgresql database >= 9.6: [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
     * PL/sh extension for postgresql: available at [https://github.com/petere/plsh](https://github.com/petere/plsh)
+  * coreutils package: For ubuntu: `apt-get install coreutils`. For Macos: `brew install coreutils` and then create a symbolic link `ln -s /usr/local/bin/gtimeout /usr/local/bin/timeout`
 
 ## Docker 
 
