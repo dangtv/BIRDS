@@ -78,10 +78,14 @@ let derive_get_datalog (debug:bool) (speedup:bool) timeout inputprog =
             (
                 (* print_endline @@ "Well-behavedness is not validated \nExit code: " ^ string_of_int is_disjoint; *)
             raise (ChkErr ("Deltas in the datalog program are not disjoint" ^ (if (debug) then "\nError messange: "^ disdel_mess else "") ));););
-    (* let fm = Or(sourcestability_sentence_of_stt ( debug) prog, Not (Ast2fol.constraint_sentence_of_stt debug prog)) in *)
-    let fm = sourcestability_sentence_of_stt ( debug) prog in
+    let fm = Or(sourcestability_sentence_of_stt ( debug) prog, Not ( view_constraint_sentence_of_stt debug prog)) in
+    (* let fm = sourcestability_sentence_of_stt ( debug) prog in *)
     let view_name = Expr.get_rterm_predname (Expr.get_schema_rterm (get_view prog)) in
     let view_vars = List.map (fun x -> Expr.string_of_var x) @@ Expr.get_rterm_varlist (Expr.get_schema_rterm (get_view prog)) in
+    if debug then (
+    print_endline "===> solving sourcestability & constraint to check view existence";
+    print_endline @@ "original sourcestability & constraint sentence: " ^(lean_string_of_fol_formula fm);
+    );
     let phi, lst = ranf2lvnf view_name fm in 
     (* we do not need vars any more because it must be all free variables in vfol and phi_i *)
     let lst2 = List.map (fun (vars, vfol, phi_i) -> 
@@ -91,7 +95,6 @@ let derive_get_datalog (debug:bool) (speedup:bool) timeout inputprog =
         | _ -> (vfol, phi_i)
     ) lst in
     if debug then (
-    print_endline "===> solving sourcestability constraint to check view existence";
     print_endline "______constraints from view-predicate normal form_______";
     print_endline @@ "phi: " ^(lean_string_of_fol_formula phi);
     List.iter (fun (vfol, phi_i) -> 
@@ -115,15 +118,15 @@ let derive_get_datalog (debug:bool) (speedup:bool) timeout inputprog =
     ) False lst2 in
     if debug then print_endline @@ "lower bound of view: " ^ (lean_string_of_fol_formula ((view_lower_fol)));
 
-    (* make the equivalence sentence of checking whether lower FOL of view implies upper FOL of view *)
+    (* make an equivalence sentence of checking whether lower FOL of view implies upper FOL of view *)
     let sentence_of_view_existence = generalize (Imp(view_lower_fol, view_upper_fol)) in 
     if debug then (print_endline @@ "FO sentence of view existence : " ^ (lean_string_of_fol_formula ((sentence_of_view_existence)));
     print_endline "_______________________________________\n");
     if debug then (print_endline "==> generating theorem for view existence";) else ();
     
     (* checking the FO sentence of the existence of a view *)
-    let theorem_of_view_existence =  "theorem view_existence " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_view_to_lean_func_types prog)) ^
-     ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt debug prog, 
+    let theorem_of_view_existence =  "theorem view_existence " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
+     ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (non_view_constraint_sentence_of_stt debug prog, 
      And(sentence_of_view_existence, generalize (Imp (phi, False)))))) in
     let lean_code_view_existence = gen_lean_code_for_theorems [theorem_of_view_existence] in
     

@@ -72,7 +72,7 @@ More information about BIRDS is available at: [https://dangtv.github.io/BIRDS/](
     * Configure for Lean: add a new file `/Users/<user_name>/.lean/leanpkg.path` on Macos or `/root/.lean/leanpkg.path` on Linux with the following content(replace `<path_to_this_folder>` with the path to this souce code):
       ```bash 
         builtin_path
-        path <path_to_this_folder>/verification/_target/deps/mathlib/.
+        path <path_to_this_folder>/verification/_target/deps/mathlib/src
         path <path_to_this_folder>/verification/src
         path <path_to_this_folder>/verification/_target/deps/super/src
       ```

@@ -298,9 +298,9 @@ let putget_sentence_of_stt (debug:bool) prog =
     generalize (Iff(putget_fm, view_fm))
 ;;
 
-(* take a view update datalog program (containing both get and put directions) and generate FO sentence of all contraints *)
+(* take a view update datalog program (may contain both get and put directions) and generate FO sentence of all contraints *)
 let constraint_sentence_of_stt (debug:bool) prog =
-    if debug then (print_endline "==> generating constraint involving view";) else ();
+    if debug then (print_endline "==> generating all constraints";) else ();
     let edb = extract_edb prog in
     let idb = extract_idb prog in 
     if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
@@ -308,7 +308,9 @@ let constraint_sentence_of_stt (debug:bool) prog =
         let view_rt = get_schema_rterm (get_view prog) in
         (* need to convert the view to be an edb relation *)
         symt_insert edb (Rule(view_rt,[]));
-        symt_remove idb (symtkey_of_rterm view_rt);
+        (* if having get (view rules) then remove it *)
+        if Hashtbl.mem idb (symtkey_of_rterm view_rt) then
+            symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
         if debug then (
         print_endline "_____preprocessed datalog rules_______"; 
@@ -320,10 +322,36 @@ let constraint_sentence_of_stt (debug:bool) prog =
     else True
 ;;
 
-(* take a view update datalog program (containing both get and put directions) and generate FO sentence of contraints not involving view *)
+(* take a view update datalog program (may contain both get and put directions) and generate FO sentence of contraints not involving view *)
 let non_view_constraint_sentence_of_stt (debug:bool) prog =
     if debug then (print_endline "==> generating constraint not involving view";) else ();
     let clean_prog = remove_constraint_of_view debug prog in
+    let edb = extract_edb clean_prog in
+    let idb = extract_idb clean_prog in
+    if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
+        (* need to change the view (in query predicate) to a edb relation *)
+        let view_rt = get_schema_rterm (get_view clean_prog) in
+        (* need to convert the view to be an edb relation *)
+        (* remove_constraint_of_view debug view_rt edb idb ; *)
+        symt_insert edb (Rule(view_rt,[]));
+        symt_remove idb (symtkey_of_rterm view_rt);
+        preprocess_rules idb;
+        if debug then (
+        print_endline "_____preprocessed datalog rules_______"; 
+        print_symtable idb; 
+        print_endline "______________\n";
+    ) else ();
+        let cnt = build_colnamtab edb idb in
+        if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
+            Imp(snd (fol_of_query idb cnt get_empty_pred), False)
+        else True
+    else True
+;;
+
+(* take a view update datalog program (may contain both get and put directions) and generate FO sentence of only contraints involving view *)
+let view_constraint_sentence_of_stt (debug:bool) prog =
+    if debug then (print_endline "==> generating a sentence of only constraints involving view";) else ();
+    let clean_prog = keep_only_constraint_of_view debug prog in
     let edb = extract_edb clean_prog in
     let idb = extract_idb clean_prog in
     if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then

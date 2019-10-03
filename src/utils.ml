@@ -560,7 +560,7 @@ let constraint2rule prog = match prog with
         let allattrlst = get_schema_attrs schema_stt in 
         let allattrlst2 = List.map (fun x -> if (List.mem x attrlst) then x else x^"2") allattrlst in
         let nonkeyattrlst = List.filter (fun x -> not (List.mem x attrlst)) allattrlst in 
-        (List.map (fun x -> Rule(get_empty_pred, [Rel (Pred(relname, List.map (fun t -> NamedVar t) allattrlst)); Rel (Pred(relname, List.map (fun t -> NamedVar t) allattrlst2)); Equal(Var (NamedVar x), Var (NamedVar (x^"2")))] )) nonkeyattrlst )@lst
+        (List.map (fun x -> Rule(get_empty_pred, [Rel (Pred(relname, List.map (fun t -> NamedVar t) allattrlst)); Rel (Pred(relname, List.map (fun t -> NamedVar t) allattrlst2)); Ineq ("<>", Var (NamedVar x), Var (NamedVar (x^"2")))] )) nonkeyattrlst )@lst
       | Query _ -> t::lst
       | Source _ -> t::lst
       | View _ -> t::lst in 

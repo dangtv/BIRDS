@@ -266,18 +266,22 @@ let datalog_of_new_view (debug:bool) prog =
   List.fold_right (fun x lst -> x@lst) new_rule_lst_lst []
 ;;
 
-(** take a view update datalog program and remove all the constraint not involving views in the program  *)
+(** take a view update datalog program (may contain both get & put) and remove all the constraint involving views in the program  *)
 let remove_constraint_of_view (debug:bool) prog = 
   let view_sch = get_view prog in
   let view_rt = get_schema_rterm view_sch in
   let edb = extract_edb prog in
   let idb = extract_idb prog in
+  symt_insert edb (Rule(rename_rterm "__dummy_edb_view__" view_rt,[]));
   if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
     let constr_rules = Hashtbl.find idb (symtkey_of_rterm get_empty_pred) in 
     symt_remove idb (symtkey_of_rterm get_empty_pred);
     let is_constr_of_view constr = 
         let local_idb = Hashtbl.copy idb in 
         symt_insert local_idb constr;
+        (* if not having get then add a dummy get *)
+        if not (Hashtbl.mem local_idb (symtkey_of_rterm view_rt)) then
+          symt_insert local_idb (Rule (view_rt, [Rel(rename_rterm "__dummy_edb_view__" view_rt)]));
         let strat = stratify edb local_idb get_empty_pred in
         List.mem (symtkey_of_rterm view_rt) strat in
     let constr_of_non_view_lst = List.filter (non is_constr_of_view) constr_rules in 
@@ -292,18 +296,22 @@ let remove_constraint_of_view (debug:bool) prog =
   else prog
 ;;
 
-(** take a view update datalog program and remove all the constraint involving views in the program  *)
+(** take a view update datalog program (both get & put) and remove all the constraint not involving views in the program  *)
 let keep_only_constraint_of_view (debug:bool) prog = 
   let view_sch = get_view prog in
   let view_rt = get_schema_rterm view_sch in
   let edb = extract_edb prog in
   let idb = extract_idb prog in
+  symt_insert edb (Rule(rename_rterm "__dummy_edb_view__" view_rt,[]));
   if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
     let constr_rules = Hashtbl.find idb (symtkey_of_rterm get_empty_pred) in 
     symt_remove idb (symtkey_of_rterm get_empty_pred);
     let is_constr_of_view constr = 
       let local_idb = Hashtbl.copy idb in 
       symt_insert local_idb constr;
+      (* if not having get then add a dummy get *)
+        if not (Hashtbl.mem local_idb (symtkey_of_rterm view_rt)) then
+          symt_insert local_idb (Rule (view_rt, [Rel(rename_rterm "__dummy_edb_view__" view_rt)]));
       let strat = stratify edb local_idb get_empty_pred in
       List.mem (symtkey_of_rterm view_rt) strat in
     let constr_of_view_lst = List.filter (is_constr_of_view) constr_rules in 

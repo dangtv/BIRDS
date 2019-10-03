@@ -259,7 +259,7 @@ local attribute [instance] classical.prop_decidable
 
 " ^ String.concat "\n\n" (List.map (fun x ->  x ^ ":= 
     begin
-    try{z3_smt},
+    z3_smt
     end") thms)
     (* try{super {max_iters := 200, timeout := 200000}} *)
 
