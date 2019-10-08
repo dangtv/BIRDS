@@ -236,11 +236,11 @@ let sourcestability_sentence_of_stt (debug:bool) prog =
     (* get the emptiness FO sentence of a relation *)
     let emptiness_fo_sentence rel = 
          let cols = List.map string_of_var (get_rterm_varlist rel) in
-         let delta_fm = (snd (fol_of_query idb cnt rel)) in
+         let freevars, delta_fm = (fol_of_query idb cnt rel) in
          (* minimize the delta of relation *)
          let min_delta = (match rel with 
-            | Deltadelete (predname,lst) ->  And(delta_fm, Atom(R(predname, (List.map (fun x -> Fol.Var x) (fv delta_fm)))) )
-            | Deltainsert (predname,lst) -> And(delta_fm, Not (Atom(R(predname, (List.map (fun x -> Fol.Var x) (fv delta_fm))))))
+            | Deltadelete (predname,lst) ->  And(delta_fm, Atom(R(predname, (List.map (fun x -> Fol.Var x) freevars))) )
+            | Deltainsert (predname,lst) -> And(delta_fm, Not (Atom(R(predname, (List.map (fun x -> Fol.Var x) freevars)))))
             | _ -> invalid_arg @@ "predicate" ^ string_of_rterm rel ^"is not a delta predicate"
          ) in
         itlist mk_exists cols min_delta in
@@ -263,11 +263,11 @@ let getput_sentence_of_stt (debug:bool) prog =
     (* get the emptiness FO sentence of a relation *)
     let emptiness_fo_sentence rel = 
          let cols = List.map string_of_var (get_rterm_varlist rel) in
-         let delta_fm = (snd (fol_of_query idb cnt rel)) in
+         let freevars, delta_fm = (fol_of_query idb cnt rel) in
          (* minimize the delta of relation *)
          let min_delta = (match rel with 
-            | Deltadelete (predname,lst) ->  And(delta_fm, Atom(R(predname, (List.map (fun x -> Fol.Var x) (fv delta_fm)))) )
-            | Deltainsert (predname,lst) -> And(delta_fm, Not (Atom(R(predname, (List.map (fun x -> Fol.Var x) (fv delta_fm))))))
+            | Deltadelete (predname,lst) ->  And(delta_fm, Atom(R(predname, (List.map (fun x -> Fol.Var x) freevars))) )
+            | Deltainsert (predname,lst) -> And(delta_fm, Not (Atom(R(predname, (List.map (fun x -> Fol.Var x) freevars)))))
             | _ -> invalid_arg @@ "predicate" ^ string_of_rterm rel ^"is not a delta predicate"
          ) in
         itlist mk_exists cols min_delta in

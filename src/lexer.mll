@@ -67,7 +67,7 @@
         try
             Hashtbl.find keyword_table lxm
         with Not_found -> RELNAME(lxm) }
-    | ['A'-'Z']['A'-'Z''0'-'9''_']* as lxm 	{
+    | '_'*['A'-'Z']['A'-'Z''0'-'9''_']* as lxm 	{
         try
             Hashtbl.find keyword_table lxm
         with Not_found -> VARNAME(lxm)
