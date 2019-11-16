@@ -1,0 +1,35 @@
+source clubs('CNAME':string, 'JYEAR':string, 'MNAME':string).
+source students('SID':int, 'SNAME':string, 'LOGIN':string, 'AGE':int, 'GPA':real).
+view activestudents('NAME':string, 'LOGIN':string, 'CLUB':string, 'SINCE':string).
+source students_next_sid('SID':int).
+
+% primary key
+PK(students,['SID']).
+
+% view definition
+activestudents(NAME, LOGIN, CLUB, SINCE) :- students(SID, NAME, LOGIN, AGE, GPA), clubs(CLUB, SINCE, NAME), GPA > 3.0.
+
+% join depedencies
+_|_ :- activestudents(NAME, LOGIN, _, _), activestudents(NAME, _, CLUB, SINCE), not activestudents(NAME, LOGIN, CLUB, SINCE).
+
+oldview(NAME, LOGIN, CLUB, SINCE) :- students(SID, NAME, LOGIN, AGE, GPA), clubs(CLUB, SINCE, NAME), GPA > 3.0.
+view_ins(NAME, LOGIN, CLUB, SINCE) :- activestudents(NAME, LOGIN, CLUB, SINCE), not oldview(NAME, LOGIN, CLUB, SINCE).
+view_del(NAME, LOGIN, CLUB, SINCE) :- oldview(NAME, LOGIN, CLUB, SINCE), not activestudents(NAME, LOGIN, CLUB, SINCE).
+
+new_sid(SID) :- SID = 1.
+new_sid(SID) :- students_next_sid(SID).
+
++students(SID, NAME, LOGIN, 0, 4.0) :- view_ins(NAME, LOGIN, CLUB, SINCE), new_sid(SID).
++clubs(CLUB, SINCE, NAME) :- view_ins(NAME, LOGIN, CLUB, SINCE).
+
+% for deletion, for each tuple in view_del we need to choose one of students and clubs to delete, 
+% if (CLUB, SINCE, NAME) need to appear in the view => have to choose students
+-students(SID, NAME, LOGIN, AGE, GPA) :- view_del(NAME, LOGIN, CLUB, SINCE), activestudents(NAME, _, CLUB, SINCE), students(SID, NAME, LOGIN, AGE, GPA).
+% in contrast, if (NAME, LOGIN) need to appear in the view -> choose clubs
+-clubs(CLUB, SINCE, NAME) :- view_del(NAME, LOGIN, CLUB, SINCE), activestudents(NAME, LOGIN, _, _) .
+% if both do not appear in the view, choose either students or clubs, below is choosing clubs
+-clubs(CLUB, SINCE, NAME) :- view_del(NAME, LOGIN, CLUB, SINCE), not activestudents(NAME, LOGIN, _, _), not activestudents(NAME, _, CLUB, SINCE).
+
+% delete old students and clubs which can join with new inserted tuple to produce a tuple not in view activestudents
+-students(SID, NAME, LOGIN, AGE, GPA) :- students(SID, NAME, LOGIN, AGE, GPA), view_ins(NAME, _, CLUB, SINCE), GPA > 3.0, not activestudents(NAME, LOGIN, CLUB, SINCE).
+-clubs(CLUB, SINCE, NAME) :- clubs(CLUB, SINCE, NAME), view_ins(NAME, LOGIN, _, _), not activestudents(NAME, LOGIN, CLUB, SINCE).

@@ -1,0 +1,9 @@
+source cars('CAR_ID':real, 'CAR_NAME':string, 'BRAND_ID':real).
+view cars_master('CAR_ID':real, 'CAR_NAME':string).
+
+% view definition
+% cars_master(CAR_ID, CAR_NAME) :- cars(CAR_ID, CAR_NAME, BRAND_ID).
+
+% update strategy
+-cars(CAR_ID, CAR_NAME, BRAND_ID) :- cars(CAR_ID, CAR_NAME, BRAND_ID), not cars_master(CAR_ID, CAR_NAME).
++cars(CAR_ID, CAR_NAME, 1.0) :- cars_master(CAR_ID, CAR_NAME), not cars(CAR_ID, CAR_NAME, _).

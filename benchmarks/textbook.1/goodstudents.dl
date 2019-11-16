@@ -1,0 +1,10 @@
+source students('SID':int, 'SNAME':string, 'LOGIN':string, 'AGE':int, 'GPA':real).
+view goodstudents('SID':int, 'GPA':real).
+
+% view definition
+% goodstudents(SID, GPA) :- students(SID, _, _, _, GPA), GPA > 3.0.
+
+_|_ :- goodstudents(SID, GPA), GPA <= 3.0.
+
+-students(SID, SNAME, LOGIN, AGE, GPA) :- students(SID, SNAME, LOGIN, AGE, GPA), GPA > 3.0, not goodstudents(SID, GPA).
++students(SID, 'unknown', 'unknown', 0, GPA) :- not students(SID, _, _, _, GPA),  goodstudents(SID, GPA).

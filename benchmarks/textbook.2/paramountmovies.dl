@@ -1,0 +1,15 @@
+source movies('TITLE':string, 'YEAR':int, 'LENGTH':int, 'GENRE':string, 'STUDIONAME':string, 'PRODUCERC':int).
+view paramountmovies('TITLE':string, 'YEAR':int).
+
+% view definition
+
+% paramountmovies(TITLE, YEAR) :- movies(TITLE, YEAR, _, _, STUDIONAME, _), STUDIONAME='Paramount'.
+
+% update strategy
+
+oldview(TITLE, YEAR) :- movies(TITLE, YEAR, _, _, STUDIONAME, _), STUDIONAME='Paramount'.
+view_ins(TITLE, YEAR) :- paramountmovies(TITLE, YEAR), not oldview(TITLE, YEAR).
+view_del(TITLE, YEAR) :- oldview(TITLE, YEAR), not paramountmovies(TITLE, YEAR).
+
++movies(TITLE, YEAR, 0, '', STUDIONAME, 0) :- view_ins(TITLE, YEAR),  STUDIONAME='Paramount'.
+-movies(TITLE, YEAR, LENGTH, GENRE, STUDIONAME, PRODUCERC) :- movies(TITLE, YEAR, LENGTH, GENRE, STUDIONAME, PRODUCERC), view_del(TITLE, YEAR).

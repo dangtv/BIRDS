@@ -1,0 +1,20 @@
+source brands('BRAND_ID':int, 'BRAND_NAME':string).
+source brand_approvals('BRAND_ID':int, 'BRAND_NAME':string).
+
+view vw_brands('BRAND_NAME':string, 'APPROVAL_STATUS':string).
+
+% view definition
+
+% vw_brands(BRAND_NAME, 'Approved') :- brands(BRAND_ID, BRAND_NAME).
+% vw_brands(BRAND_NAME, 'Pending Approval') :- brand_approvals(BRAND_ID, BRAND_NAME).
+
+% constraints
+_|_ :- vw_brands(BRAND_NAME, APPROVAL_STATUS), not APPROVAL_STATUS = 'Approved', not APPROVAL_STATUS = 'Pending Approval'.
+
+% update rules
+
++brands(BRAND_ID, BRAND_NAME) :- vw_brands(BRAND_NAME, 'Approved'), not brands(_, BRAND_NAME), BRAND_ID = 10000000.
++brand_approvals(BRAND_ID, BRAND_NAME) :- vw_brands(BRAND_NAME, 'Pending Approval'), not brand_approvals(_, BRAND_NAME), BRAND_ID = 10000000.
+
+-brands(BRAND_ID, BRAND_NAME) :- brands(BRAND_ID, BRAND_NAME), not vw_brands(BRAND_NAME, 'Approved').
+-brand_approvals(BRAND_ID, BRAND_NAME) :- brand_approvals(BRAND_ID, BRAND_NAME), not vw_brands(BRAND_NAME, 'Pending Approval').

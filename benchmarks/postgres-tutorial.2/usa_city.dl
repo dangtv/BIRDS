@@ -1,0 +1,15 @@
+source city('CITY_ID':int, 'CITY':string, 'COUNTRY_ID':int, 'LAST_UPDATE':string).
+view usa_city('CITY_ID':int, 'CITY':string, 'COUNTRY_ID':int).
+
+% view definition
+% usa_city(CITY_ID, CITY, COUNTRY_ID) :- city(CITY_ID, CITY, COUNTRY_ID, _), COUNTRY_ID = 103.
+
+% constraint
+% PK(city, [CITY_ID]).
+% PK(usa_city, [CITY_ID]).
+_|_ :- usa_city(CITY_ID, CITY, COUNTRY_ID), COUNTRY_ID <> 103.
+
+% update strategy
+
+-city(CITY_ID, CITY, COUNTRY_ID, LAST_UPDATE) :- city(CITY_ID, CITY, COUNTRY_ID, LAST_UPDATE), COUNTRY_ID = 103, not usa_city(CITY_ID, CITY, COUNTRY_ID).
++city(CITY_ID, CITY, COUNTRY_ID, '2019-10-01') :- usa_city(CITY_ID, CITY, COUNTRY_ID), not city(CITY_ID, CITY, COUNTRY_ID, _).

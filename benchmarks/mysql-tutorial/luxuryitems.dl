@@ -1,0 +1,12 @@
+source items('ID':int, 'NAME':string, 'PRICE':real).
+view luxuryitems('ID':int, 'NAME':string, 'PRICE':real).
+
+% view definition
+% luxuryitems(ID, NAME, PRICE) :- items(ID, NAME, PRICE), PRICE > 700.0.
+
+% view constraints
+_|_ :- luxuryitems(ID, NAME, PRICE), PRICE <= 700.0.
+
+% update strategy 
+-items(ID, NAME, PRICE) :- items(ID, NAME, PRICE), PRICE > 700.0, not luxuryitems(ID, NAME, PRICE).
++items(ID, NAME, PRICE) :- luxuryitems(ID, NAME, PRICE), not items(ID, NAME, PRICE).

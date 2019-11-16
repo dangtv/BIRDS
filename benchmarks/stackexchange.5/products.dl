@@ -1,0 +1,33 @@
+source products_raw('ID':int, 'TITLE':string, 'DESCRIPTION':string, 'MANUFACTURER_ID':int, 'CREATED_AT':string, 'UPDATED_AT':string, 'MPN':string, 'VISIBLE':bool).
+source subscriptions('ID':int, 'PRODUCT_ID':int, 'USER_ID':int, 'CREATED_AT':string, 'UPDATED_AT':string).
+source subscriptions_agg('PRODUCT_ID':int, 'SUBSCRIPTIONS_COUNT':int).
+view products('ID':int, 'TITLE':string, 'DESCRIPTION':string, 'MANUFACTURER_ID':int, 'CREATED_AT':string, 'UPDATED_AT':string, 'MPN':string, 'VISIBLE':bool, 'SUBSCRIPTIONS_COUNT':int).
+
+% constraint
+_|_ :- subscriptions_agg(ID, SUBSCRIPTIONS_COUNT), SUBSCRIPTIONS_COUNT=0.
+% FK
+_|_ :- subscriptions_agg(ID, _), not products_raw(ID, _, _, _, _, _, _, _).
+
+% view definition
+products(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE, SUBSCRIPTIONS_COUNT) :- products_raw(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE), subscriptions_agg(ID, SUBSCRIPTIONS_COUNT).
+
+products(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE, 0) :- products_raw(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE), not subscriptions_agg(ID, _).
+
+% constraint
+PK(products_raw, ['ID']).
+PK(subscriptions, ['ID']).
+PK(subscriptions_agg, ['PRODUCT_ID']).
+PK(products, ['ID']).
+
+% update strategy
+
+% insertion
++products_raw(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE) :- products(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE, _). 
++subscriptions_agg(ID, SUBSCRIPTIONS_COUNT) :- products(ID, _, _, _, _, _, _, _, SUBSCRIPTIONS_COUNT), SUBSCRIPTIONS_COUNT <> 0. 
+
+% deletion
+-products_raw(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE) :- products_raw(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE), not products(ID, TITLE, DESCRIPTION, MANUFACTURER_ID, CREATED_AT, UPDATED_AT, MPN, VISIBLE, _). 
+-subscriptions_agg(ID, SUBSCRIPTIONS_COUNT) :- subscriptions_agg(ID, SUBSCRIPTIONS_COUNT), not products(ID, _, _, _, _, _, _, _, SUBSCRIPTIONS_COUNT). 
+
+
+

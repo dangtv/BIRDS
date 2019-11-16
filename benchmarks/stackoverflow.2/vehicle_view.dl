@@ -1,0 +1,36 @@
+source vehicle('VEHICLE_ID':int, 'SIZE':string, 'BRAND_ID':int).
+source brand('BRAND_ID':int, 'NAME':string).
+source nex_brand_id('BRAND_ID':int).
+view vehicle_view('VEHICLE_ID':int, 'SIZE':string, 'NAME':string).
+
+% view definition 
+vehicle_view(VEHICLE_ID, SIZE, NAME) :- vehicle(VEHICLE_ID, SIZE, BRAND_ID), brand(BRAND_ID, NAME).
+
+% constraints
+% PK
+PK(vehicle,['VEHICLE_ID']).
+PK(brand, ['BRAND_ID']).
+PK(vehicle_view, ['VEHICLE_ID']).
+% FK
+_|_ :- vehicle(_, _, BRAND_ID), not brand(BRAND_ID, _).
+% join dependency for insertions
+old_view(VEHICLE_ID, SIZE, NAME) :- vehicle(VEHICLE_ID, SIZE, BRAND_ID), brand(BRAND_ID, NAME).
+view_ins(VEHICLE_ID, SIZE, NAME) :- vehicle_view(VEHICLE_ID, SIZE, NAME), not old_view(VEHICLE_ID, SIZE, NAME).
+view_ins_new_brand(VEHICLE_ID, SIZE, NAME) :- view_ins(VEHICLE_ID, SIZE, NAME), not brand(_, NAME).
+_|_ :- view_ins_new_brand(VEHICLE_ID, SIZE, _), view_ins_new_brand(_, _, NAME), not view_ins_new_brand(VEHICLE_ID, SIZE, NAME).
+
+% constraint on new brand id (new and not empty)
+_|_ :- brand(BRAND_ID, _), nex_brand_id(BRAND_ID).
+_|_ :- not nex_brand_id(_).
+
+% update strategy 
+% for deletion
+-vehicle(VEHICLE_ID, SIZE, BRAND_ID) :- vehicle(VEHICLE_ID, SIZE, BRAND_ID), brand(BRAND_ID, NAME), not vehicle_view(VEHICLE_ID, SIZE, NAME).
+
+% for insertion
++vehicle(VEHICLE_ID, SIZE, BRAND_ID) :- view_ins(VEHICLE_ID, SIZE, NAME), brand(BRAND_ID, NAME).
+% add a new brand_id if not found any in brand
+full_new_ins(VEHICLE_ID, SIZE, BRAND_ID, NAME) :- view_ins(VEHICLE_ID, SIZE, NAME), not brand(_, NAME), nex_brand_id(BRAND_ID).
++vehicle(VEHICLE_ID, SIZE, BRAND_ID) :- full_new_ins(VEHICLE_ID, SIZE, BRAND_ID, NAME).
++brand(BRAND_ID, NAME) :- full_new_ins(VEHICLE_ID, SIZE, BRAND_ID, NAME).
+

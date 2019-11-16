@@ -1,0 +1,14 @@
+source offices('OFFICECODE':string, 'CITY':string, 'PHONE':string, 'ADDRESSLINE1':string, 'ADDRESSLINE2':string, 'STATE':string, 'COUNTRY':string, 'POSTALCODE':string, 'TERRITORY':string).
+view officeinfo('OFFICECODE':string, 'PHONE':string, 'CITY':string).
+
+% view definition
+% officeinfo(OFFICECODE, PHONE, CITY) :- offices(OFFICECODE, CITY, PHONE, ADDRESSLINE1, ADDRESSLINE2, STATE, COUNTRY, POSTALCODE, TERRITORY).
+
+% update strategy
+
+-offices(OFFICECODE, CITY, PHONE, ADDRESSLINE1, ADDRESSLINE2, STATE, COUNTRY, POSTALCODE, TERRITORY) :- 
+    offices(OFFICECODE, CITY, PHONE, ADDRESSLINE1, ADDRESSLINE2, STATE, COUNTRY, POSTALCODE, TERRITORY),
+    not officeinfo(OFFICECODE, PHONE, CITY).
+
++offices(OFFICECODE, CITY, PHONE, 'ADDRESSLINE1', 'ADDRESSLINE2', 'STATE', 'COUNTRY', 'POSTALCODE', 'TERRITORY') :- 
+    officeinfo(OFFICECODE, PHONE, CITY), not offices(OFFICECODE, CITY, PHONE, _, _, _, _, _, _).

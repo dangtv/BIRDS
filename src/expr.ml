@@ -363,11 +363,11 @@ let string_of_stt st = match st with
     | Rule (p, tel)        -> string_of_rterm p ^ " :- " ^ 
                              String.concat " , " (List.map string_of_term tel) ^ ".\n"
     | Query r            -> "?- " ^ string_of_rterm r ^ ".\n"
-    | Source (name, lst)   -> "source " ^ name ^ "(" ^ String.concat ", " (List.map (fun (col,typ) -> col^":"^ (string_of_stype typ)) lst) ^ ").\n" 
-    | View (name, lst)    -> "view " ^ name ^ "(" ^ String.concat ", " (List.map (fun (col,typ) -> col^":"^ (string_of_stype typ)) lst) ^ ").\n"
+    | Source (name, lst)   -> "source " ^ name ^ "(" ^ String.concat ", " (List.map (fun (col,typ) -> "'"^col^"':"^ (string_of_stype typ)) lst) ^ ").\n" 
+    | View (name, lst)    -> "view " ^ name ^ "(" ^ String.concat ", " (List.map (fun (col,typ) -> "'"^col^"':"^ (string_of_stype typ)) lst) ^ ").\n"
     | Constraint (p, tel)        -> string_of_rterm p ^ " :- " ^ 
                              String.concat " , " (List.map string_of_term tel) ^ ".\n"
-    | Pk(relname, attrlst) -> "PK(" ^ relname ^ ", [" ^ String.concat ", " attrlst ^ "]).\n" 
+    | Pk(relname, attrlst) -> "PK(" ^ relname ^ ", [" ^ String.concat ", " (List.map (fun att -> "'"^att^"'") attrlst) ^ "]).\n" 
 ;;
 
 (** smart stringify for AST *)

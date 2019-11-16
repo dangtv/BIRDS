@@ -1,0 +1,8 @@
+source dates1962('BIRTH_DATE':string).
+source residents('EMP_NAME':string,'BIRTH_DATE':string,'GENDER':string).
+view residents1962('EMP_NAME':string,'BIRTH_DATE':string,'GENDER':string).
+
+_|_ :- residents1962(E,B,G), ¬ dates1962(B).
+
++residents(E,B,G) :- residents1962(E,B,G), ¬ residents(E,B,G).
+-residents(E,B,G) :- residents(E,B,G), dates1962(B), ¬ residents1962(E,B,G).

@@ -1,0 +1,21 @@
+source tracks('TRACK':string,'DATE':int,'RATING':int,'ALBUM':string).
+source albums('ALBUM':string,'QUANTITY':int).
+view tracks1('TRACK':string,'DATE':int,'RATING':int,'ALBUM':string,'QUANTITY':int).
+
+% constraints:
+
+⊥ :- tracks1(T,D,R,A,_), tracks1(_,_,_,A,Q), not tracks1(T,D,R,A,Q).
+
+% view definition:
+tracks1(T,D,R,A,Q) :- tracks(T,D,R,A), albums(A,Q).
+
+% caculate delta relation of tracks for the modification in the view
++tracks(TRACK,DATE,RATING,ALBUM) :- tracks1(TRACK,DATE,RATING,ALBUM,_), not tracks(TRACK,DATE,RATING,ALBUM).
+-tracks(TRACK,DATE,RATING,ALBUM) :- tracks(TRACK,DATE,RATING,ALBUM),not tracks1(TRACK,DATE,RATING,ALBUM,_), albums(ALBUM,_).
+-tracks(TRACK,DATE,RATING,ALBUM) :- tracks(TRACK,DATE,RATING,ALBUM),not tracks1(TRACK,DATE,RATING,ALBUM,_), tracks1(_,_,_,ALBUM,_).
+
+% caculate delta relation of albums for the modification in the view 
++albums(ALBUM, QUANTITY) :- tracks1(_,_,_,ALBUM,QUANTITY), not albums(ALBUM,QUANTITY).
+-albums(ALBUM, QUANTITY) :- albums(ALBUM,QUANTITY), not tracks1(_,_,_,ALBUM,QUANTITY), tracks(TRACK,DATE,RATING,ALBUM), not -tracks(TRACK,DATE,RATING,ALBUM).
+-albums(ALBUM, QUANTITY) :- albums(ALBUM,QUANTITY), not tracks1(_,_,_,ALBUM,QUANTITY), +tracks(TRACK,DATE,RATING,ALBUM), not -tracks(TRACK,DATE,RATING,ALBUM).
+-albums(ALBUM, QUANTITY) :- albums(ALBUM,QUANTITY), not tracks1(_,_,_,ALBUM,QUANTITY), tracks1(_,_,_,ALBUM,_), not -tracks(_,_,_,ALBUM).

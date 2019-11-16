@@ -1,0 +1,6 @@
+source emp('EMPNAME':string, 'SALARY':int).
+source emp_audit('OPERATION':string, 'USERID':string, 'EMPNAME':string, 'SALARY':int, 'STAMP':string).
+view emp_view('EMPNAME':string, 'SALARY':int, 'LAST_UPDATED':string).
+
+% view definition
+emp_view(EMPNAME, SALARY, MAX(STAMP)) :- emp(EMPNAME, SALARY), emp_audit(_, _, EMPNAME, _, STAMP).

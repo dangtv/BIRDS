@@ -77,8 +77,8 @@
   ;
 
   attrlist: /* empty */					{ [] }
-  | VARNAME				    				{ $1 :: [] }
-  | VARNAME SEP attrlist 					{ $1 :: $3 } /* \!/ rec. on the right */
+  | STRING				    				{ String.uppercase_ascii (String.sub $1 1 (String.length $1 - 2)) :: [] }
+  | STRING SEP attrlist 					{ String.uppercase_ascii (String.sub $1 1 (String.length $1 - 2)) :: $3 } /* \!/ rec. on the right */
   | error             { spec_parse_error "invalid syntax for a list of attributes" 1; }
   ;
 
@@ -129,8 +129,8 @@
   ;
 
   attrtypelist: /* empty */					{ [] }
-  | VARNAME TYPING stype { ($1, $3) :: [] }
-  | VARNAME TYPING stype SEP attrtypelist 					{ ($1, $3) :: $5 } /* \!/ rec. on the right */
+  | STRING TYPING stype { (String.uppercase_ascii (String.sub $1 1 (String.length $1 - 2)), $3) :: [] }
+  | STRING TYPING stype SEP attrtypelist 					{ (String.uppercase_ascii (String.sub $1 1 (String.length $1 - 2)), $3) :: $5 } /* \!/ rec. on the right */
   | error             { spec_parse_error "invalid syntax for a list of pairs of an attribute and its type" 1; }
   ;
 

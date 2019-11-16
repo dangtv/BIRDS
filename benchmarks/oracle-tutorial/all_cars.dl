@@ -1,0 +1,27 @@
+source brands('BRAND_ID':real, 'BRAND_NAME':string).
+source cars('CAR_ID':real, 'CAR_NAME':string, 'BRAND_ID':real).
+view all_cars('CAR_ID':real, 'CAR_NAME':string, 'BRAND_ID':real, 'BRAND_NAME':string).
+
+% primary key
+PK(brands,['BRAND_ID']).
+PK(cars, ['CAR_ID']).
+PK(all_cars, ['CAR_ID']).
+_|_ :- all_cars(_,_,BRAND_ID,BRAND_NAME1), all_cars(_,_,BRAND_ID,BRAND_NAME2), BRAND_NAME1 <> BRAND_NAME2.
+
+% foreign key
+_|_ :- cars(_, _, BRAND_ID), not brands(BRAND_ID, _).
+
+% view definition
+all_cars(CAR_ID, CAR_NAME, BRAND_ID, BRAND_NAME) :- cars(CAR_ID, CAR_NAME, BRAND_ID), brands(BRAND_ID, BRAND_NAME).
+
+% update strategy
+% old_view(CAR_ID, CAR_NAME, BRAND_ID, BRAND_NAME) :- cars(CAR_ID, CAR_NAME, BRAND_ID), brands(BRAND_ID, BRAND_NAME).
+% view_ins(CAR_ID, CAR_NAME, BRAND_ID, BRAND_NAME) :- all_cars(CAR_ID, CAR_NAME, BRAND_ID, BRAND_NAME), not old_view(CAR_ID, CAR_NAME, BRAND_ID, BRAND_NAME).
+% view_del(CAR_ID, CAR_NAME, BRAND_ID, BRAND_NAME) :- old_view(CAR_ID, CAR_NAME, BRAND_ID, BRAND_NAME), not all_cars(CAR_ID, CAR_NAME, BRAND_ID, BRAND_NAME).
+
+-cars(CAR_ID, CAR_NAME, BRAND_ID) :- cars(CAR_ID, CAR_NAME, BRAND_ID), not all_cars(CAR_ID, CAR_NAME, BRAND_ID, _).
+-brands(BRAND_ID, BRAND_NAME) :- brands(BRAND_ID, BRAND_NAME), all_cars(_, _, BRAND_ID, _), not all_cars(_, _, BRAND_ID, BRAND_NAME).
+
++cars(CAR_ID, CAR_NAME, BRAND_ID) :- all_cars(CAR_ID, CAR_NAME, BRAND_ID, _).
+
++brands(BRAND_ID, BRAND_NAME) :- all_cars(_, _, BRAND_ID, BRAND_NAME).

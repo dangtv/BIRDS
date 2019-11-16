@@ -1,10 +1,15 @@
 # Changelog
 
+### 2019-11-15)
+* Fix bugs
+* Benchmarks
+* Modify the syntax of schema declaration
+
 ### 0.0.3 (2019-09-07)
 * New WebUI
 * Add a new option timeout for the verification
 * Fix bugs of the data type real 
-* Add a new option for speed-up with parallel verification
+* Add a new option for speed-up by parallel verification
 * Remove the option -m mode, it will be automatically detected 
 
 ### 2019-03-17:

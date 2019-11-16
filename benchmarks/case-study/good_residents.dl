@@ -1,0 +1,9 @@
+source blacklist('EMP_NAME':string).
+source residents('EMP_NAME':string, 'BIRTH_DATE':string, 'GENDER':string).
+view good_residents('EMP_NAME':string, 'BIRTH_DATE':string).
+
+⊥ <- good_residents(NAME,BIRTH_DATE), blacklist(NAME) .
+
++residents(E,B,G) :- good_residents(E,B), G='unknown',  ¬ residents(E,B,_).
+-residents(E,B,G) :- residents(E,B,G), not blacklist(E), ¬ good_residents(E,B).
+

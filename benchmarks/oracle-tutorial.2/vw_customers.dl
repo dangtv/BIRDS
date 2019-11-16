@@ -1,0 +1,38 @@
+source customers('CUSTOMER_ID':real, 'NAME':string, 'ADDRESS':string, 'WEBSITE':string, 'CREDIT_LIMIT':real).
+source contacts('CONTACT_ID':real, 'FIRST_NAME':string, 'LAST_NAME':string, 'EMAIL':string, 'PHONE':string, 'CUSTOMER_ID':real).
+source next_customer_id('ID':real).
+source next_contact_id('ID':real).
+
+view vw_customers('NAME':string, 'ADDRESS':string, 'WEBSITE':string, 'CREDIT_LIMIT':real, 'FIRST_NAME':string, 'LAST_NAME':string, 'EMAIL':string, 'PHONE':string).
+
+% view definition
+
+% vw_customers(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE) :- customers(CUSTOMER_ID, NAME, ADDRESS, WEBSITE, CREDIT_LIMIT), contacts(CONTACT_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE, CUSTOMER_ID).
+
+% constraints
+% primary key
+PK(customers,['CUSTOMER_ID']).
+PK(contacts,['CONTACT_ID']).
+% foreign key
+_|_ :- contacts(_, _, _, _, _, CUSTOMER_ID), not customers(CUSTOMER_ID, _, _, _, _).
+% join dependency
+_|_ :- vw_customers(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, _, _, _, _), vw_customers(_, _, _, _, FIRST_NAME, LAST_NAME, EMAIL, PHONE), not vw_customers(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE).
+% new CUSTOMER_ID
+_|_ :- customers(CUSTOMER_ID, _, _, _, _), next_customer_id(CUSTOMER_ID).
+_|_ :- not next_customer_id(_).
+
+% new CONTACT_ID
+_|_ :- contacts(CONTACT_ID, _, _, _, _,_), next_contact_id(CONTACT_ID).
+_|_ :- not next_contact_id(_).
+
+% allow only insertion on the view
+_|_  :- customers(CUSTOMER_ID, NAME, ADDRESS, WEBSITE, CREDIT_LIMIT), contacts(CONTACT_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE, CUSTOMER_ID), not vw_customers(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE).
+
+% update strategy for insertion
+tmp(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE) :- customers(CUSTOMER_ID, NAME, ADDRESS, WEBSITE, CREDIT_LIMIT), contacts(CONTACT_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE, CUSTOMER_ID).
+view_ins(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE) :- vw_customers(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE), not tmp(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE).
+full_ins(CUSTOMER_ID, NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE) :- view_ins(NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, FIRST_NAME, LAST_NAME, EMAIL, PHONE), next_customer_id(CUSTOMER_ID).
++customers(CUSTOMER_ID, NAME, ADDRESS, WEBSITE, CREDIT_LIMIT) :- full_ins(CUSTOMER_ID, NAME, ADDRESS, WEBSITE, CREDIT_LIMIT, _, _, _, _).
++contacts(CONTACT_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE, CUSTOMER_ID) :- full_ins(CUSTOMER_ID, _, _, _, _, FIRST_NAME, LAST_NAME, EMAIL, PHONE), next_contact_id(CONTACT_ID).
+
+

@@ -1,0 +1,20 @@
+source persons('PERSONID':int, 'FIRSTNAME':string, 'LASTNAME':string).
+source employees('EMPLOYEEID':int, 'PERSONID':int, 'TITLE':string).
+view vwemployees('PERSONID':int, 'EMPLOYEEID':int, 'FIRSTNAME':string, 'LASTNAME':string, 'TITLE':string).
+
+% view defintion
+vwemployees(PERSONID, EMPLOYEEID, FIRSTNAME, LASTNAME, TITLE) :- employees(EMPLOYEEID, PERSONID, TITLE), persons(PERSONID, FIRSTNAME, LASTNAME).
+
+% constraints
+PK(persons,['PERSONID']).
+PK(employees, ['EMPLOYEEID']).
+PK(vwemployees, ['PERSONID']).
+% foreign key
+_|_ :- employees(_, PERSONID, _), not persons(PERSONID, _, _).
+
+% update strategy
+-employees(EMPLOYEEID, PERSONID, TITLE) :- employees(EMPLOYEEID, PERSONID, TITLE), not vwemployees(PERSONID, EMPLOYEEID, _, _, TITLE).
+-persons(PERSONID, FIRSTNAME, LASTNAME) :- persons(PERSONID, FIRSTNAME, LASTNAME), vwemployees(PERSONID, _, _, _, _), not vwemployees(PERSONID, _, FIRSTNAME, LASTNAME, _).
+
++employees(EMPLOYEEID, PERSONID, TITLE) :- vwemployees(PERSONID, EMPLOYEEID, _, _, TITLE).
++persons(PERSONID, FIRSTNAME, LASTNAME) :- vwemployees(PERSONID, _, FIRSTNAME, LASTNAME, _).

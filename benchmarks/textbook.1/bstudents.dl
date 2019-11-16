@@ -1,0 +1,29 @@
+source students('SID':int, 'SNAME':string, 'LOGIN':string, 'AGE':int, 'GPA':real).
+source enrolled('SID':int, 'CID':string, 'GRADE':string).
+view bstudents('NAME':string, 'SID':int, 'COURSE':string).
+
+% view definition
+bstudents(NAME, SID, COURSE) :- students(SID, NAME, LOGIN, AGE, GPA), enrolled(SID, COURSE, GRADE), GRADE='B'.
+
+% constraints
+% primary key
+PK(students,['SID']).
+PK(enrolled,['SID']).
+PK(bstudents,['SID']).
+
+% join dependency
+% _|_ :- bstudents(NAME, SID, _), bstudents(_, SID, COURSE), not bstudents(NAME, SID, COURSE).
+
+% update strategy
+
+% update rules
++enrolled(SID, COURSE, 'B') :- bstudents(NAME, SID, COURSE).
++students(SID, NAME, '', 0, 0.0) :- bstudents(NAME, SID, COURSE), not students(SID, NAME, _, _, _).
+
+-enrolled(SID, COURSE, GRADE) :- students(SID, NAME, LOGIN, AGE, GPA), enrolled(SID, COURSE, GRADE), GRADE='B', not bstudents(_, SID, COURSE).
+-students(SID, NAME, LOGIN, AGE, GPA) :- students(SID, NAME, LOGIN, AGE, GPA), enrolled(SID, COURSE, GRADE), GRADE='B', not bstudents(NAME, SID, _).
+
+% delete old source tuple which can join with new inserted tuple to produce a tuple not in the view
+-enrolled(SID, COURSE, GRADE) :- enrolled(SID, COURSE, GRADE), bstudents(NAME, SID, _), not bstudents(NAME, SID, COURSE).
+-students(SID, NAME, LOGIN, AGE, GPA) :- students(SID, NAME, LOGIN, AGE, GPA), bstudents(_, SID, COURSE) , not bstudents(NAME, SID, COURSE).
+

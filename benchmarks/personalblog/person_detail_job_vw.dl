@@ -1,0 +1,31 @@
+source person_detail('PID':real, 'PNAME':string).
+source person_job('PID':real, 'JOB':string).
+view person_detail_job_vw('PID':real, 'PNAME':string, 'JOB':string).
+
+% view definition
+% (left join)
+person_detail_job_vw(PID, PNAME, JOB) :- person_detail(PID, PNAME), person_job(PID, JOB).
+person_detail_job_vw(PID, PNAME, 'None') :- person_detail(PID, PNAME), not person_job(PID, _).
+
+
+% constraints
+% PK
+PK(person_detail, ['PID']).
+PK(person_job, ['PID']).
+PK(person_detail_job_vw, ['PID']).
+% FK
+_|_ :- person_job(PID, _), not person_detail(PID, _).
+% no job called "None"
+_|_ :- person_job(_, JOB), JOB='None'.
+
+
+% update strategy
+
+% insertion
++person_detail(PID, PNAME) :- person_detail_job_vw(PID, PNAME, _). 
++person_job(PID, JOB) :- person_detail_job_vw(PID, _, JOB), JOB <> 'None'.
+
+% deletion
+-person_detail(PID, PNAME) :- person_detail(PID, PNAME), not person_detail_job_vw(PID, PNAME, _). 
+-person_job(PID, JOB) :- person_job(PID, JOB), not person_detail_job_vw(PID, _, JOB).
+

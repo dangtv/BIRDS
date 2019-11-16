@@ -1,0 +1,16 @@
+source lokalita('KOD_LOK':string, 'NAZEV':string, 'KATASTR':string, 'PRESNOST':int).
+view ukaz_lok('_KOD':string, '_NAZEV':string, '_KATASTR':string, '_PRESNOST':int, '_SIRKA':real, '_DELKA':real).
+
+% view definition
+% ukaz_lok(KOD_LOK, NAZEV, KATASTR, PRESNOST, 50.0, 14.0) :- lokalita(KOD_LOK, NAZEV, KATASTR, PRESNOST).
+
+% constraint
+_|_ :- ukaz_lok(KOD_LOK, NAZEV, KATASTR, PRESNOST, SIRKA, DELKA), not SIRKA = 50.0.
+_|_ :- ukaz_lok(KOD_LOK, NAZEV, KATASTR, PRESNOST, SIRKA, DELKA), not DELKA = 14.0.
+
+
+% update strategy
+
+-lokalita(KOD_LOK, NAZEV, KATASTR, PRESNOST) :- lokalita(KOD_LOK, NAZEV, KATASTR, PRESNOST), not ukaz_lok(KOD_LOK, NAZEV, KATASTR, PRESNOST, 50.0, 14.0).
++lokalita(KOD_LOK, NAZEV, KATASTR, PRESNOST) :- ukaz_lok(KOD_LOK, NAZEV, KATASTR, PRESNOST, 50.0, 14.0), not lokalita(KOD_LOK, NAZEV, KATASTR, PRESNOST).
+

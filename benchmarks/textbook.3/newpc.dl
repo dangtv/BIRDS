@@ -1,0 +1,28 @@
+source product('MAKER':string, 'MODEL':string, 'TYPE':string).
+source pc('MODEL':string, 'SPEED':real, 'RAM':real, 'HD':real, 'PRICE':real).
+view newpc('MAKER':string, 'MODEL':string, 'SPEED':real, 'RAM':real, 'HD':real, 'PRICE':real).
+
+% view definition
+newpc(MAKER, MODEL, SPEED, RAM, HD, PRICE) :- product(MAKER, MODEL, TYPE), pc(MODEL, SPEED, RAM, HD, PRICE), TYPE = 'pc'.
+
+% join depedencies
+_|_ :- newpc(MAKER, MODEL, _, _, _, _), newpc(_, MODEL, SPEED, RAM, HD, PRICE), not newpc(MAKER, MODEL, SPEED, RAM, HD, PRICE).
+
+oldview(MAKER, MODEL, SPEED, RAM, HD, PRICE) :- product(MAKER, MODEL, TYPE), pc(MODEL, SPEED, RAM, HD, PRICE), TYPE = 'pc'.
+view_ins(MAKER, MODEL, SPEED, RAM, HD, PRICE) :- newpc(MAKER, MODEL, SPEED, RAM, HD, PRICE), not oldview(MAKER, MODEL, SPEED, RAM, HD, PRICE).
+view_del(MAKER, MODEL, SPEED, RAM, HD, PRICE) :- oldview(MAKER, MODEL, SPEED, RAM, HD, PRICE), not newpc(MAKER, MODEL, SPEED, RAM, HD, PRICE).
+
+% always insert when having some thing new in the view
++product(MAKER, MODEL, TYPE) :- view_ins(MAKER, MODEL, SPEED, RAM, HD, PRICE), TYPE = 'pc', not product(MAKER, MODEL, TYPE).
++pc(MODEL, SPEED, RAM, HD, PRICE) :- view_ins(MAKER, MODEL, SPEED, RAM, HD, PRICE), not pc(MODEL, SPEED, RAM, HD, PRICE).
+
+% for deletion, for each tuple whose part appear in view_del we need to choose one of source table to delete, 
+-product(MAKER, MODEL, 'pc') :- view_del(MAKER, MODEL, SPEED, RAM, HD, PRICE), newpc(_, MODEL, SPEED, RAM, HD, PRICE).
+-pc(MODEL, SPEED, RAM, HD, PRICE) :- view_del(MAKER, MODEL, SPEED, RAM, HD, PRICE), newpc(MAKER, MODEL, _, _, _, _).
+
+% if both the part of inserted tuple do not appear in the view, choose either one source
+-product(MAKER, MODEL, 'pc') :- view_del(MAKER, MODEL, SPEED, RAM, HD, PRICE), not newpc(_, MODEL, SPEED, RAM, HD, PRICE), not newpc(MAKER, MODEL, _, _, _, _).
+
+% delete tuples which can join with new inserted tuple to produce a tuple not in the updated view
+-product(MAKER, MODEL, 'pc') :- product(MAKER, MODEL, 'pc'), view_ins(_, MODEL, SPEED, RAM, HD, PRICE), not newpc(MAKER, MODEL, SPEED, RAM, HD, PRICE).
+-pc(MODEL, SPEED, RAM, HD, PRICE) :- pc(MODEL, SPEED, RAM, HD, PRICE), view_ins(MAKER, MODEL, _, _, _, _), not newpc(MAKER, MODEL, SPEED, RAM, HD, PRICE).

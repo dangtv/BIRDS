@@ -1,0 +1,31 @@
+source product('PRODUCT_ID':int, 'PRODUCT_NAME':string).
+source purchase('PURCHASE_ID':int, 'PRODUCT_ID':int, 'WHEN_BOUGHT':string).
+source next_produce_id('ID':int).
+view purchaseview('PURCHASE_ID':int, 'PRODUCT_NAME':string, 'WHEN_BOUGHT':string).
+
+% view definition
+% purchaseview(PURCHASE_ID, PRODUCT_NAME, WHEN_BOUGHT) :- purchase(PURCHASE_ID, PRODUCT_ID, WHEN_BOUGHT), product(PRODUCT_ID, PRODUCT_NAME).
+
+% constraints
+% primary key
+PK(product,['PRODUCT_ID']).
+PK(purchase,['PURCHASE_ID']).
+PK(purchaseview,['PURCHASE_ID']).
+% foreign key
+_|_ :- purchase(_, PRODUCT_ID, _), not product(PRODUCT_ID, _).
+% do not allow to insert a new produce
+tmp(PURCHASE_ID, PRODUCT_NAME, WHEN_BOUGHT) :- purchase(PURCHASE_ID, PRODUCT_ID, WHEN_BOUGHT), product(PRODUCT_ID, PRODUCT_NAME).
+view_ins(PURCHASE_ID, PRODUCT_NAME, WHEN_BOUGHT) :- purchaseview(PURCHASE_ID, PRODUCT_NAME, WHEN_BOUGHT), not tmp(PURCHASE_ID, PRODUCT_NAME, WHEN_BOUGHT).
+_|_ :- view_ins(_, PRODUCT_NAME, _), not product(_, PRODUCT_NAME).
+% constraint on new CUSTOMER_ID (new and not empty)
+_|_ :- product(PRODUCT_ID, _), next_produce_id(PRODUCT_ID).
+_|_ :- not next_produce_id(_).
+
+% update strategy 
+% for deletion
+-purchase(PURCHASE_ID, PRODUCT_ID, WHEN_BOUGHT) :- purchase(PURCHASE_ID, PRODUCT_ID, WHEN_BOUGHT), product(PRODUCT_ID, PRODUCT_NAME), not purchaseview(PURCHASE_ID, PRODUCT_NAME, WHEN_BOUGHT).
+
+% for insertion
++purchase(PURCHASE_ID, PRODUCT_ID, WHEN_BOUGHT) :- view_ins(PURCHASE_ID, PRODUCT_NAME, WHEN_BOUGHT), product(PRODUCT_ID, PRODUCT_NAME).
+
+

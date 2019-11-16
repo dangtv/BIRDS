@@ -1,0 +1,21 @@
+source poi('POI_ID':int, 'COL_A':int, 'COL_B':int, 'COL_C':int).
+source points('POI_ID':int, 'COL_D':string, 'COL_E':string, 'COL_F':string).
+view poi_view('POI_ID':int, 'COL_A':int, 'COL_B':int, 'COL_D':string, 'COL_E':string).
+
+% view definition
+poi_view(POI_ID, COL_A, COL_B, COL_D, COL_E) :- poi(POI_ID, COL_A, COL_B, COL_C), points(POI_ID, COL_D, COL_E, COL_F).
+
+% constraint
+% PK 
+PK(poi, ['POI_ID']).
+PK(points, ['POI_ID']).
+PK(poi_view, ['POI_ID']).
+
+% update strategy
++poi(POI_ID, COL_A, COL_B, 0) :- poi_view(POI_ID, COL_A, COL_B, COL_D, COL_E), not poi(POI_ID, COL_A, COL_B, _).
++points(POI_ID, COL_D, COL_E, 'COL_F') :- poi_view(POI_ID, COL_A, COL_B, COL_D, COL_E), not points(POI_ID, COL_D, COL_E, _).
+
+-poi(POI_ID, COL_A, COL_B, COL_C) :- poi(POI_ID, COL_A, COL_B, COL_C),  points(POI_ID, COL_D, COL_E, COL_F), not poi_view(POI_ID, COL_A, COL_B, _, _).
+% delete key conflict
+-poi(POI_ID, COL_A2, COL_B2, COL_C2) :- poi(POI_ID, COL_A2, COL_B2, COL_C2), poi_view(POI_ID, COL_A, COL_B, COL_D, COL_E), not poi(POI_ID, COL_A, COL_B, _).
+-points(POI_ID, COL_D2, COL_E2, COL_F2) :- points(POI_ID, COL_D2, COL_E2, COL_F2), poi_view(POI_ID, COL_A, COL_B, COL_D, COL_E), not points(POI_ID, COL_D, COL_E, _).

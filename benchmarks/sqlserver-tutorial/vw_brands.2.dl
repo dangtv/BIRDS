@@ -1,0 +1,22 @@
+source brands('BRAND_ID':int, 'BRAND_NAME':string).
+source brand_approvals('BRAND_ID':int, 'BRAND_NAME':string).
+
+view vw_brands('BRAND_NAME':string, 'APPROVAL_STATUS':string).
+
+% view definition
+
+% vw_brands(BRAND_NAME, 'Approved') :- brands(BRAND_ID, BRAND_NAME).
+% vw_brands(BRAND_NAME, 'Pending Approval') :- brand_approvals(BRAND_ID, BRAND_NAME).
+
+% constraints
+tmp(BRAND_NAME, 'Approved') :- brands(BRAND_ID, BRAND_NAME).
+tmp(BRAND_NAME, 'Pending Approval') :- brand_approvals(BRAND_ID, BRAND_NAME).
+% allow only insert tuples with APPROVAL_STATUS = 'Pending Approval'
+_|_ :- vw_brands(BRAND_NAME, APPROVAL_STATUS), not tmp(BRAND_NAME, APPROVAL_STATUS), not APPROVAL_STATUS  = 'Pending Approval'.
+
+% update rules
+
++brand_approvals(BRAND_ID, BRAND_NAME) :- vw_brands(BRAND_NAME, 'Pending Approval'), not brand_approvals(_, BRAND_NAME), BRAND_ID = 1.
+
+-brands(BRAND_ID, BRAND_NAME) :- brands(BRAND_ID, BRAND_NAME), not vw_brands(BRAND_NAME, 'Approved').
+-brand_approvals(BRAND_ID, BRAND_NAME) :- brand_approvals(BRAND_ID, BRAND_NAME), not vw_brands(BRAND_NAME, 'Pending Approval').
