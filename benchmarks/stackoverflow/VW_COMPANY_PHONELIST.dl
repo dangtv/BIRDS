@@ -4,9 +4,9 @@ source vendor('vendorid':int, 'vendornumber':string, 'vendorlastname':string, 'v
 view vw_company_phonelist('source':string, 'id':int, 'number':string, 'lastname':string, 'fistname':string, 'phoneno':string).
 
 % view definition
-vw_company_phonelist('Customer', ID, NUMBER, LASTNAME, FISTNAME, PHONENO) :- customer(ID, NUMBER, LASTNAME, FISTNAME, PHONENO).
-vw_company_phonelist('Supplier', ID, NUMBER, LASTNAME, FISTNAME, PHONENO) :- supplier(ID, NUMBER, LASTNAME, FISTNAME, PHONENO).
-vw_company_phonelist('Vendor', ID, NUMBER, LASTNAME, FISTNAME, PHONENO) :- vendor(ID, NUMBER, LASTNAME, FISTNAME, PHONENO).
+% vw_company_phonelist('Customer', ID, NUMBER, LASTNAME, FISTNAME, PHONENO) :- customer(ID, NUMBER, LASTNAME, FISTNAME, PHONENO).
+% vw_company_phonelist('Supplier', ID, NUMBER, LASTNAME, FISTNAME, PHONENO) :- supplier(ID, NUMBER, LASTNAME, FISTNAME, PHONENO).
+% vw_company_phonelist('Vendor', ID, NUMBER, LASTNAME, FISTNAME, PHONENO) :- vendor(ID, NUMBER, LASTNAME, FISTNAME, PHONENO).
 
 % constraints
 _|_ :- vw_company_phonelist(_SOURCE, ID, NUMBER, LASTNAME, FISTNAME, PHONENO), _SOURCE <> 'Customer', _SOURCE <> 'Supplier', _SOURCE <> 'Vendor'.

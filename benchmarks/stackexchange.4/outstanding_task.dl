@@ -2,13 +2,13 @@ source task('ID':int, 'PARENT_TASK_ID':int, 'CINEMA_ID':int, 'VENUE_ID':int, 'MO
 view outstanding_task('ID':int, 'PARENT_TASK_ID':int, 'CINEMA_ID':int, 'VENUE_ID':int, 'MOVIE_ID':int, 'EVENT_ID':int, 'RESULT':string, 'CONTEXT':string, 'GUIDE':string, 'STARTED_AT':string, 'ENDED_AT':string, 'CREATED_AT':string, 'UPDATED_AT':string).
 
 % view definition
-outstanding_task(ID, PARENT_TASK_ID, CINEMA_ID, VENUE_ID, MOVIE_ID, EVENT_ID, RESULT, CONTEXT, GUIDE, STARTED_AT, ENDED_AT, CREATED_AT, UPDATED_AT) :- task(ID, PARENT_TASK_ID, CINEMA_ID, VENUE_ID, MOVIE_ID, EVENT_ID, RESULT, CONTEXT, GUIDE, STARTED_AT, ENDED_AT, CREATED_AT, UPDATED_AT), task(PARENT_TASK_ID, _, _, _, _, _, _, _, _, _, _, _, _).
+% outstanding_task(ID, PARENT_TASK_ID, CINEMA_ID, VENUE_ID, MOVIE_ID, EVENT_ID, RESULT, CONTEXT, GUIDE, STARTED_AT, ENDED_AT, CREATED_AT, UPDATED_AT) :- task(ID, PARENT_TASK_ID, CINEMA_ID, VENUE_ID, MOVIE_ID, EVENT_ID, RESULT, CONTEXT, GUIDE, STARTED_AT, ENDED_AT, CREATED_AT, UPDATED_AT), task(PARENT_TASK_ID, _, _, _, _, _, _, _, _, _, _, _, _).
 
 % constraint 
 
 % FK
 % if PARENT_TASK_ID is not -1, then there must be a task having this ID = PARENT_TASK_ID
-% _|_ :- task(ID, PARENT_TASK_ID, _, _, _, _, _, _, _, _, _, _, _), not PARENT_TASK_ID = -1, not task(PARENT_TASK_ID, _, _, _, _, _, _, _, _, _, _, _, _).
+_|_ :- task(ID, PARENT_TASK_ID, _, _, _, _, _, _, _, _, _, _, _), not PARENT_TASK_ID = -1, not task(PARENT_TASK_ID, _, _, _, _, _, _, _, _, _, _, _, _).
 
 % no key -1
 _|_ :- task(ID, PARENT_TASK_ID, CINEMA_ID, VENUE_ID, MOVIE_ID, EVENT_ID, RESULT, CONTEXT, GUIDE, STARTED_AT, ENDED_AT, CREATED_AT, UPDATED_AT), ID = -1.
