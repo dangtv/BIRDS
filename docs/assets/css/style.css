@@ -87,8 +87,7 @@
   font-weight: bold; }
 
 .highlight .k, .highlight .kv {
-  color: #000000;
-  font-weight: bold; }
+  color: blue; }
 
 .highlight .mf {
   color: #009999; }
@@ -292,7 +291,7 @@ footer p {
   color: #f2f2f2; }
 
 a {
-  text-decoration: none;
+  text-decoration: underline;
   color: #0F79D0;
   text-shadow: none;
   transition: color 0.5s ease;
@@ -307,11 +306,14 @@ a {
   -ms-transition: text-shadow 0.5s ease; }
 
 a:hover, a:focus {
-  text-decoration: underline; }
+  text-decoration: none; }
 
 footer a {
   color: #F2F2F2;
   text-decoration: underline; }
+
+#header_wrap a {
+  text-decoration: none; }
 
 em, cite {
   font-style: italic; }
@@ -350,7 +352,7 @@ pre, code {
   -webkit-border-radius: 2px; }
 
 pre {
-  padding: 10px;
+  padding: 0px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   overflow: auto; }
 

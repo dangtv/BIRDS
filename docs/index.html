@@ -37,42 +37,89 @@
     <div id="main_content_wrap" class="outer, wrapper">
       <section id="main_content" class="inner">
           <!-- <p>Table of Contents</p> -->
-        <h2 id="overview">Overview</h2>
+        <h1 id="overview">Overview</h1>
 
-<p>BIRDS (<strong>BI</strong>directional transformation for <strong>R</strong>elational view update <strong>D</strong>atalog-based <strong>S</strong>trategies) is a declarative framework that allows developers to program update strategies on relational views, hence, making views updatable. 
+<p>BIRDS (<strong>BI</strong>directional transformation for <strong>R</strong>elational view update <strong>D</strong>atalog-based <strong>S</strong>trategies) is a framework for programming view update strategies on relations in Datalog. 
 The framework is based on the theory of (putback-based) bidirectional transformations (BX) but specifically developed for relational database management systems (RDBMSs).
-BIRDS supports Datalog, a highly declarative language, thus frees programmers from the burden of manually</p>
+BIRDS frees programmers from the burden of manually:</p>
 
 <ul>
-  <li>Checking the correctness of view update strategies with respect to the consistency of views and base relations,</li>
-  <li>Maintaining bidirectional (backward &amp; forward) transformations. In fact, a correct update strategy (backward direction) also captures the view definition (forward direction). BIRDS supports users to automatically derive the corresponding view definition for a given update strategy having no self-join or projection over the view.</li>
-  <li>Creating triggers and trigger procedures on updatable views for handling SQL DML statements: UPDATE/INSERT/DELETE.</li>
+  <li>Checking the well-behavedness of view update strategies,</li>
+  <li>Optimizing view update strategies,</li>
+  <li>Translating update strategies into triggers and trigger procedures for views in PostgreSQL to handle SQL DML statements of UPDATE/INSERT/DELETE on the views.</li>
 </ul>
 
-<h2 id="view-update-strategy-how-to-write-">View update strategy: How to write ?</h2>
+<h1 id="view-update-strategy-how-to-write-">View update strategy: How to write ?</h1>
 <p>We are given schemas of tables and a view. Traditionally, over the base tables, we write a query that defines the view. However, this defining query is not enough to determine how view updates are propagated to the base tables.</p>
 
-<p>BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy is no more than a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view.</p>
+<p>BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy can be completely described by a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view.</p>
 
-<p>Note that an update strategy should make full use of data on the view in updating the source tables. We must ensure that no information on the view is lost in the updated source.
-BIRDS supports us to verify the correctness of the written update strategy.</p>
+<p>A well-behaved update strategy should make full use of data on the view in updating the source tables. We must ensure that no information on the view is lost in the updated source. BIRDS supports us to verify the well-behavedness of the written update strategy.</p>
 
-<p>Update strategies by example: <a href="basic-tutorial.html">The basics</a></p>
+<p>Writing view update strategies by example: <a href="basic-tutorial.html">The basics</a></p>
 
 <p>The Datalog core Syntax: <a href="syntax.html">Syntax</a></p>
 
-<h2 id="installation-and-usage">Installation and Usage</h2>
+<h1 id="from-datalog-to-sql-triggers">From Datalog to SQL triggers</h1>
 
-<p>There are two ways to use BIRDS to write and compile Datalog programs of view update strategies</p>
+<p>BIRDS is integrated with PostgreSQL as a backend SQL database. BIRDS generates an SQL program that implements the described view update strategy in the PostgreSQL database by using triggers.
+See the <a href="triggers.html">trigger generation</a> for details.</p>
 
-<ul>
-  <li>Command line tool: See the <a href="cli-installation.html">instruction for CLI</a></li>
-  <li>Web-based interface: See the <a href="webui-installation.html">instruction for WebUI editor</a></li>
-</ul>
+<h1 id="installation-and-usage">Installation and Usage</h1>
 
-<p>You can also build from the <a href="https://github.com/dangtv/BIRDS">source code</a> or download <a href="https://hub.docker.com/r/dangtv/birds">BIRDS’s docker image</a> for using both the command line tool and WebUI editor of BIRDS. The PostgreSQL database in <a href="https://hub.docker.com/r/dangtv/birds">BIRDS’s docker image</a> runs on port 5432 and has a default user <code class="highlighter-rouge">postgres</code> (password: <code class="highlighter-rouge">12345678</code>)</p>
+<p>BIRDS can be used via Command line interface (CLI) or Web-based interface (WebUI).</p>
 
-<h2 id="case-studies">Case studies</h2>
+<h3 id="command-line-tool">Command line tool</h3>
+
+<p>See <a href="https://github.com/dangtv/BIRDS">https://github.com/dangtv/BIRDS</a> to install the command line tool <code class="highlighter-rouge">birds</code>.</p>
+
+<p>To use the <code class="highlighter-rouge">birds</code> command:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="o">[</span>OPTIONS]
+<span class="nt">-db</span>         print debugging information
+<span class="nt">-f</span> file     input program file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
+<span class="nt">-b</span> file     shell script file specifying the action, which will be executed when 
+            there is an update on the view, <span class="k">if </span>not chosen, execute nothing
+<span class="nt">-o</span> file     output SQL file, <span class="k">if </span>not chosen, print to stdout
+<span class="nt">-l</span> file     output verification file <span class="o">(</span>optional<span class="o">)</span>
+<span class="nt">-s</span> schema   database schema name to connect to <span class="o">(</span>default: public<span class="o">)</span>
+<span class="nt">-h</span> host     database server host <span class="o">(</span>default: <span class="s2">"localhost"</span><span class="o">)</span>
+<span class="nt">-c</span>          connect and run the generated SQL on the database server
+<span class="nt">-import</span>     connect and import the data schema from database server
+<span class="nt">-v</span>          <span class="nb">enable </span>verifications
+<span class="nt">-i</span>          optimize the update propagation by incremental rewriting rules
+<span class="nt">-e</span>          optimize datalog rules
+<span class="nt">-u</span>          speed up the verifications
+<span class="nt">-p</span> port     database server port <span class="o">(</span>default: <span class="s2">"5432"</span><span class="o">)</span>
+<span class="nt">-U</span> user     database user <span class="o">(</span>default: <span class="s2">"postgres"</span><span class="o">)</span>
+<span class="nt">-g</span> user     the special user <span class="k">for </span>global dejima synchronization <span class="o">(</span>default: <span class="s2">"dejima"</span><span class="o">)</span>
+<span class="nt">-dejima</span>     detect updates on dejima views to perform pre-defined actions <span class="k">in </span>the
+            shell script file
+<span class="nt">-w</span> password database user password <span class="o">(</span>default: 12345678<span class="o">)</span>
+<span class="nt">-d</span> dbname   database name to connect to <span class="o">(</span>default: <span class="s2">"datalogdb"</span><span class="o">)</span>
+<span class="nt">-t</span> <span class="nb">timeout  timeout</span> <span class="o">(</span>second<span class="o">)</span> <span class="o">(</span>default: 120s<span class="o">)</span>
+<span class="nt">-help</span>       Display this list of options
+<span class="nt">--help</span>      Display this list of options
+</code></pre></div></div>
+
+<p>For example, this command will transform the update strategy described in <code class="highlighter-rouge">test1.dl</code> to sql:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="nt">-s</span> public <span class="nt">-f</span> test.dl <span class="nt">-o</span> test.sql
+</code></pre></div></div>
+
+<h3 id="webui">WebUI</h3>
+
+<p>Learn to use this WebUI at <a href="webui-installation.html">instruction for WebUI editor</a></p>
+
+<h3 id="docker">Docker</h3>
+
+<p>The easiest way to use both the command line tool <code class="highlighter-rouge">birds</code> and the web-based interface is creating a docker container from <a href="https://hub.docker.com/r/dangtv/birds">BIRDS’s docker image</a>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--name</span> <span class="s2">"birds"</span> <span class="nt">-ti</span> <span class="nt">-p</span> 5432:5432 <span class="nt">-p</span> 3010:3010 dangtv/birds
+</code></pre></div></div>
+
+<p>In this docker image, the PostgreSQL database runs on port 5432 with a default user whose name is <code class="highlighter-rouge">postgres</code> and password is <code class="highlighter-rouge">12345678</code>. The BIRDS WebUI runs on port 3010 without a default user (an administrator user can be created at the first time).</p>
+
+<h1 id="case-studies">Case studies</h1>
 
 <ul>
   <li><a href="basic-tutorial.html">The basics</a></li>
@@ -94,7 +141,7 @@ BIRDS supports us to verify the correctness of the written update strategy.</p>
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 7 Sep 2019</small></p>
+        <small>Last updated on 18 Nov 2019</small></p>
       </footer>
     </div>
 
