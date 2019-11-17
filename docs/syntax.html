@@ -43,19 +43,22 @@
         <h2 id="the-datalog-core-syntax">The Datalog core Syntax</h2>
 <p>In Datalog program supported by BIRDS, a predicate <code class="highlighter-rouge">R</code> preceded by a symbol <code class="highlighter-rouge">+</code>/<code class="highlighter-rouge">-</code> (called a delta predicate) corresponds to the set of tuples need to be inserted/deleted into/from table <code class="highlighter-rouge">R</code>.
 The core syntax for Datalog supported by BIRDS is the following:</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;program&gt; ::= {&lt;statement&gt;} &lt;statement&gt;
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;program&gt;   ::= {&lt;statement&gt;} &lt;statement&gt;
 &lt;statement&gt; ::= &lt;schema&gt; | &lt;constraint&gt; | &lt;rule&gt;
-&lt;schema&gt; ::= "source:" &lt;predicate&gt; "." | "view:" &lt;predicate&gt; "."
-&lt;rule&gt; ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
-&lt;constraint&gt; ::= ("⊥" | "_|_") ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
-&lt;literal&gt; ::= | &lt;predicate&gt; | ("not" | "¬") &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
+&lt;schema&gt;    ::= "source:" &lt;relname&gt; "(" &lt;attr&gt;:&lt;type&gt; {"," &lt;attr&gt;:&lt;type&gt;} ")" "." 
+                | "view:" &lt;relname&gt; "(" &lt;attr&gt;:&lt;type&gt; {"," &lt;attr&gt;:&lt;type&gt;} ")" "."
+&lt;rule&gt;      ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
+&lt;constraint&gt;::= ("⊥" | "_|_") ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
+&lt;literal&gt;   ::= &lt;predicate&gt; | ("not" | "¬") &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
 &lt;predicate&gt; ::= [ ("+" | "-") ] &lt;relname&gt; "(" &lt;term&gt; {"," &lt;term&gt;} ")"
-&lt;builtin&gt; ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
-&lt;term&gt; ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
-&lt;varname&gt; ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
-&lt;relname&gt; ::= 'a'|..|'z' { ('a'|..|'z'| '0'|..|'9'|'_') }
-&lt;anonvar&gt; ::= '_'
-&lt;const&gt; ::= &lt;integer&gt; | &lt;float&gt; | &lt;string&gt;
+&lt;builtin&gt;   ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
+&lt;term&gt;      ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
+&lt;varname&gt;   ::= 'A'|..|'Z'|'_' { ('A'|..|'Z'| '0'|..|'9'|'_') }
+&lt;relname&gt;   ::= 'a'|..|'z'|'_' { ('a'|..|'z'| '0'|..|'9'|'_') }
+&lt;attr&gt;      ::= 'a'|..|'z'|'_' { ('a'|..|'z'| '0'|..|'9'|'_') }
+&lt;type&gt;      ::= int | float | string
+&lt;anonvar&gt;   ::= '_'
+&lt;const&gt;     ::= &lt;integer&gt; | &lt;float&gt; | &lt;string&gt;
 </code></pre></div></div>
 
 <p>In general, the verification in BIRDS is sound. BIRDS guarantees the completeness of the verification if all Datalog rules are negation guarded.</p>
