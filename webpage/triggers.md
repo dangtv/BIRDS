@@ -6,7 +6,7 @@ layout: default
 
 BIRDS compiles a Datalog program of view definition and update strategy into an SQL program that creates the corresponding view with associated triggers in PostgreSQL.
 Without recursions in the Datalog program, BIRDS automatically translates each derived (IDB) relation (source deltas, view, ...) into an equivalent SQL query.
-The SQL query of the view definition is used to create the view. Meanwhile, the SQL queries of the source deltas are used in a trigger function that implements the view update strategies.
+The SQL query of the view definition is used to create the view. Meanwhile, the SQL queries of the source deltas are used in a trigger function that implements the view update strategy.
 
 Suppose a view `v` is defined over base tables `s1`, `s2`, ..., `sn`. The first generated SQL statement is to define the view as follows:
 ```sql
