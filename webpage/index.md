@@ -21,7 +21,7 @@ A well-behaved update strategy should make full use of data on the view in updat
 
 Writing view update strategies by example: [The basics](basic-tutorial.html)
 
-The Datalog core Syntax: [Syntax](syntax.html)
+The Datalog core Syntax: BIRDS currently accepts extensions of Datalog including negation and built-in predicates but no recursion in the Datalog program. See more details at [Syntax](syntax.html)
 
 # From Datalog to SQL triggers
 

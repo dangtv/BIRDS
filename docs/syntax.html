@@ -53,7 +53,7 @@ The core syntax for Datalog supported by BIRDS is the following:</p>
 &lt;predicate&gt; ::= [ ("+" | "-") ] &lt;relname&gt; "(" &lt;term&gt; {"," &lt;term&gt;} ")"
 &lt;builtin&gt;   ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
 &lt;term&gt;      ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
-&lt;varname&gt;   ::= 'A'|..|'Z'|'_' { ('A'|..|'Z'| '0'|..|'9'|'_') }
+&lt;varname&gt;   ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
 &lt;relname&gt;   ::= 'a'|..|'z'|'_' { ('a'|..|'z'| '0'|..|'9'|'_') }
 &lt;attr&gt;      ::= 'a'|..|'z'|'_' { ('a'|..|'z'| '0'|..|'9'|'_') }
 &lt;type&gt;      ::= int | float | string

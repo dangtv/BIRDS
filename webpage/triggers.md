@@ -4,8 +4,11 @@ layout: default
 
 # Trigger generation
 
-BIRDS compiles a Datalog program of view update strategy into an SQL program that creates the corresponding view with associated triggers in PostgreSQL.
-Suppose the view schema is `v(X)`, the first SQL statement that defines the view is:
+BIRDS compiles a Datalog program of view definition and update strategy into an SQL program that creates the corresponding view with associated triggers in PostgreSQL.
+Without recursions in the Datalog program, BIRDS automatically translates each derived (IDB) relation (source deltas, view, ...) into an equivalent SQL query.
+The SQL query of the view definition is used to create the view. Meanwhile, the SQL queries of the source deltas are used in a trigger function that implements the view update strategies.
+
+Suppose a view `v` is defined over base tables `s1`, `s2`, ..., `sn`. The first generated SQL statement is to define the view as follows:
 ```sql
 CREATE OR REPLACE VIEW public.v <SQL-query-defining-the-view>;
 ```
@@ -13,15 +16,10 @@ CREATE OR REPLACE VIEW public.v <SQL-query-defining-the-view>;
 The created view `v` is a virtual view. After that, BIRDS creates a trigger to initialize some temporary tables and triggers:
 
 ```sql 
-CREATE OR REPLACE FUNCTION public.v_materialization()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
+CREATE OR REPLACE FUNCTION public.v_materialization() RETURNS TRIGGER LANGUAGE plpgsql
+SECURITY DEFINER AS $$
   DECLARE
-  text_var1 text;
-  text_var2 text;
-  text_var3 text;
+  ...
   BEGIN
     CREATE TEMPORARY TABLE __temp__Δ_ins_v ( LIKE public.v INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
     CREATE CONSTRAINT TRIGGER __temp__v_trigger_delta_action
