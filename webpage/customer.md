@@ -56,9 +56,9 @@ is to perform both deletions in the first and the second options.
 Backwardly, we can explicitly specify an update strategy on the view `jcustomer` as the following ([jcustomer.dl]({{site.github.repository_url}}/tree/master/examples/customer/jcustomer.dl)):
 
 ```prolog
-source nation(KEY:int,NAME:string,DESCRIPTION:string).
-source customer(KEY:int,NAME:string,ADDRESS:string,PHONE:string,NATIONKEY:int).
-view jcustomer(KEY:int,NAME:string,ADDRESS:string).
+source nation('KEY':int,'NAME':string,'DESCRIPTION':string).
+source customer('KEY':int,'NAME':string,'ADDRESS':string,'PHONE':string,'NATIONKEY':int).
+view jcustomer('KEY':int,'NAME':string,'ADDRESS':string).
 
 % constraint:
 ⊥ :- not nation(_, 'Japan', _).

@@ -4,22 +4,22 @@ layout: default
 
 # The basics
 
-## Schema
+## The basic syntax
 
-Example: Two base tables `s1(X,Y)` and `s2(X,Y)` and a view `v(X,Y)`
+### Source and view schemas
+
+Example: Consider two base tables `s1(X,Y)` and `s2(X,Y)` and a view `v(X,Y)`:
 
 s1
 
 | X | Y |
 |---|---|
 | 1 | 2 |
-| 2 | 3 |
 
 s2 
  
 | X | Y |
 |---|---|
-| 1 | 2 |
 | 2 | 3 |
 
 
@@ -30,15 +30,24 @@ v
 | 1 | 2 |
 | 2 | 3 |
 
+The source schema and the view schema are defined as follows:
 
 ```prolog
 source s1(X:int, Y:int).
 source s2(X:int, Y:int).
 view v(X:int, Y:int).
 ```
-* Use the keywords `source` and `view` to distinguish source tables and view
-* Each column is assigned a data type
+* Using the keywords `source` and `view` to distinguish source tables and view.
+* Each column is assigned a data type.
 * Supported data types are: `integer`, `real` and `string`.
+
+### View definition
+
+`v` can be defined over `s1` and `s2` as follows:
+```prolog
+v(X,Y) :- s1(X,Y).
+v(X,Y) :- s2(X,Y).
+```
 
 ### Rules for update strategy:
 * Delta predicate: a delta predicate is a normal predicate following a symbol `+` or `-`
@@ -50,7 +59,7 @@ view v(X:int, Y:int).
     -s1(X,Y) :- s1(X,Y), not v(X,Y).
     ```
 
-## Update strategy
+## An update strategy
 
 The following is a full Datalog program for an update strategy on the view `v(X,Y)` ([basic_sample.dl]({{site.github.repository_url}}/tree/master/examples/basic_sample.dl)):
 
@@ -94,11 +103,11 @@ The generated SQL file can run directly in a PostgreSQL database to create the c
     psql -U postgres -d sample_db -f examples/basic_sample.sql
     ```
 
-1. Run an UPDATE/INSERT/DELETE statement to modify data on view, for example:
+2. Run an UPDATE/INSERT/DELETE statement to modify data on view, for example:
     ```sql
     INSERT INTO v VALUES (6,7);
     ```
-1. Request a bigger modification on view by combining multiple UPDATE/INSERT/DELETE statements in one transaction:
+3. Request a bigger modification on view by combining multiple UPDATE/INSERT/DELETE statements in one transaction:
     ```sql
     BEGIN;
         INSERT INTO v VALUES (6,7);

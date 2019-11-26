@@ -35,7 +35,7 @@ For each view, to measure the running time of an SQL statement that modifies the
 bash dbgen.sh
 ```
 
-that randomly generates data for the base tables with various numbers of tuples. The result is many CSV files with different numbers of records (tuples) for each base table. This data generation process may take time.
+That randomly generates data for the base tables with various numbers of tuples. The result is many CSV files with different numbers of records (tuples) for each base table. This data generation process may take time.
 
 Then, we can start benchmarking by
 

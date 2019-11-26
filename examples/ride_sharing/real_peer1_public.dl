@@ -1,6 +1,9 @@
-source peer1_vehicle(VEHICLE_ID:int , CURRENT_LOCATION:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
-source area(ORIGINAL_NODE:int , AREA_NODE:int).
-view peer1_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+source peer1_vehicle('VEHICLE_ID':int , 'CURRENT_LOCATION':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+source area('ORIGINAL_NODE':int , 'AREA_NODE':int).
+view peer1_public('VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+
+% view definition
+peer1_public(V, A, S, R, P, D) :- peer1_vehicle (V, L, S, R, P, D), area (L,A).
 
 %constraints
 % primary key VEHICLE_ID on peer1_vehicle

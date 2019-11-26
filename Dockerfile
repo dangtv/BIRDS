@@ -7,6 +7,7 @@ ENV OS_LOCALE="en_US.UTF-8" \
     LC_ALL=${OS_LOCALE} \
     PG_VERSION=9.6 \
     OCAML_VERSION=4.07.0 \
+    Z3_VERSION=4.8.7 \
     PG_USER=postgres \
     PG_HOME=/var/lib/postgresql \
     PG_RUN_DIR=/run/postgresql \
@@ -59,12 +60,12 @@ RUN BUILD_PKGS="wget unzip" \
  && ln -s /usr/lib/lean/bin/lean /usr/bin/lean \
  && ln -s /usr/lib/lean/bin/leanpkg /usr/bin/leanpkg \
  && ln -s /usr/lib/lean/bin/leanchecker /usr/bin/leanchecker \
- && wget https://github.com/Z3Prover/z3/releases/download/z3-4.8.4/z3-4.8.4.d6df51951f4c-x64-ubuntu-16.04.zip \
- && unzip z3-4.8.4.d6df51951f4c-x64-ubuntu-16.04.zip \
- && mv z3-4.8.4.d6df51951f4c-x64-ubuntu-16.04 /usr/lib/z3 \
+ && wget https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip \
+ && unzip z3-${Z3_VERSION}-x64-ubuntu-16.04.zip \
+ && mv z3-${Z3_VERSION}-x64-ubuntu-16.04 /usr/lib/z3 \
  && ln -s /usr/lib/z3/bin/z3 /usr/bin/z3 \
  && rm lean-3.4.2-linux.tar.gz \
- && rm z3-4.8.4.d6df51951f4c-x64-ubuntu-16.04.zip \
+ && rm z3-${Z3_VERSION}-x64-ubuntu-16.04.zip \
  && apt-get purge -y --auto-remove ${BUILD_PKGS} \
  && rm -rf /var/lib/apt/lists/*
 

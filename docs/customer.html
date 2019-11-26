@@ -12,7 +12,7 @@
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
 <script type="application/ld+json">
-{"url":"/customer.html","@type":"WebPage","@context":"http://schema.org"}</script>
+{"@type":"WebPage","url":"/customer.html","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
   </head>
@@ -155,9 +155,9 @@ is to perform both deletions in the first and the second options.</p>
 
 <p>Backwardly, we can explicitly specify an update strategy on the view <code class="highlighter-rouge">jcustomer</code> as the following (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/customer/jcustomer.dl">jcustomer.dl</a>):</p>
 
-<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">KEY</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">DESCRIPTION</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
-<span class="ss">source</span> <span class="ss">customer</span><span class="p">(</span><span class="nv">KEY</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">ADDRESS</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">PHONE</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">NATIONKEY</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
-<span class="ss">view</span> <span class="ss">jcustomer</span><span class="p">(</span><span class="nv">KEY</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">NAME</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="nv">ADDRESS</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">nation</span><span class="p">(</span><span class="ss">'KEY'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="ss">'NAME'</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="ss">'DESCRIPTION'</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">customer</span><span class="p">(</span><span class="ss">'KEY'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="ss">'NAME'</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="ss">'ADDRESS'</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="ss">'PHONE'</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="ss">'NATIONKEY'</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">jcustomer</span><span class="p">(</span><span class="ss">'KEY'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="ss">'NAME'</span><span class="o">:</span><span class="ss">string</span><span class="p">,</span><span class="ss">'ADDRESS'</span><span class="o">:</span><span class="ss">string</span><span class="p">).</span>
 
 <span class="err">%</span> <span class="ss">constraint</span><span class="o">:</span>
 <span class="err">⊥</span> <span class="p">:-</span> <span class="ss">not</span> <span class="ss">nation</span><span class="p">(</span><span class="nv">_</span><span class="p">,</span> <span class="ss">'Japan'</span><span class="p">,</span> <span class="nv">_</span><span class="p">).</span>
@@ -254,7 +254,7 @@ old table <code class="highlighter-rouge">customer</code>. If it is not found, w
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 18 Nov 2019</small></p>
+        <small>Last updated on 27 Nov 2019</small></p>
       </footer>
     </div>
 

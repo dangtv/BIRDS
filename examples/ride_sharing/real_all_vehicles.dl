@@ -1,6 +1,6 @@
-source peer1_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
-source peer2_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
-view all_vehicles(COMPANY_ID:int, VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+source peer1_public('VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+source peer2_public('VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+view all_vehicles('COMPANY_ID':int, 'VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
 
 % constraint
 % ensure that the company_id in all_vehicles is 1 or 2

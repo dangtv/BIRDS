@@ -51,7 +51,7 @@ BIRDS is integrated with other systems to enable some features of the `birds` co
     leanpkg configure
     leanpkg build
     ```
-* Z3 >= 4.7.1: Download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases)
+* Z3 >= 4.8.7: Download at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases)
 * Postgresql database >= 9.6: [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
   * PL/sh extension for postgresql: available at [https://github.com/petere/plsh](https://github.com/petere/plsh)
 * coreutils package: For ubuntu: `apt-get install coreutils`. For Macos: `brew install coreutils` and then create a symbolic link `ln -s /usr/local/bin/gtimeout /usr/local/bin/timeout`
@@ -64,18 +64,3 @@ The docker image that contains all the features and the integrated systems of BI
   ```
 
 In this docker image, the PostgreSQL database runs on port 5432 and the BIRDS WebUI runs on port 3010
-
-<!-- * Run a docker container based on this image
-  ```bash 
-    docker run --name "birds1" -ti -p 5432:5432 -p 3010:3010 -v <host_folder>:<container_folder> birds
-  ```
-
-* For example:
-  ```bash 
-    docker run --name "birds1" -ti -p 5432:5432 -p 3010:3010 -v $(pwd)/examples:/root/examples birds
-  ``` -->
-
-<!-- * The Docker image for the entire BIRDS system is available at: [https://hub.docker.com/r/dangtv/birds](https://hub.docker.com/r/dangtv/birds), it can be downloaded by running:
-  ```bash
-    docker pull dangtv/birds
-  ``` -->

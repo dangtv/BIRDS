@@ -204,19 +204,54 @@ meta def reflect_string_formula (reflect_base : expr → smt2_m lol.term) : expr
     else
     lol.term.string <$> eval_expr string `(to_string a:string)
 
--- /-- Check if the type is an `int` or logically a subtype of an `int` like nat. -/
+-- /-- Check if the type is an `int` or logically a subtype of an `int` like nat, or rational number -/
 meta def is_number (e : expr) : tactic bool :=
 do ty ← infer_type e,
    return $ (ty = `(int)) || (ty = `(nat)) || (ty = `(rat))
+
+-- /-- Check if the type is an `string` -/
+meta def is_string (e : expr) : tactic bool :=
+do ty ← infer_type e,
+   return $ (ty = `(string))
 
 meta def unsupported_ordering_on {α : Type} (elem : expr) : tactic α :=
 do ty ← infer_type elem,
    tactic.fail $ "unable to translate orderings for values of type: " ++ to_string ty
 
-meta def reflect_ordering (reflect_arith : expr → smt2_m lol.term) (R : lol.term → lol.term → lol.term) (P Q : expr) : smt2_m lol.term :=
-do is ← is_number P, -- NB: P and Q should have the same type.
-   if is
-   then R <$> (reflect_arith P) <*> (reflect_arith Q)
+meta def reflect_ordering_lt (reflect_arith : expr → smt2_m lol.term) (P Q : expr) : smt2_m lol.term :=
+do is_num ← is_number P, -- NB: P and Q should have the same type.
+   is_str ← is_string P,
+   if is_num
+   then lol.term.lt <$> (reflect_arith P) <*> (reflect_arith Q)
+   else if is_str 
+     then lol.term.strlt <$> (reflect_arith P) <*> (reflect_arith Q)
+   else unsupported_ordering_on P
+
+meta def reflect_ordering_lte (reflect_arith : expr → smt2_m lol.term) (P Q : expr) : smt2_m lol.term :=
+do is_num ← is_number P, -- NB: P and Q should have the same type.
+   is_str ← is_string P,
+   if is_num
+   then lol.term.lte <$> (reflect_arith P) <*> (reflect_arith Q)
+   else if is_str 
+     then lol.term.strlte <$> (reflect_arith P) <*> (reflect_arith Q)
+   else unsupported_ordering_on P
+
+meta def reflect_ordering_gt (reflect_arith : expr → smt2_m lol.term) (P Q : expr) : smt2_m lol.term :=
+do is_num ← is_number P, -- NB: P and Q should have the same type.
+   is_str ← is_string P,
+   if is_num
+   then lol.term.gt <$> (reflect_arith P) <*> (reflect_arith Q)
+   else if is_str 
+     then lol.term.strgt <$> (reflect_arith P) <*> (reflect_arith Q)
+   else unsupported_ordering_on P
+
+meta def reflect_ordering_gte (reflect_arith : expr → smt2_m lol.term) (P Q : expr) : smt2_m lol.term :=
+do is_num ← is_number P, -- NB: P and Q should have the same type.
+   is_str ← is_string P,
+   if is_num
+   then lol.term.gte <$> (reflect_arith P) <*> (reflect_arith Q)
+   else if is_str 
+     then lol.term.strgte <$> (reflect_arith P) <*> (reflect_arith Q)
    else unsupported_ordering_on P
 
 meta def supported_pi_binder (ty : expr) : bool :=
@@ -251,10 +286,10 @@ meta def reflect_prop_formula' : expr → smt2_m lol.term
 | `(%%P ∧ %%Q) := lol.term.and <$> (reflect_prop_formula' P) <*> (reflect_prop_formula' Q)
 | `(%%P ∨ %%Q) := lol.term.or <$> (reflect_prop_formula' P) <*> (reflect_prop_formula' Q)
 | `(%%P ↔ %%Q) := lol.term.iff <$> (reflect_prop_formula' P) <*> (reflect_prop_formula' Q)
-| `(%%P < %%Q) := reflect_ordering (reflect_arith_formula reflect_prop_formula') lol.term.lt P Q
-| `(%%P <= %%Q) := reflect_ordering (reflect_arith_formula reflect_prop_formula') lol.term.lte P Q
-| `(%%P > %%Q) := reflect_ordering (reflect_arith_formula reflect_prop_formula') lol.term.gt P Q
-| `(%%P >= %%Q) := reflect_ordering (reflect_arith_formula reflect_prop_formula') lol.term.gte P Q
+| `(%%P < %%Q) := reflect_ordering_lt reflect_prop_formula' P Q
+| `(%%P <= %%Q) := reflect_ordering_lte reflect_prop_formula' P Q
+| `(%%P > %%Q) := reflect_ordering_gt reflect_prop_formula' P Q
+| `(%%P >= %%Q) := reflect_ordering_gte reflect_prop_formula' P Q
 | `(true) := return $ lol.term.true
 | `(false) := return $ lol.term.false
 | e := do ty ← infer_type e,

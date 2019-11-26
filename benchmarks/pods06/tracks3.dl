@@ -2,11 +2,7 @@
 source tracks2('TRACK':string,'RATING':int,'ALBUM':string,'QUANTITY':int).
 view tracks3('TRACK':string,'RATING':int,'ALBUM':string,'QUANTITY':int).
 
-% constraints: ⊥
-⊥ :- tracks2(T,R1,_,_), tracks2(T,R2,_,_), NOT R1 = R2. %TRACK -> RATING
-⊥ :- tracks2(_,_,A,Q1), tracks2(_,_,A,Q2), NOT Q1 = Q2. %ALBUMN -> QUANTITY
-⊥ :- tracks3(T,R1,_,_), tracks3(T,R2,_,_), NOT R1 = R2. %TRACK -> RATING
-⊥ :- tracks3(_,_,A,Q1), tracks3(_,_,A,Q2), NOT Q1 = Q2. %ALBUMN -> QUANTITY
+% constraints:
 ⊥() :- tracks3(T,R,A,Q), NOT Q>2.
 
 % view definition:

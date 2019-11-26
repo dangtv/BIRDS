@@ -40,6 +40,10 @@ with term : Type
 | lte : term → term → term
 | gt : term → term → term
 | gte : term → term → term
+| strlt : term → term → term
+| strlte : term → term → term
+| strgt : term → term → term
+| strgte : term → term → term
 | neg : term → term
 | concat : term → term → term
 | int : int → term
@@ -87,6 +91,14 @@ meta def term.subst (n : string) (subst : term) : term → term
     term.gt (term.subst t) (term.subst u)
 | (term.gte t u) :=
     term.gte (term.subst t) (term.subst u)
+| (term.strlt t u) :=
+    term.strlt (term.subst t) (term.subst u)
+| (term.strlte t u) :=
+    term.strlte (term.subst t) (term.subst u)
+| (term.strgt t u) :=
+    term.strgt (term.subst t) (term.subst u)
+| (term.strgte t u) :=
+    term.strgte (term.subst t) (term.subst u)
 | (term.neg t) :=
     term.neg (term.subst t)
 | (term.concat t u) :=
@@ -351,6 +363,10 @@ private meta def compile_term : lol.term → smt2_compiler smt2.term
 | (term.lte a b) := smt2.builder.lte <$> compile_term a <*> compile_term b
 | (term.gt a b) := smt2.builder.gt <$> compile_term a <*> compile_term b
 | (term.gte a b) := smt2.builder.gte <$> compile_term a <*> compile_term b
+| (term.strlt a b) := smt2.builder.strlt <$> compile_term a <*> compile_term b
+| (term.strlte a b) := smt2.builder.strlte <$> compile_term a <*> compile_term b
+| (term.strgt a b) := smt2.builder.strgt <$> compile_term a <*> compile_term b
+| (term.strgte a b) := smt2.builder.strgte <$> compile_term a <*> compile_term b
 | (term.mod a b) := smt2.builder.mod <$> compile_term a <*> compile_term b
 | (term.int i) := return $ smt2.builder.int_const i
 | (term.rat i) := return $ smt2.builder.rat_const i

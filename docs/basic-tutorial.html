@@ -12,7 +12,7 @@
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
 <script type="application/ld+json">
-{"url":"/basic-tutorial.html","@type":"WebPage","@context":"http://schema.org"}</script>
+{"@type":"WebPage","url":"/basic-tutorial.html","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
   </head>
@@ -42,9 +42,11 @@
           </nav>
         <h1 id="the-basics">The basics</h1>
 
-<h2 id="schema">Schema</h2>
+<h2 id="the-basic-syntax">The basic syntax</h2>
 
-<p>Example: Two base tables <code class="highlighter-rouge">s1(X,Y)</code> and <code class="highlighter-rouge">s2(X,Y)</code> and a view <code class="highlighter-rouge">v(X,Y)</code></p>
+<h3 id="source-and-view-schemas">Source and view schemas</h3>
+
+<p>Example: Consider two base tables <code class="highlighter-rouge">s1(X,Y)</code> and <code class="highlighter-rouge">s2(X,Y)</code> and a view <code class="highlighter-rouge">v(X,Y)</code>:</p>
 
 <p>s1</p>
 
@@ -60,10 +62,6 @@
       <td>1</td>
       <td>2</td>
     </tr>
-    <tr>
-      <td>2</td>
-      <td>3</td>
-    </tr>
   </tbody>
 </table>
 
@@ -77,10 +75,6 @@
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>1</td>
-      <td>2</td>
-    </tr>
     <tr>
       <td>2</td>
       <td>3</td>
@@ -109,15 +103,24 @@
   </tbody>
 </table>
 
+<p>The source schema and the view schema are defined as follows:</p>
+
 <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
 <span class="ss">source</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
 <span class="ss">view</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
 </code></pre></div></div>
 <ul>
-  <li>Use the keywords <code class="highlighter-rouge">source</code> and <code class="highlighter-rouge">view</code> to distinguish source tables and view</li>
-  <li>Each column is assigned a data type</li>
+  <li>Using the keywords <code class="highlighter-rouge">source</code> and <code class="highlighter-rouge">view</code> to distinguish source tables and view.</li>
+  <li>Each column is assigned a data type.</li>
   <li>Supported data types are: <code class="highlighter-rouge">integer</code>, <code class="highlighter-rouge">real</code> and <code class="highlighter-rouge">string</code>.</li>
 </ul>
+
+<h3 id="view-definition">View definition</h3>
+
+<p><code class="highlighter-rouge">v</code> can be defined over <code class="highlighter-rouge">s1</code> and <code class="highlighter-rouge">s2</code> as follows:</p>
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">).</span>
+<span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">).</span>
+</code></pre></div></div>
 
 <h3 id="rules-for-update-strategy">Rules for update strategy:</h3>
 <ul>
@@ -135,7 +138,7 @@
   </li>
 </ul>
 
-<h2 id="update-strategy">Update strategy</h2>
+<h2 id="an-update-strategy">An update strategy</h2>
 
 <p>The following is a full Datalog program for an update strategy on the view <code class="highlighter-rouge">v(X,Y)</code> (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.dl">basic_sample.dl</a>):</p>
 
@@ -200,7 +203,7 @@
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 18 Nov 2019</small></p>
+        <small>Last updated on 27 Nov 2019</small></p>
       </footer>
     </div>
 

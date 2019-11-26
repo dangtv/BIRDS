@@ -1,9 +1,12 @@
 % describe the schema of sources and views
-%s:tracks2(TRACK:string,RATING:int,ALBUM:string,QUANTITY:int).
-%v:tracks3(TRACK:string,RATING:int,ALBUM:string,QUANTITY:int).
+source tracks2('TRACK':string,'RATING':int,'ALBUM':string,'QUANTITY':int).
+view tracks3('TRACK':string,'RATING':int,'ALBUM':string,'QUANTITY':int).
 
-% constraints: ⊥
-⊥ :- tracks3(T,R,A,Q), NOT Q>2.
+% constraints:
+⊥() :- tracks3(T,R,A,Q), NOT Q>2.
+
+% view definition:
+% tracks3(T,R,A,Q) :- tracks2(T,R,A,Q),Q > 2.
 
 % rule for insertion to tracks2
 +tracks2(TRACK,RATING,ALBUM,QUANTITY) :- tracks3(TRACK,RATING,ALBUM,QUANTITY),

@@ -85,10 +85,10 @@ people, who do not appear in the view anymore. The Datalog putback
 program for `residents` is the following ([residents.dl]({{site.github.repository_url}}/tree/master/examples/employee/residents.dl)):
 
 ```prolog
-source male(EMP_NAME:string, BIRTH_DATE:string).
-source female(EMP_NAME:string, BIRTH_DATE:string).
-source others(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
-view residents(EMP_NAME:string,BIRTH_DATE:string,GENDER:string).
+source male('EMP_NAME':string, 'BIRTH_DATE':string).
+source female('EMP_NAME':string, 'BIRTH_DATE':string).
+source others('EMP_NAME':string, 'BIRTH_DATE':string, 'GENDER':string).
+view residents('EMP_NAME':string,'BIRTH_DATE':string,'GENDER':string).
 
 +male(E, B) :- residents(E, B, G), G = 'M', not male(E, B), not others(E, B, G).
 -male(E, B) :- male(E, B), G = 'M', not residents(E, B, G).
@@ -141,9 +141,9 @@ department according to `ced`, then this department of him/her need to be remove
 from `eed`. The update strategy program is as follows ([ced.dl]({{site.github.repository_url}}/tree/master/examples/employee/ced.dl)):
 
 ```prolog
-source ed(EMP_NAME:string,DEPT_NAME:string).
-source eed(EMP_NAME:string,DEPT_NAME:string).
-view ced(EMP_NAME:string, DEPT_NAME:string).
+source ed('EMP_NAME':string,'DEPT_NAME':string).
+source eed('EMP_NAME':string,'DEPT_NAME':string).
+view ced('EMP_NAME':string, 'DEPT_NAME':string).
 
 +ed(E, D) :- ced(E, D), NOT ed(E, D).
 -eed(E, D) :- ced(E, D), eed(E, D).
@@ -185,8 +185,8 @@ On the other hand, we delete only tuples in `residents` having
 The strategy is as follows ([residents1962.dl]({{site.github.repository_url}}/tree/master/examples/employee/residents1962.dl)):
 
 ```prolog
-source residents(EMP_NAME:string,BIRTH_DATE:string,GENDER:string).
-view residents1962(EMP_NAME:string,BIRTH_DATE:string,GENDER:string).
+source residents('EMP_NAME':string,'BIRTH_DATE':string,'GENDER':string).
+view residents1962('EMP_NAME':string,'BIRTH_DATE':string,'GENDER':string).
 
 _|_ :- residents1962(E,B,G), B > '1962-12-31'.
 _|_ :- residents1962(E,B,G), B < '1962-01-01'.
@@ -243,9 +243,9 @@ By the constraint, we do not allow inserting into `employees` a really
 new employee, who is not mentioned in the source relation `ced`. The following is the update strategy for `employees` ([employees.dl]({{site.github.repository_url}}/tree/master/examples/employee/employees.dl)):
 
 ```prolog
-source residents(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
-source ced(EMP_NAME:string, DEPT_NAME:string).
-view employees(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
+source residents('EMP_NAME':string, 'BIRTH_DATE':string, 'GENDER':string).
+source ced('EMP_NAME':string, 'DEPT_NAME':string).
+view employees('EMP_NAME':string, 'BIRTH_DATE':string, 'GENDER':string).
 
 % constraint
 _|_ :- employees(E,B,G), ¬ced(E,_).
@@ -281,9 +281,9 @@ For this view, an update strategy is as the following
 [researchers.dl]({{site.github.repository_url}}/tree/master/examples/employee/researchers.dl):
 
 ```prolog
-source residents(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
-source ced(EMP_NAME:string, DEPT_NAME:string).
-view researchers(EMP_NAME:string).
+source residents('EMP_NAME':string, 'BIRTH_DATE':string, 'GENDER':string).
+source ced('EMP_NAME':string, 'DEPT_NAME':string).
+view researchers('EMP_NAME':string).
 
 -ced(E,D) :- residents(E,B,G), ced(E,D), D = 'Research', ¬researchers(E). 
 +residents(E,B,G) :- researchers(E), ¬residents(E,_,_), B='0001-01-01', G='unknown'.
@@ -320,9 +320,9 @@ The view `retired` contains residents, who were retired.
 The update strategy for `retired` is to remove from the `ced` the current departments of people, who are retired (in the view `retired`), and to insert a new department for each resident, who is not retired but is not yet mentioned in `ced`. We also ensure a retired person is a resident as follows ([retired.dl]({{site.github.repository_url}}/tree/master/examples/employee/retired.dl)):
 
 ```prolog
-source residents(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
-source ced(EMP_NAME:string, DEPT_NAME:string).
-view retired(EMP_NAME:string).
+source residents('EMP_NAME':string, 'BIRTH_DATE':string, 'GENDER':string).
+source ced('EMP_NAME':string, 'DEPT_NAME':string).
+view retired('EMP_NAME':string).
 
 -ced(E,D) :- ced(E,D), retired(E).
 +residents(E,B,G) :- retired(E), ¬ residents(E,_,_), B='0001-01-01', G='unknown'.
@@ -355,9 +355,9 @@ Let `blacklist(EMP_NAME)` be a black list of residents
 We now define an update strategy for a view `voter(emp_name, birth_date)` containing residents, who have the right to vote at elections, as follows ([voter.dl]({{site.github.repository_url}}/tree/master/examples/employee/voter.dl)):
 
 ```prolog
-source blacklist(EMP_NAME:string).
-source residents(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
-view voter(EMP_NAME:string, BIRTH_DATE:string).
+source blacklist('EMP_NAME':string).
+source residents('EMP_NAME':string, 'BIRTH_DATE':string, 'GENDER':string).
+view voter('EMP_NAME':string, 'BIRTH_DATE':string).
 
 ⊥ :- voter(NAME,BIRTH_DATE), blacklist(NAME).
 

@@ -1,11 +1,15 @@
-% describe the schema of sources and views
-%s:tracks1(TRACK:string,DATE:int,RATING:int,ALBUM:string,QUANTITY:int).
-%v:tracks2(TRACK:string,RATING:int,ALBUM:string,QUANTITY:int).
+source tracks1('TRACK':string,'DATE':int,'RATING':int,'ALBUM':string,'QUANTITY':int).
+view tracks2('TRACK':string,'RATING':int,'ALBUM':string,'QUANTITY':int).
 
-%rule for insertion to tracks1
-+tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY),
-    not tracks1(TRACK,_,RATING,ALBUM,QUANTITY).
+% view definition:
+% tracks2(T,R,A,Q) :- tracks1(T,_,R,A,Q).
 
 % rule for deletion from tracks1
 -tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY) :- tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY),
     not tracks2(TRACK,RATING,ALBUM,QUANTITY).
+
++tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY),
+    not tracks1(TRACK,_,RATING,ALBUM,QUANTITY), tracks1(TRACK,DATE,_,ALBUM,_).
+
++tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY),
+    not tracks1(TRACK,_,_,ALBUM,_).

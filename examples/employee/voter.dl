@@ -1,6 +1,6 @@
-source blacklist(EMP_NAME:string).
-source residents(EMP_NAME:string, BIRTH_DATE:string, GENDER:string).
-view voter(EMP_NAME:string, BIRTH_DATE:string).
+source blacklist('EMP_NAME':string).
+source residents('EMP_NAME':string, 'BIRTH_DATE':string, 'GENDER':string).
+view voter('EMP_NAME':string, 'BIRTH_DATE':string).
 
 ⊥ :- voter(NAME,BIRTH_DATE), blacklist(NAME) .
 

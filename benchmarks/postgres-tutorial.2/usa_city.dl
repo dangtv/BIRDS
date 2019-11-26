@@ -5,8 +5,6 @@ view usa_city('CITY_ID':int, 'CITY':string, 'COUNTRY_ID':int).
 % usa_city(CITY_ID, CITY, COUNTRY_ID) :- city(CITY_ID, CITY, COUNTRY_ID, _), COUNTRY_ID = 103.
 
 % constraint
-% PK(city, [CITY_ID]).
-% PK(usa_city, [CITY_ID]).
 _|_ :- usa_city(CITY_ID, CITY, COUNTRY_ID), COUNTRY_ID <> 103.
 
 % update strategy

@@ -51,9 +51,12 @@ vehicle_id | current_location | seat_count | request_id | pickup_location | drop
 The following is an update strategy on the view `peer1_public` by using Datalog ([real_peer1_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer1_public.dl)):
 
 ```prolog
-source peer1_vehicle(VEHICLE_ID:int , CURRENT_LOCATION:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
-source area(ORIGINAL_NODE:int , AREA_NODE:int).
-view peer1_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+source peer1_vehicle('VEHICLE_ID':int , 'CURRENT_LOCATION':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+source area('ORIGINAL_NODE':int , 'AREA_NODE':int).
+view peer1_public('VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+
+% view definition
+peer1_public(V, A, S, R, P, D) :- peer1_vehicle (V, L, S, R, P, D), area (L,A).
 
 %constraints
 % primary key VEHICLE_ID on peer1_vehicle
@@ -98,9 +101,12 @@ birds -v -f real_peer1_public.dl -o real_peer1_public.sql
 The following is an update strategy on the view `peer2_public` by using Datalog ([real_peer2_public.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_peer2_public.dl)):
 
 ```prolog
-source peer2_vehicle(VEHICLE_ID:int , CURRENT_LOCATION:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
-source area(ORIGINAL_NODE:int , AREA_NODE:int).
-view peer2_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+source peer2_vehicle('VEHICLE_ID':int , 'CURRENT_LOCATION':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+source area('ORIGINAL_NODE':int , 'AREA_NODE':int).
+view peer2_public('VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+
+% view definition
+peer2_public(V, A, S, R, P, D) :- peer2_vehicle (V, L, S, R, P, D), area (L,A).
 
 %constraints
 % primary key VEHICLE_ID on peer2_vehicle
@@ -148,9 +154,9 @@ Since `peer1_public` and `peer2_public` are both updatable, we can use them as t
 The following is an update strategy for the view `all_vehicles` over `peer1_public` and `peer2_public` by using Datalog ([real_all_vehicles.dl]({{site.github.repository_url}}/tree/master/examples/ride_sharing/real_all_vehicles.dl)):
 
 ```prolog
-source peer1_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
-source peer2_public(VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
-view all_vehicles(COMPANY_ID:int, VEHICLE_ID:int , CURRENT_AREA:int , SEAT_COUNT:int , REQUEST_ID:int , PICKUP_LOCATION:int , DROPOFF_LOCATION:int).
+source peer1_public('VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+source peer2_public('VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
+view all_vehicles('COMPANY_ID':int, 'VEHICLE_ID':int , 'CURRENT_AREA':int , 'SEAT_COUNT':int , 'REQUEST_ID':int , 'PICKUP_LOCATION':int , 'DROPOFF_LOCATION':int).
 
 % constraint
 % ensure that the company_id in all_vehicles is 1 or 2

@@ -1,7 +1,7 @@
 % schema:
-source s1(X:int,Y:int).
-source s2(X:int,Y:int).
-view v(X:int,Y:int).
+source s1('X':int,'Y':int).
+source s2('X':int,'Y':int).
+view v('X':int,'Y':int).
 
 % rules for update strategy:
 -s1(X,Y) :- s1(X,Y), not v(X,Y).

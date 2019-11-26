@@ -12,7 +12,7 @@
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
 <script type="application/ld+json">
-{"url":"/syntax.html","@type":"WebPage","@context":"http://schema.org"}</script>
+{"@type":"WebPage","url":"/syntax.html","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
   </head>
@@ -41,27 +41,54 @@
             <ul></ul>
           </nav>
         <h2 id="the-datalog-core-syntax">The Datalog core Syntax</h2>
-<p>In Datalog program supported by BIRDS, a predicate <code class="highlighter-rouge">R</code> preceded by a symbol <code class="highlighter-rouge">+</code>/<code class="highlighter-rouge">-</code> (called a delta predicate) corresponds to the set of tuples need to be inserted/deleted into/from table <code class="highlighter-rouge">R</code>.
+<p>In the Datalog program supported by BIRDS, a predicate <code class="highlighter-rouge">R</code> preceded by a symbol <code class="highlighter-rouge">+</code>/<code class="highlighter-rouge">-</code> (called a delta predicate) corresponds to the set of tuples that need to be inserted/deleted into/from table <code class="highlighter-rouge">R</code>.
 The core syntax for Datalog supported by BIRDS is the following:</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;program&gt;   ::= {&lt;statement&gt;} &lt;statement&gt;
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;program&gt; ::= {&lt;statement&gt;} &lt;statement&gt;
 &lt;statement&gt; ::= &lt;schema&gt; | &lt;constraint&gt; | &lt;rule&gt;
-&lt;schema&gt;    ::= "source:" &lt;relname&gt; "(" &lt;attr&gt;:&lt;type&gt; {"," &lt;attr&gt;:&lt;type&gt;} ")" "." 
-                | "view:" &lt;relname&gt; "(" &lt;attr&gt;:&lt;type&gt; {"," &lt;attr&gt;:&lt;type&gt;} ")" "."
-&lt;rule&gt;      ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
+&lt;schema&gt; ::= "source:" &lt;relname&gt; "(" &lt;attribute&gt;:&lt;type&gt; {"," &lt;attribute&gt;:&lt;type&gt;} ")" "." 
+ | "view:" &lt;relname&gt; "(" &lt;attribute&gt;:&lt;type&gt; {"," &lt;attribute&gt;:&lt;type&gt;} ")" "."
+&lt;rule&gt; ::= &lt;predicate&gt; ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
 &lt;constraint&gt;::= ("⊥" | "_|_") ":-" &lt;literal&gt; { ("and"| ",") &lt;literal&gt; } "."
-&lt;literal&gt;   ::= &lt;predicate&gt; | ("not" | "¬") &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
+&lt;literal&gt; ::= &lt;predicate&gt; | ("not" | "¬") &lt;predicate&gt; | &lt;builtin&gt; | "not" &lt;builtin&gt;
 &lt;predicate&gt; ::= [ ("+" | "-") ] &lt;relname&gt; "(" &lt;term&gt; {"," &lt;term&gt;} ")"
-&lt;builtin&gt;   ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
-&lt;term&gt;      ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
-&lt;varname&gt;   ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
-&lt;relname&gt;   ::= 'a'|..|'z'|'_' { ('a'|..|'z'| '0'|..|'9'|'_') }
-&lt;attr&gt;      ::= 'a'|..|'z'|'_' { ('a'|..|'z'| '0'|..|'9'|'_') }
-&lt;type&gt;      ::= int | float | string
-&lt;anonvar&gt;   ::= '_'
-&lt;const&gt;     ::= &lt;integer&gt; | &lt;float&gt; | &lt;string&gt;
+&lt;builtin&gt; ::= &lt;varname&gt; ("=" | "&lt;&gt;" | "&lt;" | "&gt;" | "&lt;=" | "&gt;=") &lt;const&gt;
+&lt;term&gt; ::= &lt;varname&gt; | &lt;anonvar&gt; | &lt;const&gt;
+&lt;varname&gt; ::= 'A'|..|'Z' { ('A'|..|'Z'| '0'|..|'9'|'_') }
+&lt;relname&gt; ::= 'a'|..|'z'|'_' { ('a'|..|'z'| '0'|..|'9'|'_') }
+&lt;attribute&gt; ::= 'a'|..|'z'|'_' { ('a'|..|'z'| '0'|..|'9'|'_') }
+&lt;type&gt; ::= int | float | string
+&lt;anonvar&gt; ::= '_'
+&lt;const&gt; ::= &lt;integer&gt; | &lt;float&gt; | &lt;string&gt;
 </code></pre></div></div>
 
 <p>In general, the verification in BIRDS is sound. BIRDS guarantees the completeness of the verification if all Datalog rules are negation guarded.</p>
+
+<h2 id="abbreviated-syntax">Abbreviated syntax</h2>
+
+<p>Given a relation t(<strong>A</strong>, B, C), we can declare <strong>A</strong> as a primary key of t by:</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">PK</span><span class="p">(</span><span class="ss">t</span><span class="p">,[</span><span class="nv">A</span><span class="p">])</span>
+</code></pre></div></div>
+<p>That is an abbreviation for the following rules:</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="nv">A</span> <span class="o">-&gt;</span> <span class="nv">B</span><span class="o">:</span>
+<span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">t</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B1</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">t</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B2</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">B1</span> <span class="o">=</span> <span class="nv">B2</span><span class="p">.</span>
+<span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="nv">A</span> <span class="o">-&gt;</span> <span class="nv">C</span><span class="o">:</span>
+<span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">t</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">C1</span><span class="p">),</span> <span class="ss">t</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">C2</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">C1</span> <span class="o">=</span> <span class="nv">C2</span><span class="p">.</span>
+</code></pre></div></div>
+
+<p>Consider a relation s(<strong>A</strong>, <strong>B</strong>, C, D), where two columns <strong>A</strong> and <strong>B</strong> form the primary key of s(<strong>A</strong>, <strong>B</strong>, C, D).
+We declare this constraint by:</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">PK</span><span class="p">(</span><span class="ss">t</span><span class="p">,[</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">])</span>
+</code></pre></div></div>
+<p>That is an abbreviation for the following rules:</p>
+
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="nv">A</span><span class="p">,</span><span class="nv">B</span> <span class="o">-&gt;</span> <span class="nv">C</span><span class="o">:</span>
+<span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">C1</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">C2</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">C1</span> <span class="o">=</span> <span class="nv">C2</span><span class="p">.</span>
+<span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="nv">A</span><span class="p">,</span><span class="nv">B</span> <span class="o">-&gt;</span> <span class="nv">D</span><span class="o">:</span>
+<span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">D1</span><span class="p">),</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">D2</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">D1</span> <span class="o">=</span> <span class="nv">D2</span><span class="p">.</span>
+</code></pre></div></div>
 
       </section>
     </div>
@@ -74,7 +101,7 @@ The core syntax for Datalog supported by BIRDS is the following:</p>
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 18 Nov 2019</small></p>
+        <small>Last updated on 27 Nov 2019</small></p>
       </footer>
     </div>
 

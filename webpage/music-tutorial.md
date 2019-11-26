@@ -15,22 +15,24 @@ tracks1
  Mysong      | 2018 |      5 | Galore   |        1
  Lullaby     | 2018 |      3 | Show     |        3
 
-## Update strategy for `tracks2`
+## An update strategy for `tracks2`
 
 An update strategy on the view `tracks2` by using Datalog ([tracks2.dl]({{site.github.repository_url}}/tree/master/examples/music/tracks2.dl)):
 
 ```prolog
 % describe the schema of sources and views
-%s:tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY).
-%v:tracks2(TRACK,RATING,ALBUM,QUANTITY).
-
-%rule for insertion to tracks1
-+tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY),
-    not tracks1(TRACK,_,RATING,ALBUM,QUANTITY).
+source tracks1('TRACK':string,'DATE':int,'RATING':int,'ALBUM':string,'QUANTITY':int).
+view tracks2('TRACK':string,'RATING':int,'ALBUM':string,'QUANTITY':int).
 
 % rule for deletion from tracks1
 -tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY) :- tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY),
     not tracks2(TRACK,RATING,ALBUM,QUANTITY).
+
++tracks1(TRACK,DATE,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY),
+    not tracks1(TRACK,_,RATING,ALBUM,QUANTITY), tracks1(TRACK,DATE,_,ALBUM,_).
+
++tracks1(TRACK,2018,RATING,ALBUM,QUANTITY) :- tracks2(TRACK,RATING,ALBUM,QUANTITY),
+    not tracks1(TRACK,_,_,ALBUM,_).
 ```
 
 Verifying and compiling the update strategy into SQL statements saved in the file ([tracks2.sql]({{site.github.repository_url}}/tree/master/examples/music/tracks2.sql)):
@@ -39,17 +41,20 @@ Verifying and compiling the update strategy into SQL statements saved in the fil
 birds -v -f tracks2.dl -o tracks2.sql
 ```
 
-## Update strategy for `tracks3`
+## An update strategy for `tracks3`
 
 An update trategy on the view `tracks3` over the view `tracks2` by using Datalog ([tracks3.dl]({{site.github.repository_url}}/tree/master/examples/music/tracks3.dl)):
 
 ```prolog
 % describe the schema of sources and views
-source tracks2(TRACK:string,RATING:int,ALBUM:string,QUANTITY:int).
-view tracks3(TRACK:string,RATING:int,ALBUM:string,QUANTITY:int).
+source tracks2('TRACK':string,'RATING':int,'ALBUM':string,'QUANTITY':int).
+view tracks3('TRACK':string,'RATING':int,'ALBUM':string,'QUANTITY':int).
 
 % constraints:
-⊥ :- tracks3(T,R,A,Q), NOT Q>2.
+⊥() :- tracks3(T,R,A,Q), NOT Q>2.
+
+% view definition:
+% tracks3(T,R,A,Q) :- tracks2(T,R,A,Q),Q > 2.
 
 % rule for insertion to tracks2
 +tracks2(TRACK,RATING,ALBUM,QUANTITY) :- tracks3(TRACK,RATING,ALBUM,QUANTITY),

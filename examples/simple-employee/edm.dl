@@ -1,9 +1,9 @@
-%s:ed(ENAME,DEPT).
-%s:dm(DEPT,MGR).
-%v:edm(ENAME, DEPT,MGR).
+source ed('ENAME':string,'DEPT':string).
+source dm('DEPT':string,'MGR':string).
+view edm('ENAME':string, 'DEPT':string,'MGR':string).
 
-% definition of em: join two source relation on DEPT
-% edm(ENAME, DEPT, MGR) :- ed(ENAME, DEPT), dm(DEPT, MGR).
+% view definition
+edm(ENAME, DEPT, MGR) :- ed(ENAME, DEPT), dm(DEPT, MGR).
 
 % update strategy for edm
 

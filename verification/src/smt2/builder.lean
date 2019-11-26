@@ -67,6 +67,18 @@ term.apply ">" [t, u]
 def gte (t u : term) : term :=
 term.apply ">=" [t, u]
 
+def strlt (t u : term) : term :=
+term.apply "str.<" [t, u]
+
+def strlte (t u : term) : term :=
+term.apply "str.<=" [t, u]
+
+def strgt (t u : term) : term :=
+term.apply "not" [(term.apply "str.<=" [t, u])]
+
+def strgte (t u : term) : term :=
+term.apply "not" [(term.apply "str.>" [t, u])]
+
 def add (t u : term) : term :=
 term.apply "+" [t, u]
 
