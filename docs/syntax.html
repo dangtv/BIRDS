@@ -67,7 +67,7 @@ The core syntax for Datalog supported by BIRDS is the following:</p>
 
 <h3 id="primary-key">Primary key</h3>
 
-<p>BIRDS provides a shorthand syntax to declare primary key on relations.
+<p>BIRDS provides a shorthand syntax to declare primary keys on relations.
 Given a relation t(<strong>A</strong>, B, C), we can declare <strong>A</strong> as a primary key of t by:</p>
 
 <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">PK</span><span class="p">(</span><span class="ss">t</span><span class="p">,[</span><span class="nv">A</span><span class="p">]).</span>
@@ -87,9 +87,9 @@ We declare this constraint by:</p>
 </code></pre></div></div>
 <p>That is an abbreviation for the following rules:</p>
 
-<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="nv">A</span><span class="p">,</span><span class="nv">B</span> <span class="o">-&gt;</span> <span class="nv">C</span><span class="o">:</span>
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nv">C</span><span class="o">:</span>
 <span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">C1</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">C2</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">C1</span> <span class="o">=</span> <span class="nv">C2</span><span class="p">.</span>
-<span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="nv">A</span><span class="p">,</span><span class="nv">B</span> <span class="o">-&gt;</span> <span class="nv">D</span><span class="o">:</span>
+<span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nv">D</span><span class="o">:</span>
 <span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">D1</span><span class="p">),</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">D2</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">D1</span> <span class="o">=</span> <span class="nv">D2</span><span class="p">.</span>
 </code></pre></div></div>
 

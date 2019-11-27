@@ -30,7 +30,7 @@ In general, the verification in BIRDS is sound. BIRDS guarantees the completenes
 
 ### Primary key
 
-BIRDS provides a shorthand syntax to declare primary key on relations.
+BIRDS provides a shorthand syntax to declare primary keys on relations.
 Given a relation t(**A**, B, C), we can declare **A** as a primary key of t by:
 
 ```prolog
@@ -54,8 +54,8 @@ PK(t,[A,B]).
 That is an abbreviation for the following rules:
 
 ```prolog
-% for the functional dependency A,B -> C:
+% for the functional dependency (A,B) -> C:
 _|_ :- s(A,B,C1,_), s(A,B,C2,_), not C1 = C2.
-% for the functional dependency A,B -> D:
+% for the functional dependency (A,B) -> D:
 _|_ :- s(A,B,_,D1), s(A,B,_,D2), not D1 = D2.
 ``` 
