@@ -28,6 +28,9 @@ In general, the verification in BIRDS is sound. BIRDS guarantees the completenes
 
 ## Abbreviated syntax
 
+### Primary key
+
+BIRDS provides a shorthand syntax to declare primary key on relations.
 Given a relation t(**A**, B, C), we can declare **A** as a primary key of t by:
 
 ```prolog
