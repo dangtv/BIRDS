@@ -1,6 +1,6 @@
 # Changelog
 
-### 2019-11-15)
+### 2019-11-15
 * Fix bugs
 * Benchmarks
 * Modify the syntax of schema declaration

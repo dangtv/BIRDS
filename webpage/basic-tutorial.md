@@ -33,9 +33,9 @@ v
 The source schema and the view schema are defined as follows:
 
 ```prolog
-source s1(X:int, Y:int).
-source s2(X:int, Y:int).
-view v(X:int, Y:int).
+source s1('X':int, 'Y':int).
+source s2('X':int, 'Y':int).
+view v('X':int, 'Y':int).
 ```
 * Using the keywords `source` and `view` to distinguish source tables and view.
 * Each column is assigned a data type.
@@ -65,9 +65,9 @@ The following is a full Datalog program for an update strategy on the view `v(X,
 
 ```prolog
 % schema:
-source s1(X:int,Y:int).
-source s2(X:int,Y:int).
-view v(X:int,Y:int).
+source s1('X':int,'Y':int).
+source s2('X':int,'Y':int).
+view v('X':int,'Y':int).
 
 % rules for update strategy:
 -s1(X,Y) :- s1(X,Y), not v(X,Y).

@@ -105,9 +105,9 @@
 
 <p>The source schema and the view schema are defined as follows:</p>
 
-<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
-<span class="ss">source</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
-<span class="ss">view</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">source</span> <span class="ss">s1</span><span class="p">(</span><span class="ss">'X'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="ss">'Y'</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">s2</span><span class="p">(</span><span class="ss">'X'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="ss">'Y'</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">v</span><span class="p">(</span><span class="ss">'X'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span> <span class="ss">'Y'</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
 </code></pre></div></div>
 <ul>
   <li>Using the keywords <code class="highlighter-rouge">source</code> and <code class="highlighter-rouge">view</code> to distinguish source tables and view.</li>
@@ -143,9 +143,9 @@
 <p>The following is a full Datalog program for an update strategy on the view <code class="highlighter-rouge">v(X,Y)</code> (<a href="https://github.com/dangtv/BIRDS/tree/master/examples/basic_sample.dl">basic_sample.dl</a>):</p>
 
 <div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">%</span> <span class="ss">schema</span><span class="o">:</span>
-<span class="ss">source</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
-<span class="ss">source</span> <span class="ss">s2</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
-<span class="ss">view</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="nv">Y</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">s1</span><span class="p">(</span><span class="ss">'X'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="ss">'Y'</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">source</span> <span class="ss">s2</span><span class="p">(</span><span class="ss">'X'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="ss">'Y'</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
+<span class="ss">view</span> <span class="ss">v</span><span class="p">(</span><span class="ss">'X'</span><span class="o">:</span><span class="ss">int</span><span class="p">,</span><span class="ss">'Y'</span><span class="o">:</span><span class="ss">int</span><span class="p">).</span>
 
 <span class="err">%</span> <span class="ss">rules</span> <span class="ss">for</span> <span class="ss">update</span> <span class="ss">strategy</span><span class="o">:</span>
 <span class="o">-</span><span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">)</span> <span class="p">:-</span> <span class="ss">s1</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">),</span> <span class="ss">not</span> <span class="ss">v</span><span class="p">(</span><span class="nv">X</span><span class="p">,</span><span class="nv">Y</span><span class="p">).</span>
