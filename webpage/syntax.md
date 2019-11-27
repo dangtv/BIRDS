@@ -34,7 +34,7 @@ BIRDS provides a shorthand syntax to declare primary key on relations.
 Given a relation t(**A**, B, C), we can declare **A** as a primary key of t by:
 
 ```prolog
-PK(t,[A])
+PK(t,[A]).
 ```
 That is an abbreviation for the following rules:
 
@@ -49,7 +49,7 @@ Consider a relation s(**A**, **B**, C, D), where two columns **A** and **B** for
 We declare this constraint by:
 
 ```prolog
-PK(t,[A,B])
+PK(t,[A,B]).
 ```
 That is an abbreviation for the following rules:
 

@@ -70,7 +70,7 @@ The core syntax for Datalog supported by BIRDS is the following:</p>
 <p>BIRDS provides a shorthand syntax to declare primary key on relations.
 Given a relation t(<strong>A</strong>, B, C), we can declare <strong>A</strong> as a primary key of t by:</p>
 
-<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">PK</span><span class="p">(</span><span class="ss">t</span><span class="p">,[</span><span class="nv">A</span><span class="p">])</span>
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">PK</span><span class="p">(</span><span class="ss">t</span><span class="p">,[</span><span class="nv">A</span><span class="p">]).</span>
 </code></pre></div></div>
 <p>That is an abbreviation for the following rules:</p>
 
@@ -83,7 +83,7 @@ Given a relation t(<strong>A</strong>, B, C), we can declare <strong>A</strong> 
 <p>Consider a relation s(<strong>A</strong>, <strong>B</strong>, C, D), where two columns <strong>A</strong> and <strong>B</strong> form the primary key of s(<strong>A</strong>, <strong>B</strong>, C, D).
 We declare this constraint by:</p>
 
-<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">PK</span><span class="p">(</span><span class="ss">t</span><span class="p">,[</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">])</span>
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">PK</span><span class="p">(</span><span class="ss">t</span><span class="p">,[</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">]).</span>
 </code></pre></div></div>
 <p>That is an abbreviation for the following rules:</p>
 
