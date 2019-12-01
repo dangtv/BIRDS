@@ -34,7 +34,7 @@ BIRDS can be used via Command line interface (CLI) or Web-based interface (WebUI
 
 ### Command line tool
 
-See [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS) to install the command line tool `birds`.
+The instructions of building and installing the command line tool `birds` can be found at [https://github.com/dangtv/BIRDS](https://github.com/dangtv/BIRDS).
 
 To use the `birds` command:
 
@@ -66,9 +66,9 @@ birds [OPTIONS]
 --help      Display this list of options
 ```
 
-For example, this command will transform the update strategy described in `test1.dl` to sql:
+For example, this command will transform the update strategy described in `test.dl` to sql:
 ```bash
-birds -s public -f test.dl -o test.sql
+birds -f test.dl -o test.sql
 ```
 
 ### WebUI 

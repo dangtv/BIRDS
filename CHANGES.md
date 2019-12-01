@@ -1,11 +1,11 @@
 # Changelog
 
-### 2019-11-15
+### 0.0.3 (2019-11-15)
 * Fix bugs
 * Benchmarks
 * Modify the syntax of schema declaration
 
-### 0.0.3 (2019-09-07)
+### 2019-09-07
 * New WebUI
 * Add a new option timeout for the verification
 * Fix bugs of the data type real 
