@@ -1,5 +1,8 @@
 # Changelog
 
+### 2019-12-11
+* Incrementally calculate Dejima view updates.
+
 ### 0.0.3 (2019-11-15)
 * Fix bugs
 * Benchmarks

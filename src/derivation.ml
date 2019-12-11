@@ -796,6 +796,262 @@ let incrementalize_by_view (debug:bool) prog =
     1 *)
 ;;
 
+(** take a Datalog program of both get&put and derive an incremental Datalog program that calculates view updates from updates on a single source table **)
+let incrementalize_view_definition (debug:bool) update_table_rt prog = 
+  let bin_prog = binarize_expr debug prog in
+  let _, non_rules = seperate_rules bin_prog in
+  let edb = extract_edb bin_prog in
+  let view_rt = get_schema_rterm (get_view bin_prog) in
+  let idb = extract_idb bin_prog in
+  preprocess_rules idb;
+  let strat = stratify edb idb view_rt in
+  let rule_lst_lst = List.map (fun x -> if (Hashtbl.mem idb x) then Hashtbl.find idb x else []) strat in
+  let is_inc inc_symtkey rt = List.mem (symtkey_of_rterm rt) inc_symtkey in
+  let inc_key = [symtkey_of_rterm update_table_rt] in 
+  let init_rules = [(Rule(update_table_rt,[Rel (get_inc_original update_table_rt); Not (get_inc_del update_table_rt)]));
+  (Rule(update_table_rt,[Rel (get_inc_ins update_table_rt)]))] in
+  let incrementalize (inc_key, lst) rules = 
+    match rules with 
+    [] -> (inc_key, lst) 
+    | [r] ->
+      let head = rule_head r in 
+      let body = rule_body r in 
+      (match body with 
+        [Rel p_rt] -> 
+          (* projection *)
+          if is_inc inc_key p_rt then
+            let drop_vars = subtract (get_rterm_varlist p_rt) (get_rterm_varlist head) in
+             (*for special case, drop_vars is empty or vars of the head is empty  *)
+            if ((List.length drop_vars = 0) || (List.length (get_rterm_varlist head) = 0)) then 
+              ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (get_inc_original p_rt)]); 
+                Rule(get_inc_del head, [Rel (get_inc_del p_rt)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins p_rt)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+            else ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (get_inc_original p_rt)]); 
+                Rule(get_inc_ins head, [Rel (get_inc_ins p_rt)]);
+
+                (* the first way using count*)
+                (* Rule(Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[AggVar("COUNT", string_of_var (List.hd drop_vars)) ]), [Rel (get_inc_del p_rt)]);
+                Rule(Pred(get_rterm_predname head ^ "__dummy__t2", (get_rterm_varlist head)@[AggVar("COUNT", string_of_var (List.hd drop_vars)) ]), [Rel (get_inc_original p_rt); Rel( Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[AnonVar])) ]);
+                Rule(get_inc_del head, [Rel (Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[NamedVar "DUMMY__C1"])); Rel (Pred(get_rterm_predname head ^ "__dummy__t2", (get_rterm_varlist head)@[NamedVar "DUMMY__C2"])); Equal(Var (NamedVar "DUMMY__C1"), Var (NamedVar "DUMMY__C2")) ]) *)
+
+                (* the sencond way not using count*)
+                Rule(Pred(get_rterm_predname head ^ "π_1", (get_rterm_varlist head)), [Rel (p_rt)]);
+                Rule(get_inc_del head, [Rel (get_inc_del p_rt); Not(Pred(get_rterm_predname head ^ "π_1", (get_rterm_varlist head)))])
+                ]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          else (inc_key, lst@rules)
+        | [Rel aa; Rel bb] -> 
+          (* aa is corresponding to r1, bb is corresponding to r2 *)
+          (* join and selection *)
+          ( match (List.mem (symtkey_of_rterm aa) inc_key, List.mem (symtkey_of_rterm bb) inc_key) with 
+          (false, false) -> (inc_key, lst@rules)
+          | (true, false) -> 
+            (* only one relation *)
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (get_inc_original aa); Rel (bb)]); 
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Rel(bb)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins aa); Rel( bb)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+
+          | (false, true) -> 
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (aa); Rel (get_inc_original bb)]); 
+                Rule(get_inc_del head, [Rel( aa); Rel(get_inc_del bb)]);
+                Rule(get_inc_ins head, [Rel (aa); Rel(get_inc_ins bb)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          | (true, true) -> 
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (get_inc_original aa); Rel (get_inc_original bb)]); 
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Rel(get_inc_original bb)]);
+                Rule(get_inc_del head, [Rel(get_inc_original aa); Rel(get_inc_del bb)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins aa); Rel(bb)]); 
+                Rule(get_inc_ins head, [Rel (aa); Rel(get_inc_ins bb)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          )
+        | [Rel aa; Not bb] -> 
+          (* negation *)
+          ( match (List.mem (symtkey_of_rterm aa) inc_key, List.mem (symtkey_of_rterm bb) inc_key) with 
+          (false, false) -> (inc_key, lst@rules)
+          | (true, false) -> 
+            (* only one relation *)
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (get_inc_original aa); Not (bb)]); 
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Not(bb)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins aa); Not(bb)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+
+          | (false, true) -> 
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (aa); Not (get_inc_original bb)]); 
+                Rule(get_inc_del head, [Rel(aa); Rel(get_inc_ins bb)]);
+                Rule(get_inc_ins head, [Rel (aa); Rel(get_inc_del bb)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          | (true, true) -> 
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (get_inc_original aa); Not (get_inc_original bb)]); 
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Not(get_inc_original bb)]);
+                Rule(get_inc_del head, [Rel(get_inc_original aa); Rel(get_inc_ins bb)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins aa); Not(bb)]); 
+                Rule(get_inc_ins head, [Rel (aa); Rel(get_inc_del bb)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          )
+        | (Rel p_rt) :: buitin_t -> 
+          (* join a relation with equality, not that equality has no delta*)
+          if(List.mem (symtkey_of_rterm p_rt) inc_key) then
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, Rel (get_inc_original p_rt)::buitin_t); 
+                Rule(get_inc_del head, Rel (get_inc_del p_rt)::buitin_t);
+                Rule(get_inc_ins head, Rel (get_inc_ins p_rt)::buitin_t )]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          else (inc_key, lst@rules)
+        | (Not p_rt) :: buitin_t -> 
+          (* join a relation with equality, note that equality has no delta*)
+          if(List.mem (symtkey_of_rterm p_rt) inc_key) then
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, Not (get_inc_original p_rt)::buitin_t); 
+                Rule(get_inc_del head, Rel (get_inc_ins p_rt)::buitin_t);
+                Rule(get_inc_ins head, Rel (get_inc_del p_rt)::buitin_t )]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          else (inc_key, lst@rules)
+        | _ -> invalid_arg "function incrementalize called with not a valid list" 
+      )
+    | [Rule(head,[Rel aa]); Rule(_,[Rel temp_bb])] -> 
+      (* this is for the case of union *)
+      let bb = change_vars temp_bb (get_rterm_varlist head) in
+      ( match (List.mem (symtkey_of_rterm aa) inc_key, List.mem (symtkey_of_rterm bb) inc_key) with 
+          (false, false) -> (inc_key, lst@rules)
+          | (true, false) -> 
+            (* only one relation *)
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (get_inc_original aa)]); 
+                Rule(get_inc_original head, [Rel (bb)]);
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Not(bb)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins aa)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+
+          | (false, true) -> 
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (aa)]); 
+                Rule(get_inc_original head, [Rel (get_inc_original bb)]);
+                Rule(get_inc_del head, [Rel(get_inc_del bb); Not(aa)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins bb)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          | (true, true) -> 
+            ((symtkey_of_rterm head)::inc_key, 
+              lst@[
+                Rule(get_inc_original head, [Rel (get_inc_original aa)]); 
+                Rule(get_inc_original head, [Rel (get_inc_original bb)]);
+                Rule(get_inc_del head, [Rel (get_inc_del aa); Not(bb)]);
+                (* Rule(get_inc_del head, [Rel(get_inc_del bb); Not(get_inc_original aa); Not(get_inc_ins aa)]);
+                Rule(get_inc_del head, [Rel(get_inc_del aa); Rel(get_inc_del bb)]); *)
+                Rule(get_inc_del head, [Rel(get_inc_del bb); Not(aa)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins aa)]); 
+                Rule(get_inc_ins head, [Rel (get_inc_ins bb)])]@
+                if is_delta_or_empty head then
+                  [Rule(head,[Rel (get_inc_ins head)]) ]
+                else
+                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
+                Rule(head,[Rel (get_inc_ins head)]) ] *)
+                rules
+              )
+          )
+    | _ -> invalid_arg ("function incrementalize called with a list of "^string_of_int (List.length rules)^" elements: \n"^ Expr.string_of_prog (Prog rules) ) in
+  let _, inc_rules = List.fold_left incrementalize (inc_key, []) rule_lst_lst in 
+  if debug then (
+    print_endline "_____incrementalize_view_definition datalog rules_______"; 
+    print_endline (Expr.string_of_prog (Prog (non_rules@init_rules@inc_rules)));
+    print_endline "______________\n";
+  ) else (); 
+  Prog (non_rules@init_rules@inc_rules)
+;;
+
 (* given a program, substitute a predicate in its rules (not schema statements) to a new one *)
 let subst_pred (old_pred:string) (new_pred:string) prog = 
   match prog with 

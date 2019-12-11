@@ -617,16 +617,180 @@ let unfold_delta_sql_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:boo
 ;;
 
 (** SQL for triggers of detecting update on the source relations, which call the action of executing shell script on the view*)
-let source_update_detection_trigger_stt (dbschema:string) (debug:bool) prog =
+let source_update_detection_trigger_stt (dbschema:string) (debug:bool) (dejima_user:string) prog =
     let view_rt = get_schema_rterm (get_view prog) in
     let view_name = get_rterm_predname view_rt in
-    let all_source = (List.map (fun x -> get_schema_rterm x) (get_source_stts prog)) in 
+    let all_source = get_source_stts prog in 
     let sql_lst = List.map (fun x  -> 
-        let  source_name = get_rterm_predname x in 
-        "DROP TRIGGER IF EXISTS "^source_name^"_detect_update_"^view_name^" ON "^dbschema^"."^source_name^";
-        CREATE TRIGGER "^source_name^"_detect_update_"^view_name^"
-            AFTER INSERT OR UPDATE OR DELETE ON
-            "^dbschema^"."^source_name^" FOR EACH STATEMENT EXECUTE PROCEDURE "^dbschema^"."^view_name^"_detect_update();")
+        let source_rt = get_schema_rterm x in
+        let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (get_temp_rterm source_rt)) )) ^")" in
+        let source_name = get_rterm_predname source_rt in 
+        let inc_view_definition_raw = incrementalize_view_definition debug source_rt prog in
+        let new_source_rt = rename_rterm "new_" source_rt in
+        let subst_prog = subst_pred (get_rterm_predname source_rt) (get_rterm_predname new_source_rt) inc_view_definition_raw in
+        let inc_view_definition = add_stts [
+        (Source(get_rterm_predname (get_temp_delta_deletion_rterm source_rt), get_schema_col_typs x ));
+        (Source(get_rterm_predname (get_temp_delta_insertion_rterm source_rt), get_schema_col_typs x ));
+        (Rule(get_inc_original source_rt,[Rel (source_rt)]));
+        (Rule(get_inc_ins source_rt,[Rel (get_temp_delta_insertion_rterm source_rt)]));
+        (Rule(get_inc_del source_rt,[Rel (get_temp_delta_deletion_rterm source_rt)]))
+        ] subst_prog in
+        (* print_endline (non_rec_unfold_sql_of_symtkey dbschema idb cnt (symtkey_of_rterm (get_inc_del view_rt))); *)
+
+"
+CREATE OR REPLACE FUNCTION "^dbschema^"."^source_name^"_materialization()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+text_var1 text;
+text_var2 text;
+text_var3 text;
+BEGIN
+    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^"' OR table_name = '"^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^"')
+    THEN
+        -- RAISE LOG 'execute procedure "^source_name^"_materialization';
+        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (source_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
+        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (source_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
+    END IF;
+    RETURN NULL;
+EXCEPTION
+    WHEN object_not_in_prerequisite_state THEN
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to "^dbschema^"."^source_name^"';
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
+                                text_var2 = PG_EXCEPTION_DETAIL,
+                                text_var3 = MESSAGE_TEXT;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of "^dbschema^"."^source_name^" ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS "^source_name^"_trigger_materialization ON "^dbschema^"."^source_name^";
+CREATE TRIGGER "^source_name^"_trigger_materialization
+    BEFORE INSERT OR UPDATE OR DELETE ON
+    "^dbschema^"."^source_name^" FOR EACH STATEMENT EXECUTE PROCEDURE "^dbschema^"."^source_name^"_materialization();
+
+CREATE OR REPLACE FUNCTION "^dbschema^"."^source_name^"_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+text_var1 text;
+text_var2 text;
+text_var3 text;
+BEGIN
+    -- RAISE LOG 'execute procedure "^source_name^"_update';
+    IF TG_OP = 'INSERT' THEN
+    -- RAISE LOG 'NEW: %', NEW;
+    IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN 
+        RAISE check_violation USING MESSAGE = 'Invalid update: null value is not accepted';
+    END IF;
+    DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
+    INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^" SELECT (NEW).*; 
+    ELSIF TG_OP = 'UPDATE' THEN
+    IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN 
+        RAISE check_violation USING MESSAGE = 'Invalid update: null value is not accepted';
+    END IF;
+    DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+    INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^" SELECT (OLD).*;
+    DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
+    INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^" SELECT (NEW).*; 
+    ELSIF TG_OP = 'DELETE' THEN
+    -- RAISE LOG 'OLD: %', OLD;
+    DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+    INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^" SELECT (OLD).*;
+    END IF;
+    RETURN NULL;
+EXCEPTION
+    WHEN object_not_in_prerequisite_state THEN
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to "^dbschema^"."^source_name^"';
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
+                                text_var2 = PG_EXCEPTION_DETAIL,
+                                text_var3 = MESSAGE_TEXT;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the trigger of "^dbschema^"."^source_name^" ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS "^source_name^"_trigger_update ON "^dbschema^"."^source_name^";
+CREATE TRIGGER "^source_name^"_trigger_update
+    AFTER INSERT OR UPDATE OR DELETE ON
+    "^dbschema^"."^source_name^" FOR EACH ROW EXECUTE PROCEDURE "^dbschema^"."^source_name^"_update();
+
+CREATE OR REPLACE FUNCTION "^dbschema^"."^source_name^"_detect_update_on_"^view_name^"()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+text_var1 text;
+text_var2 text;
+text_var3 text;
+func text;
+tv text;
+deletion_data text;
+insertion_data text;
+json_data text;
+result text;
+user_name text;
+BEGIN
+IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
+    insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM ("^(
+        let opt_view_definition = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_ins view_rt)) inc_view_definition)) in
+        unfold_program_query dbschema debug opt_view_definition
+        )
+        ^") as t);
+    IF insertion_data IS NOT DISTINCT FROM NULL THEN 
+        insertion_data := '[]';
+    END IF; 
+    deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM ("^(
+        let opt_view_definition = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_del view_rt)) inc_view_definition)) in
+        unfold_program_query dbschema debug opt_view_definition
+    )^") as t);
+    IF deletion_data IS NOT DISTINCT FROM NULL THEN 
+        deletion_data := '[]';
+    END IF; 
+    IF (insertion_data IS DISTINCT FROM '[]') OR (deletion_data IS DISTINCT FROM '[]') THEN 
+        user_name := (SELECT session_user);
+        IF NOT (user_name = '"^dejima_user^"') THEN 
+            json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertions\": ' , insertion_data , ', ' , '\"deletions\": ' , deletion_data , '}');
+            result := "^dbschema^"."^view_name^"_run_shell(json_data);
+            IF result = 'true' THEN 
+                DROP TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^";
+                DROP TABLE "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^";
+            ELSE
+                -- RAISE LOG 'result from running the sh script: %', result;
+                RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool, result from running the sh script: ' 
+                || result;
+            END IF;
+        ELSE 
+            RAISE LOG 'function of detecting dejima update is called by % , no request sent to dejima proxy', user_name;
+        END IF;
+    END IF;
+END IF;
+RETURN NULL;
+EXCEPTION
+    WHEN object_not_in_prerequisite_state THEN
+        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to "^dbschema^"."^source_name^"';
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
+                                text_var2 = PG_EXCEPTION_DETAIL,
+                                text_var3 = MESSAGE_TEXT;
+        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the function "^dbschema^"."^source_name^"_detect_update_on_"^view_name^"() ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
+        RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS "^source_name^"_detect_update_on_"^view_name^" ON "^dbschema^"."^source_name^";
+CREATE TRIGGER "^source_name^"_detect_update_on_"^view_name^"
+    AFTER INSERT OR UPDATE OR DELETE ON
+    "^dbschema^"."^source_name^" FOR EACH STATEMENT EXECUTE PROCEDURE "^dbschema^"."^source_name^"_detect_update_on_"^view_name^"();
+
+")
         all_source in 
     String.concat "\n \n" sql_lst
 ;;
@@ -640,22 +804,26 @@ let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (dejima_update_detec
     (* convert these cols to string of tuple of these cols *)
     let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (get_temp_rterm view_rt)) )) ^")" in
     let (vardec, delta_sql_stt) = unfold_delta_sql_stt dbschema debug inc optimize prog in
-    let source_trigger_sql = source_update_detection_trigger_stt dbschema debug prog in
+    let source_trigger_sql = source_update_detection_trigger_stt dbschema debug dejima_user prog in
     let trigger_pgsql = 
 ( 
-if dejima_update_detect then "
+if dejima_update_detect then 
+(* "
 DROP MATERIALIZED VIEW IF EXISTS "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^";
 
 CREATE  MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^" AS 
 SELECT * FROM "^dbschema^"."^view_name^";
 
+" ^ *)
+
+"
 CREATE EXTENSION IF NOT EXISTS plsh;
 
 CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_run_shell(text) RETURNS text AS $$
 "^sh_script^"
 $$ LANGUAGE plsh;
-"^(
-    let func_body = 
+"^
+    (* (let func_body = 
 "LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
@@ -727,7 +895,9 @@ RETURNS text
 func_body
 )^"
 
-"^source_trigger_sql else "")^"
+"^ *)
+source_trigger_sql else "")
+^"
 
 CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_delta_action()
 RETURNS TRIGGER
@@ -759,11 +929,11 @@ AS $$
         "^delta_sql_stt^
         (if dejima_update_detect then "
         
-        insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" EXCEPT SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^") as t);
+        insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^") as t);
         IF insertion_data IS NOT DISTINCT FROM NULL THEN 
             insertion_data := '[]';
         END IF; 
-        deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" INTERSECT SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^") as t);
+        deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^") as t);
         IF deletion_data IS NOT DISTINCT FROM NULL THEN 
             deletion_data := '[]';
         END IF; 
@@ -772,9 +942,7 @@ AS $$
             IF NOT (user_name = '"^dejima_user^"') THEN 
                 json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertions\": ' , insertion_data , ', ' , '\"deletions\": ' , deletion_data , '}');
                 result := "^dbschema^"."^view_name^"_run_shell(json_data);
-                IF result = 'true' THEN 
-                    REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^";
-                ELSE
+                IF NOT (result = 'true') THEN
                     -- RAISE LOG 'result from running the sh script: %', result;
                     RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool, result from running the sh script: ' 
                     || result;

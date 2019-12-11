@@ -28,3 +28,5 @@ webui/node_modules/
 webui/client/node_modules/
 webui/server/node_modules/
 leanpkg.path
+
+depend
