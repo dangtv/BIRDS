@@ -12,7 +12,7 @@
 <meta name="generator" content="Jekyll v3.8.3" />
 <meta property="og:locale" content="en_US" />
 <script type="application/ld+json">
-{"@type":"WebSite","url":"/","@context":"http://schema.org"}</script>
+{"url":"/","@type":"WebSite","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
   </head>
@@ -35,9 +35,13 @@
 
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer, wrapper">
-      <section id="main_content" class="inner">
-          <!-- <p>Table of Contents</p> -->
-        <h1 id="overview">Overview</h1>
+      <div class="inner">
+          <nav>
+              <h3>Contents</h3>
+              <ul></ul>
+            </nav>
+        <section id="main_content">
+          <h1 id="overview">Overview</h1>
 
 <p>BIRDS (<strong>BI</strong>directional transformation for <strong>R</strong>elational view update <strong>D</strong>atalog-based <strong>S</strong>trategies) is a framework for programming view update strategies on relations in Datalog. 
 The framework is based on the theory of (putback-based) bidirectional transformations (BX) but specifically developed for relational database management systems (RDBMSs).
@@ -49,7 +53,7 @@ BIRDS frees programmers from the burden of manually:</p>
   <li>Translating update strategies into triggers and trigger procedures for views in PostgreSQL to handle SQL DML statements of UPDATE/INSERT/DELETE on the views.</li>
 </ul>
 
-<h1 id="view-update-strategy-how-to-write-">View update strategy: How to write ?</h1>
+<h1 id="view-update-strategy-how-to-write">View update strategy: How to write?</h1>
 <p>We are given schemas of tables and a view. Traditionally, over the base tables, we write a query that defines the view. However, this defining query is not enough to determine how view updates are propagated to the base tables.</p>
 
 <p>BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy can be completely described by a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view.</p>
@@ -130,7 +134,8 @@ See the <a href="triggers.html">trigger generation</a> for details.</p>
 </ul>
 
 
-      </section>
+        </section>
+      </div>
     </div>
     
     <!-- FOOTER  -->
@@ -141,7 +146,7 @@ See the <a href="triggers.html">trigger generation</a> for details.</p>
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 29 Nov 2019</small></p>
+        <small>Last updated on 13 Dec 2019</small></p>
       </footer>
     </div>
 

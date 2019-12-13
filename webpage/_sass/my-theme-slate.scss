@@ -69,7 +69,7 @@ h1 {
 h2 {
   padding-bottom: 10px;
   font-size: 24px;
-  background: url('../images/bg_hr.png') repeat-x bottom;
+  // background: url('../images/bg_hr.png') repeat-x bottom;
 }
 
 h3 {
@@ -230,7 +230,7 @@ hr {
   height: 1px;
   margin-bottom: 5px;
   border: none;
-  background: url('../images/bg_hr.png') repeat-x center;
+  // background: url('../images/bg_hr.png') repeat-x center;
 }
 
 table {
@@ -252,7 +252,7 @@ td {
  }
 
 form {
-  background: #f2f2f2;
+  background: #ffffff;
   padding: 20px;
 }
 
@@ -356,7 +356,7 @@ Full-Width Styles
 }
 
 #main_content_wrap {
-  background: #f2f2f2;
+  background: #ffffff;
   border-top: 1px solid #111;
   border-bottom: 1px solid #111;
 }
@@ -364,10 +364,20 @@ Full-Width Styles
 #main_content {
   padding-top: 40px;
   padding-bottom: 20px;
+  // margin-left: auto;
+  width: 76%;
+  position: relative;
+  left: 21%;
+  // max-width: 800px;
+  padding: 5px 10px;
 }
 
 #footer_wrap {
   background: #212121;
+}
+
+.highlight {
+  background-color: #ffffff;
 }
 
 
@@ -481,10 +491,12 @@ Small Device Styles
 }
 
 nav {
-  // width: 230px;
-  // position: fixed;
-  // top: 270px;
-  // left:50%;
+  width: 20%;
+  position: fixed;
+  top: 160px;
+  max-width: 200px;
+  // margin-left: auto;;
+  // left:10%;
   // margin-left:-580px;
   // text-align: right;
 
@@ -503,7 +515,8 @@ nav {
       // right:-12px;
 
       &.tag-h1 {
-        font-size: 1.2em;
+        padding-left: 2px;;
+        font-size: 1.0em;
 
         a {
           font-weight: bold;
@@ -511,12 +524,12 @@ nav {
         }
 
         + .tag-h2 {
-
         }
       }
 
       &.tag-h2 {
-
+        padding-left: 10px;;
+        font-size: 0.9em;
         + .tag-h1 {
           margin-top:10px;
         }
@@ -529,9 +542,10 @@ nav {
       &:hover { color: #999; }
     }
 
-    // .active {
-    //   border-right:solid 4px #39C;
-    //   padding-right:13px;
-    // }
+    .active {
+      border-right:solid 4px #39C;
+      background: #f2f2f2;
+      padding-right:13px;
+    }
   }
 }

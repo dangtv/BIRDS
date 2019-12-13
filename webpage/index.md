@@ -12,7 +12,7 @@ BIRDS frees programmers from the burden of manually:
 * Optimizing view update strategies,
 * Translating update strategies into triggers and trigger procedures for views in PostgreSQL to handle SQL DML statements of UPDATE/INSERT/DELETE on the views. 
 
-# View update strategy: How to write ?
+# View update strategy: How to write?
 We are given schemas of tables and a view. Traditionally, over the base tables, we write a query that defines the view. However, this defining query is not enough to determine how view updates are propagated to the base tables.
 
 BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy can be completely described by a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view. 

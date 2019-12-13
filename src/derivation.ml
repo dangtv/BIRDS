@@ -571,7 +571,7 @@ let incrementalize_by_view (debug:bool) prog =
             else ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 Rule(get_inc_original head, [Rel (get_inc_original p_rt)]); 
-                Rule(get_inc_ins head, [Rel (get_inc_ins p_rt)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins p_rt); Not(get_inc_original head)]);
 
                 (* the first way using count*)
                 (* Rule(Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[AggVar("COUNT", string_of_var (List.hd drop_vars)) ]), [Rel (get_inc_del p_rt)]);
@@ -838,7 +838,7 @@ let incrementalize_view_definition (debug:bool) update_table_rt prog =
             else ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 Rule(get_inc_original head, [Rel (get_inc_original p_rt)]); 
-                Rule(get_inc_ins head, [Rel (get_inc_ins p_rt)]);
+                Rule(get_inc_ins head, [Rel (get_inc_ins p_rt); Not(get_inc_original head)]);
 
                 (* the first way using count*)
                 (* Rule(Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[AggVar("COUNT", string_of_var (List.hd drop_vars)) ]), [Rel (get_inc_del p_rt)]);

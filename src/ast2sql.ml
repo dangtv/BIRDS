@@ -623,7 +623,7 @@ let source_update_detection_trigger_stt (dbschema:string) (debug:bool) (dejima_u
     let all_source = get_source_stts prog in 
     let sql_lst = List.map (fun x  -> 
         let source_rt = get_schema_rterm x in
-        let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (get_temp_rterm source_rt)) )) ^")" in
+        let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (source_rt)) )) ^")" in
         let source_name = get_rterm_predname source_rt in 
         let inc_view_definition_raw = incrementalize_view_definition debug source_rt prog in
         let new_source_rt = rename_rterm "new_" source_rt in
@@ -631,7 +631,8 @@ let source_update_detection_trigger_stt (dbschema:string) (debug:bool) (dejima_u
         let inc_view_definition = add_stts [
         (Source(get_rterm_predname (get_temp_delta_deletion_rterm source_rt), get_schema_col_typs x ));
         (Source(get_rterm_predname (get_temp_delta_insertion_rterm source_rt), get_schema_col_typs x ));
-        (Rule(get_inc_original source_rt,[Rel (source_rt)]));
+        (Source(get_rterm_predname (get_temp_rterm source_rt), get_schema_col_typs x ));
+        (Rule(get_inc_original source_rt,[Rel (get_temp_rterm source_rt)]));
         (Rule(get_inc_ins source_rt,[Rel (get_temp_delta_insertion_rterm source_rt)]));
         (Rule(get_inc_del source_rt,[Rel (get_temp_delta_deletion_rterm source_rt)]))
         ] subst_prog in
@@ -653,6 +654,8 @@ BEGIN
         -- RAISE LOG 'execute procedure "^source_name^"_materialization';
         CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (source_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
         CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (source_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
+        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_rterm source_rt))^" WITH OIDS ON COMMIT DROP AS (SELECT * FROM " ^dbschema^"."^(get_rterm_predname (source_rt)) ^");
+        
     END IF;
     RETURN NULL;
 EXCEPTION
@@ -762,6 +765,7 @@ IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^vie
             IF result = 'true' THEN 
                 DROP TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^";
                 DROP TABLE "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^";
+                DROP TABLE "^(get_rterm_predname (get_temp_rterm source_rt))^";
             ELSE
                 -- RAISE LOG 'result from running the sh script: %', result;
                 RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool, result from running the sh script: ' 

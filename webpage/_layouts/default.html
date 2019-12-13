@@ -34,13 +34,15 @@
 
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer, wrapper">
-      <section id="main_content" class="inner">
-          <!-- <p>Table of Contents</p> -->
+      <div class="inner">
           <nav>
-            <ul></ul>
-          </nav>
-        {{ content }}
-      </section>
+              <h3>Contents</h3>
+              <ul></ul>
+            </nav>
+        <section id="main_content">
+          {{ content }}
+        </section>
+      </div>
     </div>
     
     <!-- FOOTER  -->
