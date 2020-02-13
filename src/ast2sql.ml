@@ -773,6 +773,22 @@ IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^vie
             END IF;
         ELSE 
             RAISE LOG 'function of detecting dejima update is called by % , no request sent to dejima proxy', user_name;
+
+            -- update the table that stores the insertions and deletions we calculated
+            DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
+            INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_deletions
+                "^(
+                    let opt_view_definition = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_del view_rt)) inc_view_definition)) in
+                    unfold_program_query dbschema debug opt_view_definition
+                )^";
+
+            DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
+            INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_insertions
+                "^(
+                let opt_view_definition = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_ins view_rt)) inc_view_definition)) in
+                unfold_program_query dbschema debug opt_view_definition
+                )
+                ^";
         END IF;
     END IF;
 END IF;
@@ -822,6 +838,38 @@ SELECT * FROM "^dbschema^"."^view_name^";
 
 "
 CREATE EXTENSION IF NOT EXISTS plsh;
+
+CREATE TABLE "^dbschema^".__dummy__"^view_name^"_detected_deletions ( LIKE public.dejima_bank INCLUDING ALL );
+CREATE TABLE "^dbschema^".__dummy__"^view_name^"_detected_insertions ( LIKE public.dejima_bank INCLUDING ALL );
+
+CREATE OR REPLACE FUNCTION public.dejima_bank_get_detected_update_data()
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+  DECLARE
+  deletion_data text;
+  insertion_data text;
+  json_data text;
+  BEGIN
+    insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions as t);
+    IF insertion_data IS NOT DISTINCT FROM NULL THEN 
+        insertion_data := '[]';
+    END IF; 
+    deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions as t);
+    IF deletion_data IS NOT DISTINCT FROM NULL THEN 
+        deletion_data := '[]';
+    END IF; 
+    IF (insertion_data IS DISTINCT FROM '[]') OR (deletion_data IS DISTINCT FROM '[]') THEN 
+        -- calcuate the update data
+        json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertions\": ' , insertion_data , ', ' , '\"deletions\": ' , deletion_data , '}');
+        -- clear the update data
+        DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
+        DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
+    END IF;
+    RETURN json_data;
+  END;
+$$;
 
 CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_run_shell(text) RETURNS text AS $$
 "^sh_script^"
@@ -953,6 +1001,15 @@ AS $$
                 END IF;
             ELSE 
                 RAISE LOG 'function of detecting dejima update is called by % , no request sent to dejima proxy', user_name;
+
+                -- update the table that stores the insertions and deletions we calculated
+                DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
+                INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_deletions
+                    SELECT * FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^";
+
+                DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
+                INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_insertions
+                    SELECT * FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^";
             END IF;
         END IF;" else "") ^"
     END IF;

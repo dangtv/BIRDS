@@ -2,6 +2,8 @@ destination: ../docs
 exclude: ['README.md', 'Gemfile.lock', 'Gemfile', 'jekyll-theme-slate.gemspec', 'LICENSE']
 show_downloads: false
 execution_downloads: true
+title: BIRDS
+description: Bidirectional Transformation for Relational View Update Datalog-based Strategies
 google_analytics:
 theme: jekyll-theme-slate
 github:
