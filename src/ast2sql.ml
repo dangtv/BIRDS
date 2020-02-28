@@ -636,6 +636,8 @@ let source_update_detection_trigger_stt (dbschema:string) (debug:bool) (dejima_u
         (Rule(get_inc_ins source_rt,[Rel (get_temp_delta_insertion_rterm source_rt)]));
         (Rule(get_inc_del source_rt,[Rel (get_temp_delta_deletion_rterm source_rt)]))
         ] subst_prog in
+        let ins_view_optimized_datalog = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_ins view_rt)) inc_view_definition)) in 
+        let del_view_optimized_datalog = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_del view_rt)) inc_view_definition)) in
         (* print_endline (non_rec_unfold_sql_of_symtkey dbschema idb cnt (symtkey_of_rterm (get_inc_del view_rt))); *)
 
 "
@@ -743,16 +745,14 @@ user_name text;
 BEGIN
 IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
     insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM ("^(
-        let opt_view_definition = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_ins view_rt)) inc_view_definition)) in
-        unfold_program_query dbschema debug opt_view_definition
+        unfold_program_query dbschema debug ins_view_optimized_datalog
         )
         ^") as t);
     IF insertion_data IS NOT DISTINCT FROM NULL THEN 
         insertion_data := '[]';
     END IF; 
     deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM ("^(
-        let opt_view_definition = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_del view_rt)) inc_view_definition)) in
-        unfold_program_query dbschema debug opt_view_definition
+        unfold_program_query dbschema debug del_view_optimized_datalog
     )^") as t);
     IF deletion_data IS NOT DISTINCT FROM NULL THEN 
         deletion_data := '[]';
@@ -778,15 +778,13 @@ IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^vie
             DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
             INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_deletions
                 "^(
-                    let opt_view_definition = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_del view_rt)) inc_view_definition)) in
-                    unfold_program_query dbschema debug opt_view_definition
+                    unfold_program_query dbschema debug del_view_optimized_datalog
                 )^";
 
             DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
             INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_insertions
                 "^(
-                let opt_view_definition = (Ast2fol.optimize_query_datalog debug (insert_stt (Query (get_inc_ins view_rt)) inc_view_definition)) in
-                unfold_program_query dbschema debug opt_view_definition
+                unfold_program_query dbschema debug ins_view_optimized_datalog
                 )
                 ^";
         END IF;
@@ -824,7 +822,6 @@ let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (dejima_update_detec
     (* convert these cols to string of tuple of these cols *)
     let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (get_temp_rterm view_rt)) )) ^")" in
     let (vardec, delta_sql_stt) = unfold_delta_sql_stt dbschema debug inc optimize prog in
-    let source_trigger_sql = source_update_detection_trigger_stt dbschema debug dejima_user prog in
     let trigger_pgsql = 
 ( 
 if dejima_update_detect then 
@@ -948,7 +945,7 @@ func_body
 )^"
 
 "^ *)
-source_trigger_sql else "")
+source_update_detection_trigger_stt dbschema debug dejima_user prog else "")
 ^"
 
 CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_delta_action()

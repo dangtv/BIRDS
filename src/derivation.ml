@@ -382,21 +382,14 @@ let extract_projection_rules (st:symtable) =
 (** take a view update datalog program and extract projections to other rules *)
 let extract_projection_expr (debug:bool) prog = 
   let _, non_rules = seperate_rules prog in
-  (* let edb = extract_edb prog in *)
-  (* need to change the view (in query predicate) to a edb relation *)
-  let view_rt = get_schema_rterm (get_view prog) in
-  (* need to convert the view to be an edb relation *)
-  (* symt_insert edb (Rule(view_rt,[])); *)
   let idb = extract_idb prog in
-  let view_rules = Hashtbl.find idb (symtkey_of_rterm view_rt) in
-  symt_remove idb (symtkey_of_rterm view_rt);
   preprocess_rules idb;
   if debug then (
                     print_endline "_____projection-preprocessed datalog rules_______"; 
-                    print_endline (Expr.string_of_prog (Prog(non_rules @ view_rules @ (extract_projection_rules idb))));
+                    print_endline (Expr.string_of_prog (Prog(non_rules @ (extract_projection_rules idb))));
                     print_endline "______________\n";
                 ) else ();   
-  Prog(non_rules @ view_rules @ (extract_projection_rules idb))
+  Prog(non_rules @ (extract_projection_rules idb))
 ;;
 
 (** given a rule, extract projection opetor of the rule and do the projections in other rules  *)
@@ -490,21 +483,14 @@ let binarize_rules (st:symtable) =
 let binarize_expr (debug:bool) prog = 
   let proj_extracted_prog = extract_projection_expr debug prog in
   let _, non_rules = seperate_rules proj_extracted_prog in
-  (* let edb = extract_edb prog in *)
-  (* need to change the view (in query predicate) to a edb relation *)
-  let view_rt = get_schema_rterm (get_view proj_extracted_prog) in
-  (* need to convert the view to be an edb relation *)
-  (* symt_insert edb (Rule(view_rt,[])); *)
   let idb = extract_idb proj_extracted_prog in
-  let view_rules = Hashtbl.find idb (symtkey_of_rterm view_rt) in
-  symt_remove idb (symtkey_of_rterm view_rt);
   preprocess_rules idb;
   if debug then (
     print_endline "_____binarization-preprocessed datalog rules_______"; 
-    print_endline (Expr.string_of_prog (Prog(non_rules @ view_rules @ (binarize_rules idb))));
+    print_endline (Expr.string_of_prog (Prog(non_rules  @ (binarize_rules idb))));
     print_endline "______________\n";
   ) else ();   
-  Prog(non_rules @ view_rules @ (binarize_rules idb))
+  Prog(non_rules @ (binarize_rules idb))
 ;;
 
 let get_inc_original rt = Pred("∂_old_" ^ get_rterm_predname rt, get_rterm_varlist rt);;
@@ -775,7 +761,7 @@ let incrementalize_by_view (debug:bool) prog =
                 rules
               )
           )
-    | _ -> invalid_arg ("function incrementalize called with a list of "^string_of_int (List.length rules)^" elements: \n"^ Expr.string_of_prog (Prog rules) ) in
+    | _ -> invalid_arg ("function incrementalize_by_view called with a list of "^string_of_int (List.length rules)^" elements: \n"^ Expr.string_of_prog (Prog rules) ) in
   let _, inc_rules = List.fold_left incrementalize (inc_key, []) rule_lst_lst in 
   if debug then (
     print_endline "_____incrementalize_by_view datalog rules_______"; 
@@ -1042,7 +1028,7 @@ let incrementalize_view_definition (debug:bool) update_table_rt prog =
                 rules
               )
           )
-    | _ -> invalid_arg ("function incrementalize called with a list of "^string_of_int (List.length rules)^" elements: \n"^ Expr.string_of_prog (Prog rules) ) in
+    | _ -> invalid_arg ("function incrementalize_view_definition called with a list of "^string_of_int (List.length rules)^" elements: \n"^ Expr.string_of_prog (Prog rules) ) in
   let _, inc_rules = List.fold_left incrementalize (inc_key, []) rule_lst_lst in 
   if debug then (
     print_endline "_____incrementalize_view_definition datalog rules_______"; 
