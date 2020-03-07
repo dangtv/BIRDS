@@ -1,5 +1,7 @@
 **/*.olean
 **/*.cmi
+**/*.cmt
+**/*.cmti
 **/*.cmo
 **/.DS_Store
 **/bin/
