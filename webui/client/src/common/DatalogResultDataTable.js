@@ -10,6 +10,7 @@ import SqlEditor from '../common/SqlEditor';
 // import FlyingBirds from './FlyingBirds.js';
 // import FoldingCube from './FoldingCube.js';
 import RollingCircle from './RollingCircle.js';
+import Button from 'antd/lib/button';
 
 const renderValue = (input, fieldMeta) => {
   if (input === null || input === undefined) {
@@ -206,13 +207,15 @@ class DatalogResultDataTable extends React.PureComponent {
   };
 
   render() {
-    const { isRunning, datalogError, datalogResult } = this.props;
+    const { isRunning, datalogError, datalogResult, runDatalog } = this.props;
     // const { height, width } = this.state.dimensions;
 
     if (isRunning) {
       return (
-        <div className="aspect-ratio--object flex items-center justify-center">
-          {/* <FlyingBirds /> */}
+        // <div className="aspect-ratio--object flex items-center justify-center">
+        //   <FlyingBirds />
+        // </div>
+        <div className="h-100 items-center flex-center">
           {/* <FoldingCube /> */}
           <RollingCircle />
         </div>
@@ -220,13 +223,32 @@ class DatalogResultDataTable extends React.PureComponent {
     }
 
     if (datalogError) {
-      return (
-        <div
-          className={`aspect-ratio--object flex items-center justify-center f2 pa4 tc bg-light-red`}
-        >
-          {datalogError}
-        </div>
-      );
+      if (datalogError.includes ('not validated')){
+        return (
+          <div
+            className={`aspect-ratio--object items-center justify-center f3 pa4 tc bg-light-yellow`}
+          >
+            {datalogError}
+            <br/>
+            <Button
+              type="primary"
+              onClick={() => runDatalog(5, false)}
+              disabled={isRunning}
+            >
+              Generate a counterexample
+            </Button>
+          </div>
+        );
+      }
+      else {
+        return (
+          <div
+            className={`aspect-ratio--object items-center justify-center f3 pa4 tc bg-light-yellow`}
+          >
+            {datalogError}
+          </div>
+        );
+      }
     }
 
     if (datalogResult) {
@@ -271,6 +293,7 @@ class DatalogResultDataTable extends React.PureComponent {
       return (
         <SqlEditor
           value={datalogResult.sql}
+          readOnly={true}
           // onChange={onChange}
           // onSelectionChange={handleDatalogSelectionChange}
         />
@@ -284,7 +307,8 @@ class DatalogResultDataTable extends React.PureComponent {
 DatalogResultDataTable.propTypes = {
   isRunning: PropTypes.bool,
   datalogError: PropTypes.string,
-  datalogResult: PropTypes.object
+  datalogResult: PropTypes.object,
+  runDatalog: PropTypes.func.isRequired
 };
 
 export default DatalogResultDataTable;

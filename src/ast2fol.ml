@@ -277,7 +277,7 @@ let getput_sentence_of_stt (debug:bool) prog =
 
 (* take a view update datalog program (containing both get and put directions) and generate FO sentence of putget property for its view update strategy *)
 let putget_sentence_of_stt (debug:bool) prog =
-    let putget_prog =  datalog_of_putget debug prog in
+    let putget_prog =  datalog_of_putget debug false prog in
     let edb = extract_edb putget_prog in
     (* need to change the view (in query predicate) to a edb relation *)
     let view_rt = get_schema_rterm (get_view putget_prog) in

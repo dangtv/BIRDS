@@ -29,11 +29,15 @@ export default function fetchJson(method, url, body) {
       // Eventually this should change to proper status code usage
       if (response.redirected) {
         return (window.location = response.url);
-      } else if (response.status === 200) {
+      }
+      // return response.json();
+      else if (response.status === 200) {
         return response.json();
       } else {
         console.error(response);
-        throw new Error('Server responded not ok');
+        throw new Error(
+          'Server responded not ok, the response status is not 200'
+        );
       }
     })
     .catch(error => {

@@ -127,6 +127,7 @@ let extract_idb = function
       | Rule _ -> symt_insert idb t 
       | Constraint _ -> ()
       | Pk _ -> ()
+      | Fact _ -> ()
       | Query _ -> ()
       | Source _ -> ()
       | View _ -> () in            
@@ -146,6 +147,7 @@ let extract_edb = function
       | Rule _ -> ()
       | Constraint _ -> ()
       | Pk _ -> ()
+      | Fact _ -> ()
       | Query rt -> ()
       | View _ -> ()
       | Source _ -> symt_insert edb (Rule (get_schema_rterm t,[])) in            
@@ -297,6 +299,39 @@ let build_vartab (col_names:colnamtab) rterms =
   let _ = List.fold_left in_rt 0 rterms in
   vt
 
+(** builds a vartab (use numbers to refer the tables and columns, used in rosette code) out of a list of rterms and with the colnamtab *)
+let build_num_vartab (col_names:colnamtab) rterms =
+  let vt:vartab = Hashtbl.create (2*(List.length (get_rtermlst_vars rterms ))) in
+  let in_rt n rterm =
+    let pname = get_rterm_predname rterm in
+    let vlst = get_rterm_varlist rterm in
+    let arity = get_arity rterm in
+    let key = symtkey_of_rterm rterm in
+    if not (Hashtbl.mem col_names key) then raise (SemErr ("not found edb or idb predicate "^string_of_symtkey key)) else
+    let rec gen_nums ind n =
+      if ind<n then ((string_of_int ind))::(gen_nums (ind+1) n) 
+      else [] in
+    let cols = gen_nums 0 arity in
+    let in_v cn v =
+      let comp_cn =
+        "(list-ref (list-ref tuplelst "^(string_of_int n)^") "^cn^")"
+      in
+      match v with
+        NamedVar _ | NumberedVar _ ->
+        vt_insert vt (string_of_var v) comp_cn
+      | AggVar _ -> raise (SemErr (
+          "Goal "^(string_of_symtkey key)^
+          " contains an aggregate function as a variable, "^
+          "which is only allowed in rule heads"
+        ))
+      | _ -> ()
+    in
+    List.iter2 in_v cols vlst;
+    n+1
+  in
+  let _ = List.fold_left in_rt 0 rterms in
+  vt
+
 (***********************************************************
  *  Eqtab
  *********************************************************)
@@ -380,6 +415,8 @@ let get_view e = match e with
     | h::_ -> raise (SemErr "The program has more than one view")
 ;;
 
+let get_view_rterm e = get_schema_rterm (get_view e);;
+
 (** generate column name list [col0, col1,....]  *)
 let rec gen_cols ind n =
   if ind<n then ( "COL"^(string_of_int ind))::(gen_cols (ind+1) n) 
@@ -445,19 +482,32 @@ let rename_term prefix t = match t with
   | _ -> t
 ;;
 
-let rename_rule prefix (debug:bool) rule = match rule with 
-  | Rule (p, tel)        -> Rule(rename_rterm prefix p, List.map (rename_term prefix) tel)
+let rename_rule prefix rule = match rule with 
+  | Rule (p, body)        -> Rule(rename_rterm prefix p, List.map (rename_term prefix) body)
   | _ -> invalid_arg "function rename_rule called with not a rule"
 ;;
 
-let rename_rules prefix (debug:bool) rules = 
-  List.map (rename_rule prefix debug) rules
+let rename_fact prefix rule = match rule with 
+  | Fact rt        -> Fact (rename_rterm prefix rt)
+  | _ -> invalid_arg "function rename_fact called with not a fact"
+;;
+
+let rename_rules prefix rules = 
+  List.map (rename_rule prefix) rules
 
 let str_contains s1 s2 =
   let re = Str.regexp_string s2
   in
   try ignore (Str.search_forward re s1 0); true
   with Not_found -> false
+
+(** Cut a substring started by a word *)
+let cut_str_by_word s1 word =
+  let re = Str.regexp_string word in
+  let start = try(Str.search_forward re s1 0)
+    with Not_found -> String.length s1 in 
+  String.sub s1 start ((String.length s1)-start)
+;;
 
 (** print delta predicate list  *)
 let print_deltas dlst = 
@@ -525,7 +575,7 @@ let read_file filename =
 
 let exe_command command = 
   let tmp_file = Filename.temp_file "" ".txt" in
-  let status = Sys.command @@ command ^" > " ^ tmp_file in
+  let status = Sys.command @@ command ^" > " ^ tmp_file ^" 2>> " ^ tmp_file in
   let message = String.concat "\n" @@ read_file tmp_file in 
   status, message;;
 
@@ -546,10 +596,28 @@ let verify_fo_lean debug timeout sentence =
   if (debug && (status = 0)) then print_endline @@">>> verified by lean: correct";
   status, message;;
 
+let check_ros_prog debug timeout sentence = 
+  if  debug then (
+    print_endline @@"==> generating a counterexample by Rosette";
+    print_endline "--------------";
+    print_endline "Racket code:\n";
+    print_endline sentence;
+    print_endline "--------------";
+    flush stdout;
+  ) else ();
+  let tmp_file = Filename.temp_file "" ".rkt" in
+  let ol =  open_out tmp_file in  
+  fprintf ol "%s\n" sentence;
+  close_out ol;
+  let status, message = exe_command @@ "timeout "^ (string_of_int timeout) ^" racket "^tmp_file in
+  if (debug && (status = 0)) then print_endline @@">>> Checked by Rosette";
+  status, message;;
+
 let constraint2rule prog = match prog with 
     | Prog stt_lst ->
     let trans_stt t lst= match t with
       | Rule _ -> t::lst
+      | Fact _ -> t::lst
       | Constraint _ -> (rule_of_constraint t)::lst
       | Pk (relname, attrlst) -> 
         (* generate datalog rules for a primary key *)
@@ -565,4 +633,30 @@ let constraint2rule prog = match prog with
       | Source _ -> t::lst
       | View _ -> t::lst in 
     Prog(List.fold_right trans_stt stt_lst [])         
+;;
+
+(* 
+Color	Code
+Black	0;30
+Blue	0;34
+Green	0;32
+Cyan	0;36
+Red	0;31
+Purple	0;35
+Brown	0;33
+Blue	0;34
+Green	0;32
+Cyan	0;36
+Red	0;31
+Purple	0;35
+Brown	0;33 *)
+let colored_string color str = match color with 
+    "red" -> "\027[31m"^str^"\027[0m"
+    | "black"	 -> "\027[30m"^str^"\027[0m"
+    | "blue"	 -> "\027[34m"^str^"\027[0m"
+    | "green"	 -> "\027[32m"^str^"\027[0m"
+    | "cyan"	 -> "\027[36m"^str^"\027[0m"
+    | "purple" -> "\027[35m"^str^"\027[0m"
+    | "brown"	 -> "\027[33m"^str^"\027[0m"
+    | _ -> str
 ;;

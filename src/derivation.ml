@@ -174,6 +174,7 @@ let transform_rule (view:rterm) (cnt:colnamtab) (rule:stt) lst=
   | Query _ -> lst
   | Constraint _ -> lst
   | Pk _ -> lst
+  | Fact _ -> lst
   | Source _ -> rule::lst
   | View _ -> rule::lst
   | Rule(h, body) ->
@@ -203,7 +204,7 @@ let transform_rule (view:rterm) (cnt:colnamtab) (rule:stt) lst=
       if(List.length pos_views >0) then Rule(rule_head rule, List.map (rename_if_isview view) (rule_body rule)) :: lst 
       else lst (* if there is no view predicate in the rule body (it can not appear in the head) then remove this rule in the derived get*)
 
-let derive (debug:bool) (edb:symtable) prog = 
+let derive (log:bool) (edb:symtable) prog = 
   (* get the view user want to define *)
   match prog with
     Prog stt_lst ->
@@ -215,7 +216,7 @@ let derive (debug:bool) (edb:symtable) prog =
     let cnt = build_colnamtab local_edb idb in
     let mapping:vartab = Hashtbl.create 100 in 
     List.iter (schema_mapping_of_rule cnt mapping view_rt) stt_lst;
-    if debug then (
+    if log then (
                    print_endline "========mapping===="; vt_print mapping;
                 ) else ();
     let transformed_lst = List.fold_right (transform_rule view_rt cnt) stt_lst [] in 
@@ -226,7 +227,7 @@ let derive (debug:bool) (edb:symtable) prog =
     deltapred_to_pred "_derived_" (Prog (transformed_lst@[view_def]));;
 
 (* take a view update datalog program and generate datalog rule for apply delta relation to the source *)
-let datalog_of_delta_appliation (debug:bool) prog = 
+let datalog_of_delta_appliation (log:bool) prog = 
     (* get all pair of delta relations *)
     let delta_rt_lst = get_delta_rterms prog in
     (* get each pair of delta relations from the delta relation lst delta_rt_lst *)
@@ -253,8 +254,14 @@ let datalog_of_delta_appliation (debug:bool) prog =
     let lst2 = List.fold_left (fun lst src ->  Rule(get_new_source_rel_pred src, [Rel src]) :: lst ) [] non_delta_source_lst in 
     lst2@lst1
 
+
+(* take a view update datalog program and generate datalog rule for deriving new source from deltas *)
+let datalog_of_new_source (log:bool) prog = 
+    let source_lst = get_source_rterms prog in 
+    List.fold_left (fun lst src -> Rule(get_new_source_rel_pred src, [Rel (src); Not (get_del_delta_pred src)]):: Rule(get_new_source_rel_pred src, [Rel (get_ins_delta_pred src)]) :: Rule(get_del_delta_pred src,[]) :: Rule(get_ins_delta_pred src,[]) :: lst ) [] source_lst 
+
 (** take a view update datalog program and generate datalog rule for computing new view from new source *)
-let datalog_of_new_view (debug:bool) prog =
+let datalog_of_new_view (log:bool) prog =
   let edb = extract_edb prog in
   (* need to change the view (in query predicate) to a edb relation *)
   let idb = extract_idb prog in
@@ -262,12 +269,12 @@ let datalog_of_new_view (debug:bool) prog =
   let view_rt = get_schema_rterm (get_view prog) in
   let strat = stratify edb idb view_rt in
   let rule_lst_lst = List.map (Hashtbl.find idb) strat in
-  let new_rule_lst_lst = List.map (rename_rules "__dummy_new_" debug) rule_lst_lst in
+  let new_rule_lst_lst = List.map (rename_rules "__dummy_new_") rule_lst_lst in
   List.fold_right (fun x lst -> x@lst) new_rule_lst_lst []
 ;;
 
 (** take a view update datalog program (may contain both get & put) and remove all the constraint involving views in the program  *)
-let remove_constraint_of_view (debug:bool) prog = 
+let remove_constraint_of_view (log:bool) prog = 
   let view_sch = get_view prog in
   let view_rt = get_schema_rterm view_sch in
   let edb = extract_edb prog in
@@ -287,7 +294,7 @@ let remove_constraint_of_view (debug:bool) prog =
     let constr_of_non_view_lst = List.filter (non is_constr_of_view) constr_rules in 
     List.iter (symt_insert idb) constr_of_non_view_lst;
     let non_view_cstr_prog = Prog((get_schema_stts prog)@ (rules_of_symt idb)) in 
-    if debug then (
+    if log then (
       print_endline "_____constraints not involing view_______"; 
       print_string (Expr.string_of_prog  non_view_cstr_prog); 
       print_endline "______________\n";
@@ -297,7 +304,7 @@ let remove_constraint_of_view (debug:bool) prog =
 ;;
 
 (** take a view update datalog program (both get & put) and remove all the constraint not involving views in the program  *)
-let keep_only_constraint_of_view (debug:bool) prog = 
+let keep_only_constraint_of_view (log:bool) prog = 
   let view_sch = get_view prog in
   let view_rt = get_schema_rterm view_sch in
   let edb = extract_edb prog in
@@ -317,7 +324,7 @@ let keep_only_constraint_of_view (debug:bool) prog =
     let constr_of_view_lst = List.filter (is_constr_of_view) constr_rules in 
     List.iter (symt_insert idb) constr_of_view_lst;
     let view_cstr_prog = Prog((get_schema_stts prog)@ (rules_of_symt idb)) in 
-    if debug then (
+    if log then (
       print_endline "_____constraints involing view_______"; 
       print_string (Expr.string_of_prog  view_cstr_prog); 
       print_endline "______________\n";
@@ -327,9 +334,13 @@ let keep_only_constraint_of_view (debug:bool) prog =
 ;;
 
 (** given a view update datalog program return datalog program of putget property *)
-let datalog_of_putget (debug:bool) prog = 
-  let putget_datalog = add_stts (datalog_of_new_view debug prog) (Expr.add_stts (datalog_of_delta_appliation ( debug) prog) prog) in 
-  if debug then (
+let datalog_of_putget (log:bool) (full_deltas:bool) prog = 
+  let delta_application =
+    if full_deltas then datalog_of_new_source log prog 
+      else datalog_of_delta_appliation log prog in 
+  let raw_putget_datalog = add_stts (datalog_of_new_view log prog) (Expr.add_stts delta_application prog) in 
+  let putget_datalog = delete_rule_of_predname (get_rterm_predname (get_view_rterm raw_putget_datalog)) raw_putget_datalog in
+  if log then (
     print_endline "_____putget datalog program_______"; 
     print_string (Expr.string_of_prog  putget_datalog); 
     print_endline "______________\n";
@@ -342,6 +353,7 @@ let extract_projection stt ind= match stt with
     | Query _    -> invalid_arg "function extract_projection called with a query"
     | Constraint _    -> invalid_arg "function extract_projection called with a Constraint"
     | Pk _    -> invalid_arg "function extract_projection called with a Pk"
+    | Fact _    -> invalid_arg "function extract_projection called with a Fact"
     | Source _    -> invalid_arg "function extract_projection called with a source schema"
     | View _ -> invalid_arg "function extract_projection called with a view schema"
     | Rule(h, b) -> 
@@ -380,11 +392,11 @@ let extract_projection_rules (st:symtable) =
   rules
 
 (** take a view update datalog program and extract projections to other rules *)
-let extract_projection_expr (debug:bool) prog = 
+let extract_projection_expr (log:bool) prog = 
   let _, non_rules = seperate_rules prog in
   let idb = extract_idb prog in
   preprocess_rules idb;
-  if debug then (
+  if log then (
                     print_endline "_____projection-preprocessed datalog rules_______"; 
                     print_endline (Expr.string_of_prog (Prog(non_rules @ (extract_projection_rules idb))));
                     print_endline "______________\n";
@@ -397,6 +409,7 @@ let binarize stt ind= match stt with
     | Query _    -> invalid_arg "function extract_projection called with a query"
     | Constraint _    -> invalid_arg "function extract_projection called with a Constraint"
     | Pk _    -> invalid_arg "function extract_projection called with a Pk"
+    | Fact _    -> invalid_arg "function extract_projection called with a Fact"
     | Source _    -> invalid_arg "function extract_projection called with a source schema"
     | View _ -> invalid_arg "function extract_projection called with a view schema"
     | Rule(h, b) -> 
@@ -480,12 +493,12 @@ let binarize_rules (st:symtable) =
   rules
 
 (** take a view update datalog program and extract projections to other rules *)
-let binarize_expr (debug:bool) prog = 
-  let proj_extracted_prog = extract_projection_expr debug prog in
+let binarize_expr (log:bool) prog = 
+  let proj_extracted_prog = extract_projection_expr log prog in
   let _, non_rules = seperate_rules proj_extracted_prog in
   let idb = extract_idb proj_extracted_prog in
   preprocess_rules idb;
-  if debug then (
+  if log then (
     print_endline "_____binarization-preprocessed datalog rules_______"; 
     print_endline (Expr.string_of_prog (Prog(non_rules  @ (binarize_rules idb))));
     print_endline "______________\n";
@@ -500,10 +513,10 @@ let get_inc_del rt = Pred("∂_del_" ^ get_rterm_predname rt, get_rterm_varlist 
 let get_inc_ins rt = Pred("∂_ins_" ^ get_rterm_predname rt, get_rterm_varlist rt);;
 
 (** take a valid (satisfy putget and getput) view update datalog program and incrementalize it by the update (delta relations) on view *)
-let incrementalize_by_view (debug:bool) prog = 
-  let bin_prog = binarize_expr debug prog in
+let incrementalize_by_view (log:bool) prog = 
+  let bin_prog = binarize_expr log prog in
   let _, non_rules = seperate_rules bin_prog in
-  let putget_prog = datalog_of_putget false bin_prog in
+  let putget_prog = datalog_of_putget false false bin_prog in
   let edb = extract_edb putget_prog in
   (* need to change the view (in query predicate) to a edb relation *)
   let view_rt = get_schema_rterm (get_view putget_prog) in
@@ -763,7 +776,7 @@ let incrementalize_by_view (debug:bool) prog =
           )
     | _ -> invalid_arg ("function incrementalize_by_view called with a list of "^string_of_int (List.length rules)^" elements: \n"^ Expr.string_of_prog (Prog rules) ) in
   let _, inc_rules = List.fold_left incrementalize (inc_key, []) rule_lst_lst in 
-  if debug then (
+  if log then (
     print_endline "_____incrementalize_by_view datalog rules_______"; 
     print_endline (Expr.string_of_prog (Prog (non_rules@init_rules@inc_rules)));
     print_endline "______________\n";
@@ -783,8 +796,8 @@ let incrementalize_by_view (debug:bool) prog =
 ;;
 
 (** take a Datalog program of both get&put and derive an incremental Datalog program that calculates view updates from updates on a single source table **)
-let incrementalize_view_definition (debug:bool) update_table_rt prog = 
-  let bin_prog = binarize_expr debug prog in
+let incrementalize_view_definition (log:bool) update_table_rt prog = 
+  let bin_prog = binarize_expr log prog in
   let _, non_rules = seperate_rules bin_prog in
   let edb = extract_edb bin_prog in
   let view_rt = get_schema_rterm (get_view bin_prog) in
@@ -1030,7 +1043,7 @@ let incrementalize_view_definition (debug:bool) update_table_rt prog =
           )
     | _ -> invalid_arg ("function incrementalize_view_definition called with a list of "^string_of_int (List.length rules)^" elements: \n"^ Expr.string_of_prog (Prog rules) ) in
   let _, inc_rules = List.fold_left incrementalize (inc_key, []) rule_lst_lst in 
-  if debug then (
+  if log then (
     print_endline "_____incrementalize_view_definition datalog rules_______"; 
     print_endline (Expr.string_of_prog (Prog (non_rules@init_rules@inc_rules)));
     print_endline "______________\n";

@@ -90,24 +90,24 @@ function DatalogList({
               <Icon type="edit" />
             </IconButtonLink>
           </Tooltip>,
-          <Tooltip key="table" title="Open results in new window">
-            <IconButtonLink
-              to={tableUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon type="table" />
-            </IconButtonLink>
-          </Tooltip>,
-          <Tooltip key="chart" title="Open chart in new window">
-            <IconButtonLink
-              to={chartUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon type="bar-chart" />
-            </IconButtonLink>
-          </Tooltip>,
+          // <Tooltip key="table" title="Open results in new window">
+          //   <IconButtonLink
+          //     to={tableUrl}
+          //     target="_blank"
+          //     rel="noopener noreferrer"
+          //   >
+          //     <Icon type="table" />
+          //   </IconButtonLink>
+          // </Tooltip>,
+          // <Tooltip key="chart" title="Open chart in new window">
+          //   <IconButtonLink
+          //     to={chartUrl}
+          //     target="_blank"
+          //     rel="noopener noreferrer"
+          //   >
+          //     <Icon type="bar-chart" />
+          //   </IconButtonLink>
+          // </Tooltip>,
           <Popconfirm
             key="del"
             title="Are you sure?"
@@ -154,7 +154,7 @@ function DatalogList({
           className="shadow-2 pa3"
           style={{
             position: 'fixed',
-            left: 640,
+            left: 440,
             top: 40,
             right: 40,
             bottom: 40,
@@ -184,10 +184,10 @@ function DatalogList({
           <div
             style={{
               flexGrow: 1,
-              display: 'flex'
+              display: 'contents'
             }}
           >
-            <DlEditor readOnly value={preview.datalogText} />
+            <DlEditor readOnly showLineNumbers={false} value={preview.datalogText} />
           </div>
         </div>
       )}

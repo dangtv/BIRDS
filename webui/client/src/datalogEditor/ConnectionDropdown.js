@@ -40,7 +40,7 @@ function ConnectionDropdown({
       <Select
         showSearch
         placeholder="Choose a connection"
-        style={{ width: 180 }}
+        style={{ width: 160 }}
         optionFilterProp="children"
         value={selectedConnectionId || undefined}
         // defaultValue={'No connection' || undefined}

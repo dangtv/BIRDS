@@ -1,6 +1,6 @@
 {
   "name": "birds-editor",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Web app. Write SQL and visualize the results. Supports Postgres, MySQL, SQL Server, Crate, Vertica and SAP HANA.",
   "license": "MIT",
   "engines": {

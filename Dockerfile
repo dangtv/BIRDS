@@ -7,7 +7,7 @@ ENV OS_LOCALE="en_US.UTF-8" \
     LC_ALL=${OS_LOCALE} \
     PG_VERSION=9.6 \
     OCAML_VERSION=4.07.0 \
-    Z3_VERSION=4.8.7 \
+    Z3_VERSION=4.8.6 \
     PG_USER=postgres \
     PG_HOME=/var/lib/postgresql \
     PG_RUN_DIR=/run/postgresql \
@@ -99,6 +99,21 @@ RUN BUILD_PKGS="git" \
  && leanpkg configure && cd /usr/lib/birds/verification/_target/deps/mathlib/ && leanpkg configure && leanpkg build -- --threads=1 \
  && cd /usr/lib/birds/verification/_target/deps/super/ && leanpkg configure && leanpkg build \
  && cd /usr/lib/birds/verification/ && leanpkg build \
+ && apt-get purge -y --auto-remove ${BUILD_PKGS} \
+ && rm -rf /var/lib/apt/lists/*
+
+# install racket and rosette
+WORKDIR /root/
+RUN BUILD_PKGS="wget libgtk2.0" \
+ && RUNTIME_PKGS="" \
+ && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
+ && wget https://mirror.racket-lang.org/installers/7.6/racket-minimal-7.6-x86_64-linux.sh \
+ && chmod a+x racket-minimal-7.6-x86_64-linux.sh \
+ && bash racket-minimal-7.6-x86_64-linux.sh --unix-style --create-dir --dest /usr/local/racket \
+ && ln -s /usr/local/racket/bin/racket /usr/local/bin/racket \
+ && ln -s /usr/local/racket/bin/raco /usr/local/bin/raco \
+ && raco pkg install --auto rosette \
+ && rm racket-minimal-7.6-x86_64-linux.sh \
  && apt-get purge -y --auto-remove ${BUILD_PKGS} \
  && rm -rf /var/lib/apt/lists/*
 

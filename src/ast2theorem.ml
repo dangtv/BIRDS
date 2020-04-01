@@ -124,6 +124,7 @@ let source_to_lean_func_types prog = match prog with
         | Query _ -> funcs
         | Constraint _ -> funcs 
         | Pk _ -> funcs 
+        | Fact _ -> funcs 
         | View _ -> funcs 
         | Source (name, lst) -> ( name ^ ": " ^ String.concat " → " ( List.map (fun (col,typ) -> stype_to_lean_type typ) lst) ^ " → Prop" )::funcs in
     List.fold_left p_el [] sttlst;;
@@ -137,6 +138,7 @@ let source_to_z3_func_types prog = match prog with
         | Query _ -> funcs
         | Constraint _ -> funcs 
         | Pk _ -> funcs 
+        | Fact _ -> funcs 
         | View _ -> funcs 
         | Source (name, lst) -> ( "(declare-fun " ^name ^ " (" ^ 
         String.concat " " ( List.map (fun (col,typ) -> stype_to_z3_type typ) lst) ^ ") Bool)" )::funcs in
@@ -151,6 +153,7 @@ let source_view_to_lean_func_types prog =match prog with
         | Query _ -> funcs
         | Constraint _ -> funcs 
         | Pk _ -> funcs 
+        | Fact _ -> funcs 
         | Source (name, lst)  
         | View (name, lst) -> ( name ^ ": " ^ String.concat " → " ( List.map (fun (col,typ) -> stype_to_lean_type typ) lst) ^ " → Prop" )::funcs in
     List.fold_left p_el [] sttlst;;
@@ -164,6 +167,7 @@ let source_view_to_z3_func_types prog =match prog with
         | Query _ -> funcs
         | Constraint _ -> funcs 
         | Pk _ -> funcs 
+        | Fact _ -> funcs 
         | Source (name, lst)  
         | View (name, lst) -> ( "(declare-fun " ^name ^ " (" ^ 
         String.concat " " ( List.map (fun (col,typ) -> stype_to_z3_type typ) lst) ^ ") Bool)" )::funcs in

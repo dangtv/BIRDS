@@ -34,7 +34,7 @@ function birds_import(connection) {
 
   return new Promise((resolve, reject) => {
     var exec = require('child_process').exec;
-    exec('echo "" | birds -c -import -h '+pgConfig.host+' -U '+pgConfig.user+' -p '+ pgConfig.port+' -w '
+    exec('echo "" | birds -c --import -h '+pgConfig.host+' -U '+pgConfig.user+' -p '+ pgConfig.port+' -w '
     +pgConfig.password+' -d '+pgConfig.database, function callback(error, stdout, stderr){
       // console.log(stdout);
       // console.log(error);

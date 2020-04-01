@@ -9,12 +9,12 @@ function DatalogListButton() {
   return (
     <>
       <Button icon="file-text" onClick={() => setShowDatalogs(true)}>
-        Datalog
+        Files
       </Button>
       <Drawer
         title={'Datalog programs'}
         visible={showDatalogs}
-        width="600"
+        width="400"
         onClose={() => setShowDatalogs(false)}
         placement="left"
       >

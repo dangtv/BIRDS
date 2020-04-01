@@ -1,0 +1,3 @@
+DROP DATABASE IF EXISTS vldb20_demo;
+
+CREATE DATABASE vldb20_demo;

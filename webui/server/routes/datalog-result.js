@@ -46,6 +46,8 @@ router.post('/api/datalog-result', mustBeAuthenticated, function(req, res) {
     connectionId: req.body.connectionId,
     timeout: req.body.timeout,
     verification: req.body.verification,
+    counterexample: req.body.counterexample,
+    debug: req.body.debug,
     optimization: req.body.optimization,
     speedup: req.body.speedup,
     datalogName: req.body.datalogName,
@@ -65,7 +67,8 @@ function getDatalogResult(data) {
       // if (!connection) {
       //   throw new Error('Please choose a connection');
       // }
-      if(connection) connection.maxRows = Number(data.config.get('queryResultMaxRows'));
+      if (connection)
+        connection.maxRows = Number(data.config.get('queryResultMaxRows'));
       data.connection = connection;
       return Cache.findOneByCacheKey(data.cacheKey);
     })
@@ -85,12 +88,20 @@ function getDatalogResult(data) {
     })
     .then(newCache => {
       data.cache = newCache;
-      return runDatalog(data.datalogText, data.connection, data.user, data.timeout, data.verification, data.optimization, data.speedup).then(
-        result => {
-          data.datalogResult = result;
-          data.datalogResult.cacheKey = data.cacheKey;
-        }
-      );
+      return runDatalog(
+        data.datalogText,
+        data.connection,
+        data.user,
+        data.timeout,
+        data.verification,
+        data.counterexample,
+        data.debug,
+        data.optimization,
+        data.speedup
+      ).then(result => {
+        data.datalogResult = result;
+        data.datalogResult.cacheKey = data.cacheKey;
+      });
     })
     .then(() => {
       if (data.config.get('allowCsvDownload')) {

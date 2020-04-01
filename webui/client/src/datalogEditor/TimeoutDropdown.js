@@ -7,10 +7,7 @@ import { actions } from '../stores/unistoreStore';
 
 const { Option } = Select;
 
-function TimeoutDropdown({
-  timeout,
-  selectTimeout
-}) {
+function TimeoutDropdown({ timeout, selectTimeout }) {
   const handleChange = t => {
     selectTimeout(t);
   };
@@ -23,7 +20,7 @@ function TimeoutDropdown({
         placeholder="Timeout"
         style={{ width: 100 }}
         optionFilterProp="children"
-        value={timeout || undefined}
+        value={timeout.toString() || undefined}
         // defaultValue={"1m" || undefined}
         onChange={handleChange}
         filterOption={(input, option) =>
@@ -32,68 +29,36 @@ function TimeoutDropdown({
           option.props.name.toLowerCase().indexOf(input.toLowerCase()) >= 0
         }
       >
-        <Option
-          style={{ borderTop: '1px solid #ccc' }}
-          value="5"
-          name="5s"
-        >
+        <Option style={{ borderTop: '1px solid #ccc' }} value="5" name="5s">
           <Icon type="clock-circle" /> <em>5s</em>
         </Option>
 
-        <Option
-          style={{ borderTop: '1px solid #ccc' }}
-          value="10"
-          name="10s"
-        >
-          <Icon type="clock-circle" />  <em>10s</em>
+        <Option style={{ borderTop: '1px solid #ccc' }} value="10" name="10s">
+          <Icon type="clock-circle" /> <em>10s</em>
         </Option>
 
-        <Option
-          style={{ borderTop: '1px solid #ccc' }}
-          value="50"
-          name="50s"
-        >
-          <Icon type="clock-circle" />  <em>50s</em>
+        <Option style={{ borderTop: '1px solid #ccc' }} value="30" name="30s">
+          <Icon type="clock-circle" /> <em>30s</em>
         </Option>
 
-        <Option
-          style={{ borderTop: '1px solid #ccc' }}
-          value="60"
-          name="1m"
-        >
-          <Icon type="clock-circle" />  <em>1m</em>
-        </Option>
-        
-        <Option
-          style={{ borderTop: '1px solid #ccc' }}
-          value="120"
-          name="2m"
-        >
-          <Icon type="clock-circle" />  <em>2m</em>
+        <Option style={{ borderTop: '1px solid #ccc' }} value="60" name="1m">
+          <Icon type="clock-circle" /> <em>1m</em>
         </Option>
 
-        <Option
-          style={{ borderTop: '1px solid #ccc' }}
-          value="300"
-          name="5m"
-        >
-          <Icon type="clock-circle" />  <em>5m</em>
+        <Option style={{ borderTop: '1px solid #ccc' }} value="120" name="2m">
+          <Icon type="clock-circle" /> <em>2m</em>
         </Option>
 
-        <Option
-          style={{ borderTop: '1px solid #ccc' }}
-          value="600"
-          name="10m"
-        >
-          <Icon type="clock-circle" />  <em>10m</em>
+        <Option style={{ borderTop: '1px solid #ccc' }} value="300" name="5m">
+          <Icon type="clock-circle" /> <em>5m</em>
         </Option>
 
-        <Option
-          style={{ borderTop: '1px solid #ccc' }}
-          value="3600"
-          name="1h"
-        >
-          <Icon type="clock-circle" />  <em>1h</em>
+        <Option style={{ borderTop: '1px solid #ccc' }} value="600" name="10m">
+          <Icon type="clock-circle" /> <em>10m</em>
+        </Option>
+
+        <Option style={{ borderTop: '1px solid #ccc' }} value="3600" name="1h">
+          <Icon type="clock-circle" /> <em>1h</em>
         </Option>
       </Select>
     </>

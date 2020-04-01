@@ -38,7 +38,7 @@ See the usage of the `birds` command by typing:
 
 BIRDS is integrated with other systems to enable some features of the `birds` command. These systems can be installed as follows:
 
-* Z3 >= 4.8.7: The binary files can be downloaded at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases). To install the `z3` command, create a symbolic link in `/usr/bin` to the `z3` binary file:
+* Z3 >= 4.8.6: The binary files can be downloaded at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases). To install the `z3` command, create a symbolic link in `/usr/bin` to the `z3` binary file:
   ```bash 
   ln -s <path-to-the-z3-binary-file> /usr/bin/z3
   ```

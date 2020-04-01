@@ -60,7 +60,8 @@ function Toolbar({
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
-  const validationState = showValidation && !datalogName.length ? 'error' : null;
+  const validationState =
+    showValidation && !datalogName.length ? 'error' : null;
   const cloneDisabled = !datalogId;
 
   const isAdmin = currentUser.role === 'admin';
@@ -69,14 +70,15 @@ function Toolbar({
     <div className="w-100 bg-near-white ph2 pv1 bb b--light-gray">
       <Form className="flex" layout="inline">
         <FormItem>
-          <DatalogListButton />
-        </FormItem>
-
-        <FormItem>
-          {/* <Button.Group> */}
-            <Button icon="database" onClick={toggleSchema} />
+          <Button.Group>
+            <Tooltip placement="bottom" title="Show Schema">
+              <Button icon="database" onClick={toggleSchema} />
+            </Tooltip>
+            <Tooltip placement="bottom" title="All Programs">
+              <DatalogListButton />
+            </Tooltip>
             {/* <Button icon="bar-chart" onClick={toggleVisSidebar} /> */}
-          {/* </Button.Group> */}
+          </Button.Group>
           <ConnectionDropDown />
         </FormItem>
 
@@ -87,7 +89,10 @@ function Toolbar({
             </IconButtonLink>
           </Tooltip>
           <Tooltip placement="bottom" title="Import database schema">
-            <IconButtonLink to="/datalog/new" onClick={() => importSchemaDatalog()}>
+            <IconButtonLink
+              to="/datalog/new"
+              onClick={() => importSchemaDatalog()}
+            >
               <Icon type="import" />
             </IconButtonLink>
           </Tooltip>
@@ -109,7 +114,10 @@ function Toolbar({
           />
           <Button.Group>
             <Tooltip placement="bottom" title="Clone">
-              <Button onClick={handleCloneClickDatalog} disabled={cloneDisabled}>
+              <Button
+                onClick={handleCloneClickDatalog}
+                disabled={cloneDisabled}
+              >
                 <Icon type="copy" />
               </Button>
             </Tooltip>
@@ -130,28 +138,38 @@ function Toolbar({
         </FormItem>
 
         <FormItem>
-            Verify &nbsp;
-            <VerificationSwitch />
-            &nbsp;
-            Optimize &nbsp;
-            <OptimizationSwitch />
-            &nbsp;
-            Speed &nbsp;
-            <SpeedSwitch />
-            &nbsp;
-            {/* Timeout &nbsp; */}
-            <Popover placement="bottom" content="Timeout" trigger="hover">
-              {/* <Icon type="clock-circle" /> &nbsp; */}
-              <TimeoutDropDown />
-            </Popover>
-            &nbsp;
+          Verify &nbsp;
+          <VerificationSwitch />
+          &nbsp; Optimize &nbsp;
+          <OptimizationSwitch />
+          &nbsp; Speed &nbsp;
+          <SpeedSwitch />
+          &nbsp;
+          {/* Timeout &nbsp; */}
+          <Popover placement="bottom" content="Timeout" trigger="hover">
+            {/* <Icon type="clock-circle" /> &nbsp; */}
+            <TimeoutDropDown />
+          </Popover>
+          &nbsp;
+          <Tooltip placement="bottom" title="Compile (with/without verification) into SQL">
             <Button
               type="primary"
-              onClick={() => runDatalog()}
+              onClick={() => runDatalog(0, false)}
               disabled={isRunning}
             >
-              Run
+              Compile
             </Button>
+          </Tooltip>
+          &nbsp;
+          <Tooltip placement="bottom" title="Test for the given tuples">
+            <Button
+              type="danger"
+              onClick={() => runDatalog(0, true)}
+              disabled={isRunning}
+            >
+              Test
+            </Button>
+          </Tooltip>
         </FormItem>
 
         <div className="flex-grow-1" />
@@ -162,12 +180,11 @@ function Toolbar({
               <Icon type="edit" /> SQL
             </IconButtonLink>
           </Tooltip>
-          <AboutButton />
-          {isAdmin && (
-            <ConfigButton />
-          )}
-
-          <SignoutButton />
+          <Button.Group>
+            <AboutButton />
+            {isAdmin && <ConfigButton />}
+            <SignoutButton />
+          </Button.Group>
         </FormItem>
       </Form>
     </div>

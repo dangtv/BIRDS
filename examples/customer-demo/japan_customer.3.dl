@@ -1,0 +1,25 @@
+source nation('ID':int, 'NAME':string, 'DESCRIPTION':string).
+source customer('ID':int, 'NAME':string, 'MARRIED':bool, 'PHONE':string, 'NATION_ID':int).
+view japanese_customer('ID':int, 'NAME':string, 'MARRIED':bool).
+
+% view definition
+japanese_customer(ID, NAME, MARRIED) :- customer(ID, NAME, MARRIED, PHONE, NATION_ID), nation(NATION_ID, NATION, DES), NATION = 'Japan'.
+
+% constraints
+PK(nation, ['ID']).
+PK(customer, ['ID']).
+PK(japanese_customer, ['ID']).
+
+% a constraint that nation must have a tuple of Japan
+_|_ :- not nation(_, 'Japan', _).
+
+% update strategy
+-customer(ID, NAME, MARRIED, PHONE, NATION_ID) :- customer(ID, NAME, MARRIED, PHONE, NATION_ID), nation(NATION_ID, NATION, _), 
+    NATION = 'Japan', not japanese_customer(ID, NAME, MARRIED).
+    
+existing_japanese_customer(ID, NAME, MARRIED) :- customer(ID, NAME, MARRIED, PHONE, NATION_ID), nation(NATION_ID, 'Japan', _).
++customer(ID, NAME, MARRIED, PHONE, NATION_ID) :- japanese_customer(ID, NAME, MARRIED), not existing_japanese_customer(ID, NAME, MARRIED), 
+    nation(NATION_ID, 'Japan', _), customer(ID, _, _, PHONE, _).
++customer(ID, NAME, MARRIED, PHONE, NATION_ID) :- japanese_customer(ID, NAME, MARRIED), not existing_japanese_customer(ID, NAME, MARRIED), 
+    nation(NATION_ID, 'Japan', _), not customer(ID, _, _, _,_), PHONE = 'unknown'.
+    

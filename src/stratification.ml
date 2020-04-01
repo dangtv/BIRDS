@@ -59,3 +59,34 @@ let stratify (edb:symtable) (idb:symtable) (query_rt:rterm) : (symtkey list) =
         []
     else
         strat_dfs edb idb visit active key
+;;
+
+(** get all rules that are evaluated before evaluating the rules of query_rt *)
+let get_preceding_rules prog query_rt =
+    let edb = extract_edb prog in
+    let strat =
+        let temp_idb = extract_idb prog in
+        Rule_preprocess.preprocess_rules temp_idb;
+        stratify edb temp_idb query_rt in
+    let idb = extract_idb prog in
+    symt_remove idb (symtkey_of_rterm query_rt);
+    Rule_preprocess.preprocess_rules idb;
+    let rule_lst_lst = List.map (fun x -> if (Hashtbl.mem idb x) then Hashtbl.find idb x else []) strat in
+    List.concat rule_lst_lst
+;;
+
+(** get all rules in a stratified order *)
+let get_stratified_rules prog =
+    let edb = extract_edb prog in
+    let idb = extract_idb prog in
+    let get_preds key rules lst = (Pred(get_rterm_predname (rule_head (List.hd rules)), gen_vars 0 (get_symtkey_arity key))) :: lst in
+    let all_rels = Hashtbl.fold get_preds idb [] in
+    let tmp = Pred("__str_tmp__",[]) in
+    symt_insert idb (Rule(tmp, List.map (fun x -> Rel x) all_rels));
+    Rule_preprocess.preprocess_rules idb;
+    let strat = stratify edb idb tmp in
+    let idb = extract_idb prog in
+    symt_remove idb (symtkey_of_rterm tmp);
+    let rule_lst_lst = List.map (fun x -> if (Hashtbl.mem idb x) then Hashtbl.find idb x else []) strat in
+    List.concat rule_lst_lst
+;;

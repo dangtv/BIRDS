@@ -125,6 +125,7 @@ let extract_rule_constants = function
     | Query _    -> invalid_arg "function extract_rule_constants called with a query"
     | Constraint _    -> invalid_arg "function extract_rule_constants called with a Constraint"
     | Pk _    -> invalid_arg "function extract_rule_constants called with a Primary key"
+    | Fact _    -> invalid_arg "function extract_rule_constants called with a Fact"
     | Source _    -> invalid_arg "function extract_rule_constants called with a source schema"
     | View _ -> invalid_arg "function extract_rule_constants called with a view schema"
     | Rule(h, b) -> 
@@ -149,6 +150,7 @@ let anonvar2namedvar = function
     | Query _    -> invalid_arg "function anonvar2namedvar called with a query"
     | Constraint _    -> invalid_arg "function anonvar2namedvar called with a Constraint"
     | Pk _    -> invalid_arg "function anonvar2namedvar called with a Pk"
+    | Fact _    -> invalid_arg "function anonvar2namedvar called with a Pk"
     | Source _    -> invalid_arg "function anonvar2namedvar called with a source schema"
     | View _ -> invalid_arg "function anonvar2namedvar called with a view schema"
     | Rule(h, b) -> 
@@ -175,6 +177,50 @@ let anonvar2namedvar = function
         Rule(h,newb)
 ;;
 
+(** Given a rule, replace string to a int defined by a mapping*)
+let string2int mapping = function
+    | Query _    -> invalid_arg "function anonvar2namedvar called with a query"
+    | Constraint _    -> invalid_arg "function anonvar2namedvar called with a Constraint"
+    | Pk _    -> invalid_arg "function anonvar2namedvar called with a Pk"
+    | Fact _    -> invalid_arg "function anonvar2namedvar called with a Pk"
+    | Source _    -> invalid_arg "function anonvar2namedvar called with a source schema"
+    | View _ -> invalid_arg "function anonvar2namedvar called with a view schema"
+    | Rule(h, b) -> 
+        let s2i_term t = match t with 
+            | Rel rt -> (match rt with 
+                        | Pred (name, varlst) -> 
+                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                            Rel (Pred (name, new_varlst))
+                        | Deltainsert (name, varlst) -> 
+                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                            Rel (Deltainsert (name, new_varlst))
+                        | Deltadelete (name, varlst) -> 
+                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                            Rel (Deltadelete (name, new_varlst))
+                        )
+            | Not rt -> (match rt with 
+                        | Pred (name, varlst) -> 
+                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                            Not (Pred (name, new_varlst))
+                        | Deltainsert (name, varlst) -> 
+                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                            Not (Deltainsert (name, new_varlst))
+                        | Deltadelete (name, varlst) -> 
+                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                            Not (Deltadelete (name, new_varlst))
+                        )
+            | Equal (Const (String s1), Const (String s2)) -> Equal (Const (Int (mapping s1)), Const (Int (mapping s2)))
+            | Equal (Const (String s1), x) -> Equal (Const (Int (mapping s1)),x)
+            | Equal (x, Const (String s2)) -> Equal (x, Const (Int (mapping s2)))
+            | Ineq (op, Const (String s1), Const (String s2)) -> Ineq (op, Const (Int (mapping s1)), Const (Int (mapping s2)))
+            | Ineq (op, Const (String s1), x) -> Ineq (op, Const (Int (mapping s1)), x)
+            | Ineq (op, x, Const (String s2)) -> Ineq (op, x, Const (Int (mapping s2)))
+            | _ -> t in
+        let newb  = List.map s2i_term b in 
+        (* print_endline (string_of_stt (Rule(h,newb)));  *)
+        Rule(h,newb)
+;;
+
 (****************************************************)
 (*      Main function                               *)
 (****************************************************)
@@ -195,7 +241,45 @@ let preprocess_rules (st:symtable) =
         Hashtbl.replace st key sorted_lst in
     Hashtbl.iter rep_rule st
 
-(** Given a symtable, replace AnonVar to a NamedVar*)
+let extract_rterm_adom rt = 
+    let vl = get_rterm_varlist rt in
+    let extract var c_lst = match var with 
+        | ConstVar const -> const::c_lst
+        | _ -> c_lst in
+    List.fold_right extract vl []
+
+let extract_rule_adom = function
+    | Query _    -> invalid_arg "function extract_rule_constants called with a query"
+    | Constraint _    -> invalid_arg "function extract_rule_constants called with a Constraint"
+    | Pk _    -> invalid_arg "function extract_rule_constants called with a Primary key"
+    | Fact _    -> invalid_arg "function extract_rule_constants called with a Fact"
+    | Source _    -> invalid_arg "function extract_rule_constants called with a source schema"
+    | View _ -> invalid_arg "function extract_rule_constants called with a view schema"
+    | Rule(h, b) -> 
+        let h_adom = extract_rterm_adom h in
+        let extract t c_lst = match t with
+            | Rel rt -> (extract_rterm_adom rt) @ c_lst
+            | Not rt -> (extract_rterm_adom rt) @ c_lst
+            | Equal (Const c1, Const c2) | Ineq (_, Const c1, Const c2) -> c1::c2::c_lst
+            | Equal (_, Const c) | Equal (Const c, _)
+            | Ineq (_, Const c, _) | Ineq (_, _, Const c) -> c::c_lst
+            | _ -> c_lst in
+        let b_adom = List.fold_right extract b [] in
+        h_adom@b_adom
+
+let extract_rules_adom rules =
+    List.concat (List.map extract_rule_adom rules)
+
+let extract_rules_string_adom rules =
+    let lst = List.filter (function | String s -> true | _-> false) (extract_rules_adom rules) in 
+    Lib.setify (List.map string_of_const lst)
+;;
+
+let string2int_rules mapping rules =
+    List.map (string2int mapping) rules
+;;
+
+(** Given a symtable, replace AnonVar with a NamedVar*)
 let anon2named_rules (st:symtable) =
     let rep_rule key rules =
         let named_lst = List.map anonvar2namedvar rules in

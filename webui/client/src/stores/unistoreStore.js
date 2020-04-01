@@ -57,7 +57,7 @@ export const unistoreStore = createStore({
   datalogError: null,
   runDatalogStartTime: undefined,
   selectedText: '',
-  timeout: '60',
+  timeout: 60,
   verification: false,
   optimization: false,
   speedup: false,
@@ -123,26 +123,24 @@ export const actions = store => ({
         }
       });
 
-      
-      if (connectionId == 'noconnection'){
+      if (connectionId == 'noconnection') {
         return {
           schema: {
             ...schema,
             [connectionId]: {
-              loading: false,
+              loading: false
               // schemaInfo,
               // expanded
             }
           }
         };
-      }
-      else{
+      } else {
         const qs = reload ? '?reload=true' : '';
         const json = await fetchJson(
           'GET',
           `/api/schema-info/${connectionId}${qs}`
-        )
-      
+        );
+
         const { error, schemaInfo } = json;
         if (error) {
           return message.error(error);
@@ -471,11 +469,14 @@ export const actions = store => ({
     return { selectedText };
   },
 
-  // DATALOG 
+  // DATALOG
   formatDatalog(state) {
     const { datalog } = state;
     return {
-      datalog: { ...datalog, datalogText: dlFormatter.format(datalog.datalogText) },
+      datalog: {
+        ...datalog,
+        datalogText: dlFormatter.format(datalog.datalogText)
+      },
       unsavedChanges: true
     };
   },
@@ -513,16 +514,27 @@ export const actions = store => ({
   },
 
   async loadDatalog(state, datalogId) {
-    const { error, datalog } = await fetchJson('GET', `/api/datalog/${datalogId}`);
+    const { error, datalog } = await fetchJson(
+      'GET',
+      `/api/datalog/${datalogId}`
+    );
     if (error) {
       message.error(error);
     }
-    return { datalog, selectedConnectionId: datalog.connectionId};
+    return { datalog, selectedConnectionId: datalog.connectionId };
   },
 
-  async runDatalog(state) {
-    const { cacheKey, datalog, selectedText, selectedConnectionId, timeout, verification, optimization, speedup } = state;
-
+  async runDatalog(state, ctex, debug) {
+    const {
+      cacheKey,
+      datalog,
+      selectedText,
+      selectedConnectionId,
+      timeout,
+      verification,
+      optimization,
+      speedup
+    } = state;
     store.setState({
       isRunning: true,
       runDatalogStartTime: new Date()
@@ -531,6 +543,8 @@ export const actions = store => ({
       connectionId: selectedConnectionId,
       timeout: timeout,
       verification: verification,
+      counterexample: ctex,
+      debug: debug,
       optimization: optimization,
       speedup: speedup,
       cacheKey,
@@ -564,25 +578,27 @@ export const actions = store => ({
       connectionId: selectedConnectionId
     });
     if (datalog._id) {
-      fetchJson('PUT', `/api/datalog/${datalog._id}`, datalogData).then(json => {
-        const { error, datalog } = json;
-        const { datalogs } = store.getState();
-        if (error) {
-          message.error(error);
-          store.setState({ isSaving: false });
-          return;
+      fetchJson('PUT', `/api/datalog/${datalog._id}`, datalogData).then(
+        json => {
+          const { error, datalog } = json;
+          const { datalogs } = store.getState();
+          if (error) {
+            message.error(error);
+            store.setState({ isSaving: false });
+            return;
+          }
+          message.success('Datalog Saved');
+          const updatedDatalogs = datalogs.map(q => {
+            return q._id === datalog._id ? datalog : q;
+          });
+          store.setState({
+            isSaving: false,
+            unsavedChanges: false,
+            datalog,
+            datalogs: updatedDatalogs
+          });
         }
-        message.success('Datalog Saved');
-        const updatedDatalogs = datalogs.map(q => {
-          return q._id === datalog._id ? datalog : q;
-        });
-        store.setState({
-          isSaving: false,
-          unsavedChanges: false,
-          datalog,
-          datalogs: updatedDatalogs
-        });
-      });
+      );
     } else {
       fetchJson('POST', `/api/datalog`, datalogData).then(json => {
         const { error, datalog } = json;
@@ -618,29 +634,32 @@ export const actions = store => ({
 
   async importSchemaDatalog(state) {
     const { selectedConnectionId } = state;
-      const {datalogSchema } = await fetchJson(
-        'GET',
-        `/api/schema-datalog/${selectedConnectionId}`
-      );
-      // if (error) {
-      //   return message.error(error);
-      // }
+    const { datalogSchema } = await fetchJson(
+      'GET',
+      `/api/schema-datalog/${selectedConnectionId}`
+    );
+    // if (error) {
+    //   return message.error(error);
+    // }
 
-      return {
+    return {
       datalogResult: undefined,
-      datalog: Object.assign({}, {
-        _id: '',
-        name: '',
-        tags: [],
-        connectionId: '',
-        datalogText: datalogSchema,
-        chartConfiguration: {
-          chartType: '',
-          fields: {} // key value for chart
+      datalog: Object.assign(
+        {},
+        {
+          _id: '',
+          name: '',
+          tags: [],
+          connectionId: '',
+          datalogText: datalogSchema,
+          chartConfiguration: {
+            chartType: '',
+            fields: {} // key value for chart
+          }
         }
-      }),
+      ),
       unsavedChanges: false
-      };
+    };
   },
 
   setDatalogState(state, field, value) {

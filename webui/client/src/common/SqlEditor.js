@@ -12,7 +12,7 @@ import AceEditor from 'react-ace';
 
 const noop = () => {};
 
-function SqlEditor({ config, onChange, readOnly, value, onSelectionChange }) {
+function SqlEditor({ config, onChange, readOnly, showLineNumbers, value, onSelectionChange }) {
   const [dimensions, setDimensions] = useState({ width: -1, height: -1 });
   const [editor, setEditor] = useState(null);
 
@@ -68,6 +68,8 @@ function SqlEditor({ config, onChange, readOnly, value, onSelectionChange }) {
             showPrintMargin={false}
             theme="sqlserver"
             readOnly={readOnly}
+            showLineNumbers={showLineNumbers}
+            showGutter={showLineNumbers}
             value={value}
             width={width + 'px'}
           />
@@ -81,12 +83,14 @@ SqlEditor.propTypes = {
   onChange: PropTypes.func,
   onSelectionChange: PropTypes.func,
   readOnly: PropTypes.bool,
-  value: PropTypes.string
+  value: PropTypes.string,
+  showLineNumbers: PropTypes.bool
 };
 
 SqlEditor.defaultProps = {
   onSelectionChange: () => {},
   readOnly: false,
+  showLineNumbers: true,
   value: ''
 };
 

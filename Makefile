@@ -23,7 +23,6 @@ OCAMLOPT_FLAGS=-bin-annot -w -26 -I $(RELEASE_DIR) -I $(LOGIC_RELEASE_DIR)
 OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR)
 
 #Name of the files that are part of the project
-# MAIN_FILE=eval_main
 MAIN_FILE=main
 LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
@@ -32,9 +31,11 @@ TOP_FILES=\
     expr utils parser lexer\
     conn_ops\
 	rule_preprocess stratification derivation \
-	ast2fol ast2sql \
+	bottom_up evaluation\
+	ast2fol ast2sql ast2ros\
 	ast2theorem \
 	bx\
+	debugger \
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\

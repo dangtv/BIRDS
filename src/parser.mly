@@ -35,12 +35,29 @@
 
 %start main               /*  entry point    */
 %type <Expr.expr> main
+
+%start parse_rterm
+%type <Expr.rterm> parse_rterm
+
+%start parse_query
+%type <Expr.conj_query> parse_query
+
 %%
 
 /* Grammar */
   main:	EOF	        { Prog [] }
   | program  EOF                        { Prog (List.rev $1)  }
   | error             { spec_parse_error "invalid syntax for a main program" 1; }
+  ;
+
+  parse_rterm:
+  | predicate EOF     {$1}
+  | error             { spec_parse_error "invalid syntax for a rterm" 1; }
+  ;
+
+  parse_query:
+  | conj_query EOF     {$1}
+  | error             { spec_parse_error "invalid syntax for a conj_query" 1; }
   ;
   
   program: 
@@ -61,12 +78,12 @@
   | query	                            { $1 }
   | source	                            { $1 }
   | view	                            { $1 }
-  | fact				    { failwith "fact: to be implemented" }
+  | fact				    { $1 }
   | error             { spec_parse_error "invalid syntax for a rule or a declaration of query/source/view/constraint" 1; }
   ;
   
   fact:
-  literal                               { $1 }
+  predicate DOT                              {Fact $1 }
   | error             { spec_parse_error "invalid syntax for a fact" 1; }
   ;
 
@@ -98,6 +115,25 @@
   head:
   predicate						{ $1 }
   | error             { spec_parse_error "invalid syntax for a head" 1; }
+  ;
+
+  conj_query:
+  | LPAREN varlist RPAREN IMPLIEDBY signed_literals 
+    {
+      let pos_literals, neg_literal = $5 in
+      Expr.Conj_query ($2, pos_literals, neg_literal)
+    }
+  | error             { spec_parse_error "invalid syntax for a conjunctive query" 1; }
+  ;
+
+  signed_literals:
+  | predicate SEP signed_literals
+    { let pos, neg = $3 in $1 :: pos, neg }
+  | NOT predicate SEP signed_literals
+    { let pos, neg = $4 in pos, $2 :: neg }
+  | predicate { [$1], [] }
+  | NOT predicate { [], [$2] }
+  | error             { spec_parse_error "invalid syntax for a signed_literals" 1; }
   ;
 
   body:

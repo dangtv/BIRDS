@@ -11,29 +11,42 @@ const drivers = {};
  * @param {string} datalog
  * @param {object} connection
  */
-function birds(datalog, connection, timeout, verification, optimization, speedup) {
-  if ((!connection) || (!connection.username)) {
+function birds(
+  datalog,
+  connection,
+  timeout,
+  verification,
+  counterexample,
+  debug,
+  optimization,
+  speedup
+) {
+  if (!connection || !connection.username) {
     return new Promise((resolve, reject) => {
       var exec = require('child_process').exec;
-      var command = 'echo "'+datalog+'" | birds -t '+timeout;
+      var command = 'echo "' + datalog + '" | birds -t ' + timeout.toString();
+      if (debug) command = command + ' --debug --explain';
       if (verification) command = command + ' -v';
+      if (counterexample > 0)
+        command = command + ' -x ' + counterexample.toString();
       if (optimization) command = command + ' -i -e ';
-      if (speedup) command = command + ' -u ';
-      exec(command, function callback(error, stdout, stderr){
-        // console.log(stdout);
-        // console.log(error);
-        // console.log(stderr);
+      if (speedup && counterexample == 0) command = command + ' -u ';
+      // exec(command, {timeout:6000}, function callback(error, stdout, stderr) { //for timeout 6 seconds.
+      exec(command, function callback(error, stdout, stderr) {
         if (error == null) {
           return resolve(stdout);
-        }
-        else {
+        } else {
+          // console.log(stdout);
+          // console.log(">>>> Error of executing BIRDS:");
+          // console.log(error);
+          // console.log("___stderr____");
+          // console.log(stderr);
           return reject(stderr);
           // return resolve(stdout);
         }
-        });
+      });
     });
-  }
-  else {
+  } else {
     const pgConfig = {
       user: connection.username,
       password: connection.password,
@@ -51,28 +64,43 @@ function birds(datalog, connection, timeout, verification, optimization, speedup
         pgConfig.ssl['ca'] = fs.readFileSync(connection.postgresCA);
       }
     }
-    if (connection.port) pgConfig.port = connection.port
-    else pgConfig.port='5432';
+    if (connection.port) pgConfig.port = connection.port;
+    else pgConfig.port = '5432';
 
     return new Promise((resolve, reject) => {
       var exec = require('child_process').exec;
-      var command = 'echo "'+datalog+'" | birds -c -h '+pgConfig.host+' -U '+pgConfig.user+' -p '+ pgConfig.port+' -w '
-      +pgConfig.password+' -d '+pgConfig.database+ ' -t '+timeout;
+      var command =
+        'echo "' +
+        datalog +
+        '" | birds -c -h ' +
+        pgConfig.host +
+        ' -U ' +
+        pgConfig.user +
+        ' -p ' +
+        pgConfig.port +
+        ' -w ' +
+        pgConfig.password +
+        ' -d ' +
+        pgConfig.database +
+        ' -t ' +
+        timeout;
+      if (debug) command = command + ' --debug --explain';
       if (verification) command = command + ' -v';
+      if (counterexample > 0)
+        command = command + ' -x ' + counterexample.toString();
       if (optimization) command = command + ' -i -e ';
-      if (speedup) command = command + ' -u ';
-      exec(command, function callback(error, stdout, stderr){
+      if (speedup && counterexample == 0) command = command + ' -u ';
+      exec(command, function callback(error, stdout, stderr) {
         // console.log(stdout);
         // console.log(error);
         // console.log(stderr);
         if (error == null) {
           return resolve(stdout);
-        }
-        else {
+        } else {
           return reject(stderr);
           // return resolve(stdout);
         }
-        });
+      });
     });
   }
 }
@@ -85,7 +113,17 @@ function birds(datalog, connection, timeout, verification, optimization, speedup
  * @param {*} timeout
  * @returns {Promise}
  */
-function runDatalog(datalog, connection, user, timeout, verification, optimization, speedup) {
+function runDatalog(
+  datalog,
+  connection,
+  user,
+  timeout,
+  verification,
+  counterexample,
+  debug,
+  optimization,
+  speedup
+) {
   // console.log (datalog+' hehee');
   const datalogResult = {
     id: uuid.v4(),
@@ -99,7 +137,16 @@ function runDatalog(datalog, connection, user, timeout, verification, optimizati
     rows: []
   };
 
-  return birds(datalog, connection, timeout, verification, optimization, speedup).then(results => {
+  return birds(
+    datalog,
+    connection,
+    timeout,
+    verification,
+    counterexample,
+    debug,
+    optimization,
+    speedup
+  ).then(results => {
     // const { rows, incomplete } = results;
     // console.log(results);
 
@@ -108,31 +155,33 @@ function runDatalog(datalog, connection, user, timeout, verification, optimizati
     // datalogResult.rows = rows;
     // datalogResult.rows = [{'SQL':results}];
     datalogResult.stopTime = new Date();
-    datalogResult.datalogRunTime = datalogResult.stopTime - datalogResult.startTime;
+    datalogResult.datalogRunTime =
+      datalogResult.stopTime - datalogResult.startTime;
     // datalogResult.meta = getMeta(rows);
     // datalogResult.fields = Object.keys(datalogResult.meta);
     datalogResult.fields = ['SQL'];
 
-    if (debug) {
-      var connectionName = "No connection";
-      if (connection) if (connection.name) connectionName = connection.name;
-      // const rowCount = rows.length;
-      const { startTime, stopTime, datalogRunTime } = datalogResult;
-      console.log("here");
-      console.log(
-        JSON.stringify({
-          userId: user && user._id,
-          userEmail: user && user.email,
-          connectionName,
-          timeout,
-          startTime,
-          stopTime,
-          datalogRunTime,
-          // rowCount,
-          datalog
-        })
-      );
-    }
+    // if (debug) {
+    //   var connectionName = 'No connection';
+    //   if (connection) if (connection.name) connectionName = connection.name;
+    //   // const rowCount = rows.length;
+    //   const { startTime, stopTime, datalogRunTime } = datalogResult;
+    //   console.log('here');
+    //   console.log(
+    //     JSON.stringify({
+    //       userId: user && user._id,
+    //       userEmail: user && user.email,
+    //       connectionName,
+    //       timeout,
+    //       startTime,
+    //       stopTime,
+    //       datalogRunTime,
+    //       counterexample,
+    //       // rowCount,
+    //       datalog
+    //     })
+    //   );
+    // }
 
     return datalogResult;
   });

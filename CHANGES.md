@@ -1,5 +1,11 @@
 # Changelog
 
+### 0.0.4 (2020-04-01)
+* CLI: Update some options and add new options
+* New counterexample & explanation generator
+* New in-memory Datalog evaluator
+* New features for WebUI
+
 ### 2019-12-11
 * Incrementally calculate Dejima view updates.
 
