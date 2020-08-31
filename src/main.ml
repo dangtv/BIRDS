@@ -63,7 +63,7 @@ let speclist = [
   ("-s", Arg.String (fun s -> dbschema := s),  "<schema> Database schema name to connect to (default: public)");
   ("-h", Arg.String (fun s -> host := s),      "<host> Database server host (default: \"localhost\")");
   ("-c", Arg.Unit (fun () -> connectdb := true),      " Connect and run the generated SQL on the database server");
-  ("--import", Arg.Unit (fun () -> importschema := true),      " Connect and import the data schema from database server");
+  ("--import", Arg.Unit (fun () -> importschema := true),      " Connect and import the data schema from the database server");
   ("-v", Arg.Unit (fun () -> verification := true),      " Enable verifications");
   ("--verification", Arg.Unit (fun () -> verification := true),      " The same as -v");
   ("-x", Arg.Int (fun d -> cex_generation := true; cex_max := d),      "<size> Get a counterexample with the maximum size if the program is not well-behaved");
@@ -77,7 +77,7 @@ let speclist = [
   ("-p", Arg.Int    (fun d -> port := d),      "<port> Database server port (default: \"5432\")");
   ("-U", Arg.String (fun s -> user := s),      "<user> Database user (default: \"postgres\")");
   ("-g", Arg.String (fun s -> dejima_user := s),      "<user> The special user for global dejima synchronization (default: \"dejima\")");
-  ("--dejima", Arg.Unit (fun () -> dejima_ud := true),      " Detect updates on dejima views to perform pre-defined actions in the shell script file");
+  ("--dejima", Arg.Unit (fun () -> dejima_ud := true),      " Detect updates on dejima views to perform predefined actions in the shell script file");
   ("-w", Arg.String (fun s -> password := s),  "<password> Database user password (default: 12345678)");
   ("-d", Arg.String (fun s -> dbname := s),    "<dbname> Database name to connect to (default: \"datalogdb\")");
   ("-t", Arg.Int (fun d -> timeout := d),    "<timeout> Timeout (second) (default: 120s)");

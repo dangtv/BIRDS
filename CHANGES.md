@@ -1,5 +1,9 @@
 # Changelog
 
+### 2020-08-30
+* Fix bugs in the Datalog evaluator
+* Accept `'` in the end of a variable name
+
 ### 0.0.4 (2020-04-01)
 * CLI: Update some options and add new options
 * New counterexample & explanation generator

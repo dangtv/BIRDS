@@ -15,14 +15,15 @@ BIN_DIR=bin
 LOGIC_BIN_DIR=bin/logic
 RELEASE_DIR = release
 LOGIC_RELEASE_DIR = release/logic
-OBJ_DIR=${SOURCE_DIR}
-LOGIC_OBJ_DIR=${LOGIC_SOURCE_DIR}
+OBJ_DIR=${BIN_DIR}
+LOGIC_OBJ_DIR=${LOGIC_BIN_DIR}
 
 OCAMLC_FLAGS=-bin-annot -w -26  -I $(OBJ_DIR) -I $(LOGIC_OBJ_DIR)
 OCAMLOPT_FLAGS=-bin-annot -w -26 -I $(RELEASE_DIR) -I $(LOGIC_RELEASE_DIR)
 OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR)
 
 #Name of the files that are part of the project
+# MAIN_FILE=eval_main
 MAIN_FILE=main
 LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\

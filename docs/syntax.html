@@ -8,16 +8,16 @@
     <link rel="stylesheet" href="assets/css/style.css?v=">
     <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
     <script src="assets/js/main.js"></script>
-<!-- Begin Jekyll SEO tag v2.5.0 -->
+<!-- Begin Jekyll SEO tag v2.6.1 -->
 <title>BIRDS | Bidirectional Transformation for Relational View Update Datalog-based Strategies</title>
-<meta name="generator" content="Jekyll v3.8.3" />
+<meta name="generator" content="Jekyll v4.0.0" />
 <meta property="og:title" content="BIRDS" />
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="Bidirectional Transformation for Relational View Update Datalog-based Strategies" />
 <meta property="og:description" content="Bidirectional Transformation for Relational View Update Datalog-based Strategies" />
 <meta property="og:site_name" content="BIRDS" />
 <script type="application/ld+json">
-{"url":"/syntax.html","description":"Bidirectional Transformation for Relational View Update Datalog-based Strategies","headline":"BIRDS","@type":"WebPage","@context":"http://schema.org"}</script>
+{"url":"/syntax.html","description":"Bidirectional Transformation for Relational View Update Datalog-based Strategies","headline":"BIRDS","@type":"WebPage","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
   </head>
@@ -80,9 +80,9 @@ Given a relation t(<strong>A</strong>, B, C), we can declare <strong>A</strong> 
 </code></pre></div></div>
 <p>That is an abbreviation for the following rules:</p>
 
-<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="nv">A</span> <span class="o">-&gt;</span> <span class="nv">B</span><span class="o">:</span>
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">% for the functional dependency A -&gt; B:</span>
 <span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">t</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B1</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">t</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B2</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">B1</span> <span class="o">=</span> <span class="nv">B2</span><span class="p">.</span>
-<span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="nv">A</span> <span class="o">-&gt;</span> <span class="nv">C</span><span class="o">:</span>
+<span class="c1">% for the functional dependency A -&gt; C:</span>
 <span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">t</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">C1</span><span class="p">),</span> <span class="ss">t</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">C2</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">C1</span> <span class="o">=</span> <span class="nv">C2</span><span class="p">.</span>
 </code></pre></div></div>
 
@@ -93,9 +93,9 @@ We declare this constraint by:</p>
 </code></pre></div></div>
 <p>That is an abbreviation for the following rules:</p>
 
-<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nv">C</span><span class="o">:</span>
+<div class="language-prolog highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">% for the functional dependency (A,B) -&gt; C:</span>
 <span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">C1</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">C2</span><span class="p">,</span><span class="nv">_</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">C1</span> <span class="o">=</span> <span class="nv">C2</span><span class="p">.</span>
-<span class="err">%</span> <span class="ss">for</span> <span class="ss">the</span> <span class="ss">functional</span> <span class="ss">dependency</span> <span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nv">D</span><span class="o">:</span>
+<span class="c1">% for the functional dependency (A,B) -&gt; D:</span>
 <span class="nv">_</span><span class="p">|</span><span class="nv">_</span> <span class="p">:-</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">D1</span><span class="p">),</span> <span class="ss">s</span><span class="p">(</span><span class="nv">A</span><span class="p">,</span><span class="nv">B</span><span class="p">,</span><span class="nv">_</span><span class="p">,</span><span class="nv">D2</span><span class="p">),</span> <span class="ss">not</span> <span class="nv">D1</span> <span class="o">=</span> <span class="nv">D2</span><span class="p">.</span>
 </code></pre></div></div>
 
@@ -111,7 +111,7 @@ We declare this constraint by:</p>
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 13 Feb 2020</small></p>
+        <small>Last updated on 30 Aug 2020</small></p>
       </footer>
     </div>
 

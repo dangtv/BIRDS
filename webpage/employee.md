@@ -160,7 +160,7 @@ Let's try an update to `ced`:
 update ced set dept_name = 'Research' where emp_name='Anneke Preusig';
 ```
 
-Meaning that `Anneke Preusig` change her department to `Research`. This movement is reflected to the source tables:
+Meaning that `Anneke Preusig` changes her department to `Research`. This movement is reflected to the source tables:
 
 ![update](assets/images/ced-update-ed.png)
 ![update](assets/images/ced-update-eed.png)
@@ -290,7 +290,7 @@ view researchers('EMP_NAME':string).
 +ced(E,D) :- researchers(E), D = 'Research'.
 ```
 
-The first two rules means if a resident is a researcher but not in the view `researchers` anymore, we deleted the current department `Research` of this resident.
+The first two rules mean if a resident is a researcher but not in the view `researchers` anymore, we deleted the current department `Research` of this resident.
 By contrast, by the third rule, if a new researcher appears in the view, we need to put this department information to the table `ced`, which contains information about the current departments. 
 The second rule ensures each researcher is a resident by inserting into `residents` if a researcher is not yet a resident.
 
@@ -346,7 +346,7 @@ He will not be in any department anymore:
 
 ## Update strategy for `voter`
 
-Let `blacklist(EMP_NAME)` be a black list of residents
+Let `blacklist(EMP_NAME)` be a blacklist of residents
 
 |emp_name     
 |------------------
@@ -365,7 +365,7 @@ view voter('EMP_NAME':string, 'BIRTH_DATE':string).
 -residents(E,B,G) :- residents(E,B,G), not blacklist(E), ¬ voter(E,B).
 ```
 
-The constraint `⊥ :- voter(NAME,BIRTH_DATE), blacklist(NAME).` ensures that no person in the black list can be inserted to the view `voter`. Updated data in the view `voter` is reflected to the source relation `residents` by the last two rules.
+The constraint `⊥ :- voter(NAME,BIRTH_DATE), blacklist(NAME).` ensures that no person in the blacklist can be inserted to the view `voter`. Updated data in the view `voter` is reflected to the source relation `residents` by the last two rules.
 
 Verifying and compiling the update strategy into SQL:
 

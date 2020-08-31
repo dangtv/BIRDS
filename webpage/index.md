@@ -30,7 +30,7 @@ See the [trigger generation](triggers.html) for details.
 
 # Installation and Usage
 
-BIRDS can be used via Command line interface (CLI) or Web-based interface (WebUI).
+BIRDS can be used via the Command line interface (CLI) or the Web-based interface (WebUI).
 
 ### Command line tool
 
@@ -40,30 +40,36 @@ To use the `birds` command:
 
 ```bash
 birds [OPTIONS]
--db         print debugging information
--f file     input program file, if not chosen, read from stdin
--b file     shell script file specifying the action, which will be executed when 
-            there is an update on the view, if not chosen, execute nothing
--o file     output SQL file, if not chosen, print to stdout
--l file     output verification file (optional)
--s schema   database schema name to connect to (default: public)
--h host     database server host (default: "localhost")
--c          connect and run the generated SQL on the database server
--import     connect and import the data schema from database server
--v          enable verifications
--i          optimize the update propagation by incremental rewriting rules
--e          optimize datalog rules
--u          speed up the verifications
--p port     database server port (default: "5432")
--U user     database user (default: "postgres")
--g user     the special user for global dejima synchronization (default: "dejima")
--dejima     detect updates on dejima views to perform pre-defined actions in the
-            shell script file
--w password database user password (default: 12345678)
--d dbname   database name to connect to (default: "datalogdb")
--t timeout  timeout (second) (default: 120s)
--help       Display this list of options
---help      Display this list of options
+--version               Print version
+--log                   Print running information
+--debug                 Enable debugging mode
+--explain               Show only explanations in the debugging mode
+-f <file>               Input program file, if not chosen, read from stdin
+-b <file>               Shell script file specifying the action, which will be executed when there is an update on the view, if not chosen, execute nothing
+-o <file>               Output SQL file, if not chosen, print to stdout
+-l <file>               Output verification file (optional)
+-s <schema>             Database schema name to connect to (default: public)
+-h <host>               Database server host (default: "localhost")
+-c                      Connect and run the generated SQL on the database server
+--import                Connect and import the data schema from the database server
+-v                      Enable verifications
+-x <size>               Get a counterexample with the maximum size if the program is not well-behaved
+--counterexample <size> The same as -x
+-i                      Optimize the update propagation by incremental rewriting rules
+--incrementalization    The same as -i
+-e                      Optimize datalog rules
+--optimization          The same as -e
+-u                      Speed up the verifications
+--speedup               The same as -u
+-p <port>               Database server port (default: "5432")
+-U <user>               Database user (default: "postgres")
+-g <user>               The special user for global dejima synchronization (default: "dejima")
+--dejima                Detect updates on dejima views to perform pre-defined actions in the shell script file
+-w <password>           Database user password (default: 12345678)
+-d <dbname>             Database name to connect to (default: "datalogdb")
+-t <timeout>            Timeout (second) (default: 120s)
+-help                   Display this list of options
+--help                  Display this list of options
 ```
 
 For example, this command will transform the update strategy described in `test.dl` to sql:

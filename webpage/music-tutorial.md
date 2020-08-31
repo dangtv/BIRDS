@@ -43,7 +43,7 @@ birds -v -f tracks2.dl -o tracks2.sql
 
 ## An update strategy for `tracks3`
 
-An update trategy on the view `tracks3` over the view `tracks2` by using Datalog ([tracks3.dl]({{site.github.repository_url}}/tree/master/examples/music/tracks3.dl)):
+An update strategy on the view `tracks3` over the view `tracks2` by using Datalog ([tracks3.dl]({{site.github.repository_url}}/tree/master/examples/music/tracks3.dl)):
 
 ```prolog
 % describe the schema of sources and views

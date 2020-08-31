@@ -15,7 +15,7 @@ sudo gem install bundler
 bundle install
 ```
 
-### Generating webpage
+### Generating the web pages
 
 Go to this folder (`cd webpage`)
 

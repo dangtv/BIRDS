@@ -1656,7 +1656,7 @@ let term_of_literal lit=
   
 let clause_of_rule_fact r = match r with
   | Expr.Rule (a, l) ->
-    let tbl = mk_vartbl (List.length (Utils.get_termlst_vars l)) in
+    let tbl = mk_vartbl (2* List.length (Utils.get_termlst_vars l)) in
     let a = literal_of_rterm false ~tbl a in
     let l = List.map (literal_of_term ~tbl) l in
     mk_clause a l

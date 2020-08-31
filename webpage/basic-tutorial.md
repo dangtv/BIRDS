@@ -37,7 +37,7 @@ source s1('X':int, 'Y':int).
 source s2('X':int, 'Y':int).
 view v('X':int, 'Y':int).
 ```
-* Using the keywords `source` and `view` to distinguish source tables and view.
+* Using the keywords `source` and `view` to distinguish the source tables and the view.
 * Each column is assigned a data type.
 * Supported data types are: `integer`, `real` and `string`.
 

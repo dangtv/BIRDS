@@ -186,29 +186,20 @@ let string2int mapping = function
     | Source _    -> invalid_arg "function anonvar2namedvar called with a source schema"
     | View _ -> invalid_arg "function anonvar2namedvar called with a view schema"
     | Rule(h, b) -> 
+        let s2i_rterm rt = match rt with 
+            | Pred (name, varlst) -> 
+                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                (Pred (name, new_varlst))
+            | Deltainsert (name, varlst) -> 
+                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                (Deltainsert (name, new_varlst))
+            | Deltadelete (name, varlst) -> 
+                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+                (Deltadelete (name, new_varlst)) in
+            
         let s2i_term t = match t with 
-            | Rel rt -> (match rt with 
-                        | Pred (name, varlst) -> 
-                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
-                            Rel (Pred (name, new_varlst))
-                        | Deltainsert (name, varlst) -> 
-                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
-                            Rel (Deltainsert (name, new_varlst))
-                        | Deltadelete (name, varlst) -> 
-                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
-                            Rel (Deltadelete (name, new_varlst))
-                        )
-            | Not rt -> (match rt with 
-                        | Pred (name, varlst) -> 
-                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
-                            Not (Pred (name, new_varlst))
-                        | Deltainsert (name, varlst) -> 
-                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
-                            Not (Deltainsert (name, new_varlst))
-                        | Deltadelete (name, varlst) -> 
-                            let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
-                            Not (Deltadelete (name, new_varlst))
-                        )
+            | Rel rt -> Rel (s2i_rterm rt) 
+            | Not rt -> Not (s2i_rterm rt)
             | Equal (Const (String s1), Const (String s2)) -> Equal (Const (Int (mapping s1)), Const (Int (mapping s2)))
             | Equal (Const (String s1), x) -> Equal (Const (Int (mapping s1)),x)
             | Equal (x, Const (String s2)) -> Equal (x, Const (Int (mapping s2)))
@@ -217,8 +208,9 @@ let string2int mapping = function
             | Ineq (op, x, Const (String s2)) -> Ineq (op, x, Const (Int (mapping s2)))
             | _ -> t in
         let newb  = List.map s2i_term b in 
+        let newh  = s2i_rterm h in 
         (* print_endline (string_of_stt (Rule(h,newb)));  *)
-        Rule(h,newb)
+        Rule(newh,newb)
 ;;
 
 (****************************************************)

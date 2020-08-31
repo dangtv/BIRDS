@@ -8,16 +8,16 @@
     <link rel="stylesheet" href="assets/css/style.css?v=">
     <script src="https://code.jquery.com/jquery-3.3.0.min.js" integrity="sha256-RTQy8VOmNlT6b2PIRur37p6JEBZUE7o8wPgMvu18MC4=" crossorigin="anonymous"></script>
     <script src="assets/js/main.js"></script>
-<!-- Begin Jekyll SEO tag v2.5.0 -->
+<!-- Begin Jekyll SEO tag v2.6.1 -->
 <title>BIRDS | Bidirectional Transformation for Relational View Update Datalog-based Strategies</title>
-<meta name="generator" content="Jekyll v3.8.3" />
+<meta name="generator" content="Jekyll v4.0.0" />
 <meta property="og:title" content="BIRDS" />
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="Bidirectional Transformation for Relational View Update Datalog-based Strategies" />
 <meta property="og:description" content="Bidirectional Transformation for Relational View Update Datalog-based Strategies" />
 <meta property="og:site_name" content="BIRDS" />
 <script type="application/ld+json">
-{"url":"/cli-installation.html","description":"Bidirectional Transformation for Relational View Update Datalog-based Strategies","headline":"BIRDS","@type":"WebPage","@context":"http://schema.org"}</script>
+{"url":"/cli-installation.html","description":"Bidirectional Transformation for Relational View Update Datalog-based Strategies","headline":"BIRDS","@type":"WebPage","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
   </head>
@@ -62,31 +62,39 @@ or build an executable file from the source code available at <a href="https://g
 <h2 id="usage">Usage</h2>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="o">[</span>OPTIONS]
-<span class="nt">-db</span>         print debugging information
-<span class="nt">-f</span> file     input program file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
-<span class="nt">-b</span> file     shell script file specifying the action, which will be executed when there is an update on the view, <span class="k">if </span>not chosen, execute nothing
-<span class="nt">-o</span> file     output SQL file, <span class="k">if </span>not chosen, print to stdout
-<span class="nt">-l</span> file     output verification file <span class="o">(</span>optional<span class="o">)</span>
-<span class="nt">-s</span> schema   database schema name to connect to <span class="o">(</span>default: public<span class="o">)</span>
-<span class="nt">-h</span> host     database server host <span class="o">(</span>default: <span class="s2">"localhost"</span><span class="o">)</span>
-<span class="nt">-c</span>          connect and run the generated SQL on the database server
-<span class="nt">-import</span>     connect and import the data schema from database server
-<span class="nt">-v</span>          <span class="nb">enable </span>verifications
-<span class="nt">-i</span>          optimize the update propagation by incremental rewriting rules
-<span class="nt">-e</span>          optimize datalog rules
-<span class="nt">-u</span>          speed up the verifications
-<span class="nt">-p</span> port     database server port <span class="o">(</span>default: <span class="s2">"5432"</span><span class="o">)</span>
-<span class="nt">-U</span> user     database user <span class="o">(</span>default: <span class="s2">"postgres"</span><span class="o">)</span>
-<span class="nt">-g</span> user     the special user <span class="k">for </span>global dejima synchronization <span class="o">(</span>default: <span class="s2">"dejima"</span><span class="o">)</span>
-<span class="nt">-dejima</span>     detect updates on dejima views to perform pre-defined actions <span class="k">in </span>the shell script file
-<span class="nt">-w</span> password database user password <span class="o">(</span>default: 12345678<span class="o">)</span>
-<span class="nt">-d</span> dbname   database name to connect to <span class="o">(</span>default: <span class="s2">"datalogdb"</span><span class="o">)</span>
-<span class="nt">-t</span> <span class="nb">timeout  timeout</span> <span class="o">(</span>second<span class="o">)</span> <span class="o">(</span>default: 120s<span class="o">)</span>
-<span class="nt">-help</span>       Display this list of options
-<span class="nt">--help</span>      Display this list of options
+<span class="nt">--version</span>               Print version
+<span class="nt">--log</span>                   Print running information
+<span class="nt">--debug</span>                 Enable debugging mode
+<span class="nt">--explain</span>               Show only explanations <span class="k">in </span>the debugging mode
+<span class="nt">-f</span> &lt;file&gt;               Input program file, <span class="k">if </span>not chosen, <span class="nb">read </span>from stdin
+<span class="nt">-b</span> &lt;file&gt;               Shell script file specifying the action, which will be executed when there is an update on the view, <span class="k">if </span>not chosen, execute nothing
+<span class="nt">-o</span> &lt;file&gt;               Output SQL file, <span class="k">if </span>not chosen, print to stdout
+<span class="nt">-l</span> &lt;file&gt;               Output verification file <span class="o">(</span>optional<span class="o">)</span>
+<span class="nt">-s</span> &lt;schema&gt;             Database schema name to connect to <span class="o">(</span>default: public<span class="o">)</span>
+<span class="nt">-h</span> &lt;host&gt;               Database server host <span class="o">(</span>default: <span class="s2">"localhost"</span><span class="o">)</span>
+<span class="nt">-c</span>                      Connect and run the generated SQL on the database server
+<span class="nt">--import</span>                Connect and import the data schema from the database server
+<span class="nt">-v</span>                      Enable verifications
+<span class="nt">-x</span> &lt;size&gt;               Get a counterexample with the maximum size <span class="k">if </span>the program is not well-behaved
+<span class="nt">--counterexample</span> &lt;size&gt; The same as <span class="nt">-x</span>
+<span class="nt">-i</span>                      Optimize the update propagation by incremental rewriting rules
+<span class="nt">--incrementalization</span>    The same as <span class="nt">-i</span>
+<span class="nt">-e</span>                      Optimize datalog rules
+<span class="nt">--optimization</span>          The same as <span class="nt">-e</span>
+<span class="nt">-u</span>                      Speed up the verifications
+<span class="nt">--speedup</span>               The same as <span class="nt">-u</span>
+<span class="nt">-p</span> &lt;port&gt;               Database server port <span class="o">(</span>default: <span class="s2">"5432"</span><span class="o">)</span>
+<span class="nt">-U</span> &lt;user&gt;               Database user <span class="o">(</span>default: <span class="s2">"postgres"</span><span class="o">)</span>
+<span class="nt">-g</span> &lt;user&gt;               The special user <span class="k">for </span>global dejima synchronization <span class="o">(</span>default: <span class="s2">"dejima"</span><span class="o">)</span>
+<span class="nt">--dejima</span>                Detect updates on dejima views to perform pre-defined actions <span class="k">in </span>the shell script file
+<span class="nt">-w</span> &lt;password&gt;           Database user password <span class="o">(</span>default: 12345678<span class="o">)</span>
+<span class="nt">-d</span> &lt;dbname&gt;             Database name to connect to <span class="o">(</span>default: <span class="s2">"datalogdb"</span><span class="o">)</span>
+<span class="nt">-t</span> &lt;<span class="nb">timeout</span><span class="o">&gt;</span>            Timeout <span class="o">(</span>second<span class="o">)</span> <span class="o">(</span>default: 120s<span class="o">)</span>
+<span class="nt">-help</span>                   Display this list of options
+<span class="nt">--help</span>                  Display this list of options
 </code></pre></div></div>
 
-<p>For example, this command will transform the update strategy described in <code class="highlighter-rouge">test1.dl</code> to sql:</p>
+<p>For example, this command transforms the update strategy described in <code class="highlighter-rouge">test1.dl</code> to <code class="highlighter-rouge">test1.sql</code>:</p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>birds <span class="nt">-s</span> public <span class="nt">-f</span> test1.dl <span class="nt">-o</span> test1.sql
 </code></pre></div></div>
 
@@ -102,7 +110,7 @@ or build an executable file from the source code available at <a href="https://g
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 13 Feb 2020</small></p>
+        <small>Last updated on 30 Aug 2020</small></p>
       </footer>
     </div>
 

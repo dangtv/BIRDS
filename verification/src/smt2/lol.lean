@@ -262,7 +262,7 @@ private meta def compile_type_simple : type → smt2_compiler smt2.sort
 | (type.fn [] rt) := compile_type_simple rt
 -- There is a bug here.
 | (type.refinement t _) := compile_type_simple t
-| t := smt2_compiler.fail $ "compile_simple_type: unsupported" ++ to_string t
+| t := smt2_compiler.fail $ "compile_simple_type: unsupported " ++ to_string t
 
 @[reducible] meta def refinements : Type := string → smt2_compiler unit
 
