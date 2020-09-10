@@ -113,6 +113,6 @@ This work is partially supported by the Japan Society for the Promotion of Scien
 
 [Van-Dang Tran](https://dangtv.github.io/) (The Graduate University for Advanced Studies, SOKENDAI, Japan),
 
-[Hiroyuki Kato](http://research.nii.ac.jp/~kato/kato/Top.html) (National Institute of Informatics (NII), Japan),
+[Hiroyuki Kato](https://researchmap.jp/katohiroyuki?lang=en) (National Institute of Informatics (NII), Japan),
 
 [Zhenjiang Hu](http://research.nii.ac.jp/~hu/) (Peking University, China).
