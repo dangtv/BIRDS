@@ -17,7 +17,7 @@
 <meta property="og:description" content="Bidirectional Transformation for Relational View Update Datalog-based Strategies" />
 <meta property="og:site_name" content="BIRDS" />
 <script type="application/ld+json">
-{"url":"/","name":"BIRDS","description":"Bidirectional Transformation for Relational View Update Datalog-based Strategies","headline":"BIRDS","@type":"WebSite","@context":"https://schema.org"}</script>
+{"@type":"WebSite","url":"/","name":"BIRDS","headline":"BIRDS","description":"Bidirectional Transformation for Relational View Update Datalog-based Strategies","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
   </head>
@@ -61,7 +61,7 @@ BIRDS frees programmers from the burden of manually:</p>
 <h1 id="view-update-strategy-how-to-write">View update strategy: How to write?</h1>
 <p>We are given schemas of tables and a view. Traditionally, over the base tables, we write a query that defines the view. However, this defining query is not enough to determine how view updates are propagated to the base tables.</p>
 
-<p>BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy can be completely described by a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view.</p>
+<p>BIRDS allows developers to focus on the reverse direction, i.e., the view update strategy, which is more essential for updatable views. An update strategy can be completely described by a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view.</p>
 
 <p>A well-behaved update strategy should make full use of data on the view in updating the source tables. We must ensure that no information on the view is lost in the updated source. BIRDS supports us to verify the well-behavedness of the written update strategy.</p>
 
@@ -123,7 +123,7 @@ See the <a href="triggers.html">trigger generation</a> for details.</p>
 
 <h3 id="webui">WebUI</h3>
 
-<p>Learn to use this WebUI at <a href="webui-installation.html">instruction for WebUI editor</a></p>
+<p>Learn to use this WebUI at <a href="webui-installation.html">the instruction for the WebUI editor</a></p>
 
 <h3 id="docker">Docker</h3>
 
@@ -144,6 +144,28 @@ See the <a href="triggers.html">trigger generation</a> for details.</p>
   <li><a href="music-tutorial.html">Music database</a></li>
 </ul>
 
+<h1 id="publications">Publications</h1>
+
+<ol>
+  <li>
+    <p>Van-Dang Tran, Hiroyuki Kato, Zhenjiang Hu. <strong>Programmable View Update Strategies on Relations</strong>. <em>46th International Conference on Very Large Data Bases (<a href="https://vldb2020.org">VLDB 2020</a>)</em>, Tokyo, Japan, 2020. [<a href="assets/bib/vldb2020.bib">BibTeX</a>, <a href="https://doi.org/10.14778/3377369.3377380">DOI</a>, <a href="https://arxiv.org/abs/1911.05921">extended version</a>]</p>
+  </li>
+  <li>
+    <p>Van-Dang Tran, Hiroyuki Kato, Zhenjiang Hu. <strong>BIRDS: Programming view update strategies in Datalog</strong>. <em>46th International Conference on Very Large Data Bases (<a href="https://vldb2020.org">VLDB 2020</a>)</em>, Demonstration, Tokyo, Japan, 2020. [<a href="assets/bib/vldb2020demo.bib">BibTeX</a>, <a href="https://doi.org/10.14778/3415478.3415503">DOI</a>]</p>
+  </li>
+</ol>
+
+<h1 id="acknowledgments">Acknowledgments</h1>
+
+<p>This work is partially supported by the Japan Society for the Promotion of Science (JSPS) Grant-in-Aid for Scientific Research (S) No. 17H06099 (<a href="http://www.biscuits.work/">the BISCUITS project</a>). We thank the authors of the open source software projects (<a href="https://github.com/Z3Prover/">Z3</a>, <a href="https://github.com/leanprover/">Lean</a>, <a href="https://github.com/rickbergfalk/sqlpad">SQLPad</a>, <a href="https://github.com/emina/rosette">Rosette</a>, <a href="https://github.com/c-cube/datalog">datalog</a>, and so forth) that are used and extended in BIRDS.</p>
+
+<h1 id="contact">Contact</h1>
+
+<p><a href="https://dangtv.github.io/">Van-Dang Tran</a> (The Graduate University for Advanced Studies, SOKENDAI, Japan),</p>
+
+<p><a href="http://research.nii.ac.jp/~kato/kato/Top.html">Hiroyuki Kato</a> (National Institute of Informatics (NII), Japan),</p>
+
+<p><a href="http://research.nii.ac.jp/~hu/">Zhenjiang Hu</a> (Peking University, China).</p>
 
         </section>
       </div>
@@ -157,7 +179,7 @@ See the <a href="triggers.html">trigger generation</a> for details.</p>
           Maintained by <a href="https://dangtv.github.io">Vandang Tran</a>, Hiroyuki Kato, Zhenjiang Hu</small>.
         
         <small>Theme based on <a href="https://github.com/pages-themes/slate">Slate</a></small>.
-        <small>Last updated on 30 Aug 2020</small></p>
+        <small>Last updated on 10 Sep 2020</small></p>
       </footer>
     </div>
 

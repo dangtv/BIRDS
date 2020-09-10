@@ -63,7 +63,7 @@ BIRDS is integrated with other systems to enable some features of the `birds` co
     leanpkg configure
     leanpkg build
     ```
-* Rosette: After installing [Racket](https://racket-lang.org) (Minimal Racket can work well), `rosette` can be installed by `raco pkg install rosette`.
+* Rosette: After installing [Racket](https://racket-lang.org) (Minimal Racket can work well), [Rosette](https://github.com/emina/rosette) can be installed by `raco pkg install rosette`.
 * PostgreSQL database >= 9.6: [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
   * PL/sh extension for PostgreSQL: available at [https://github.com/petere/plsh](https://github.com/petere/plsh)
 * coreutils: 

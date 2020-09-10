@@ -15,7 +15,7 @@ BIRDS frees programmers from the burden of manually:
 # View update strategy: How to write?
 We are given schemas of tables and a view. Traditionally, over the base tables, we write a query that defines the view. However, this defining query is not enough to determine how view updates are propagated to the base tables.
 
-BIRDS allows developers to focus on the reverse direction, view update strategy, which is more essential for updatable views. An update strategy can be completely described by a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view. 
+BIRDS allows developers to focus on the reverse direction, i.e., the view update strategy, which is more essential for updatable views. An update strategy can be completely described by a Datalog program over the base tables and the view that results in updates (insertions/deletions) on the base tables. In fact, this update strategy captures both the view update propagation and the defining query of the view. 
 
 A well-behaved update strategy should make full use of data on the view in updating the source tables. We must ensure that no information on the view is lost in the updated source. BIRDS supports us to verify the well-behavedness of the written update strategy.
 
@@ -79,7 +79,7 @@ birds -f test.dl -o test.sql
 
 ### WebUI 
 
-Learn to use this WebUI at [instruction for WebUI editor](webui-installation.html)
+Learn to use this WebUI at [the instruction for the WebUI editor](webui-installation.html)
 
 ### Docker
 
@@ -99,4 +99,20 @@ In this docker image, the PostgreSQL database runs on port 5432 with a default u
 * [Ride-sharing system](ridesharing-tutorial.html)
 * [Music database](music-tutorial.html)
 
+# Publications
 
+1. Van-Dang Tran, Hiroyuki Kato, Zhenjiang Hu. **Programmable View Update Strategies on Relations**. *46th International Conference on Very Large Data Bases ([VLDB 2020](https://vldb2020.org))*, Tokyo, Japan, 2020. [[BibTeX](assets/bib/vldb2020.bib), [DOI](https://doi.org/10.14778/3377369.3377380), [extended version](https://arxiv.org/abs/1911.05921)] 
+
+2. Van-Dang Tran, Hiroyuki Kato, Zhenjiang Hu. **BIRDS: Programming view update strategies in Datalog**. *46th International Conference on Very Large Data Bases ([VLDB 2020](https://vldb2020.org))*, Demonstration, Tokyo, Japan, 2020. [[BibTeX](assets/bib/vldb2020demo.bib), [DOI](https://doi.org/10.14778/3415478.3415503)]
+
+# Acknowledgments
+
+This work is partially supported by the Japan Society for the Promotion of Science (JSPS) Grant-in-Aid for Scientific Research (S) No. 17H06099 ([the BISCUITS project](http://www.biscuits.work/)). We thank the authors of the open source software projects ([Z3](https://github.com/Z3Prover/), [Lean](https://github.com/leanprover/), [SQLPad](https://github.com/rickbergfalk/sqlpad), [Rosette](https://github.com/emina/rosette), [datalog](https://github.com/c-cube/datalog), and so forth) that are used and extended in BIRDS.
+
+# Contact
+
+[Van-Dang Tran](https://dangtv.github.io/) (The Graduate University for Advanced Studies, SOKENDAI, Japan),
+
+[Hiroyuki Kato](http://research.nii.ac.jp/~kato/kato/Top.html) (National Institute of Informatics (NII), Japan),
+
+[Zhenjiang Hu](http://research.nii.ac.jp/~hu/) (Peking University, China).
