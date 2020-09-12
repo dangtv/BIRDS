@@ -53,7 +53,7 @@
     "nedb": "^1.8.0",
     "nedb-promise": "^2.0.1",
     "node-crate": "^2.0.6",
-    "node-fetch": "^2.3.0",
+    "node-fetch": "^2.6.1",
     "node-xlsx": "^0.11.2",
     "nodemailer": "^4.7.0",
     "passport": "^0.4.0",
