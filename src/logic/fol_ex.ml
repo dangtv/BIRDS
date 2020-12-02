@@ -501,14 +501,14 @@ let rec permutations = function
 
 let conj_trivial lits =
   let pos,neg = partition positive lits in
-  let power_set_pos = allnonemptysubsets lits in
+  let power_set_pos = if (List.length lits < 11) then allnonemptysubsets lits else List.map (fun x -> [x]) lits in
   (* let power_set_with_permutation = List.fold_left (fun lst x -> lst@(permutations x) ) [] power_set_pos in *)
   (* List.iter (fun x -> print_endline (lean_string_of_fol_formula x)) (List.map list_disj power_set_with_permutation); *)
   intersect (List.map list_conj power_set_pos) (image negate neg) <> [];;
 
 let disj_trivial lits =
   let pos,neg = partition positive lits in
-  let power_set_pos = allnonemptysubsets lits in
+  let power_set_pos = if (List.length lits < 11) then allnonemptysubsets lits else List.map (fun x -> [x]) lits in
   (* let power_set_with_permutation = List.fold_left (fun lst x -> lst@(permutations x) ) [] power_set_pos in *)
   (* List.iter (fun x -> print_endline (lean_string_of_fol_formula x)) (List.map list_disj power_set_with_permutation); *)
   intersect (List.map list_disj power_set_pos) (image negate neg) <> [];;

@@ -38,6 +38,9 @@ See the usage of the `birds` command by typing:
 
 BIRDS is integrated with other systems to enable some features of the `birds` command. These systems can be installed as follows:
 
+* PostgreSQL database >= 9.6: [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
+  * PL/sh extension for PostgreSQL: available at [https://github.com/petere/plsh](https://github.com/petere/plsh)
+
 * Z3 >= 4.8.7: The binary files can be downloaded at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases). To install the `z3` command, create a symbolic link in `/usr/bin` to the `z3` binary file:
   ```bash 
   ln -s <path-to-the-z3-binary-file> /usr/bin/z3
@@ -57,6 +60,9 @@ BIRDS is integrated with other systems to enable some features of the `birds` co
       path <path_to_BIRDS>/verification/src
       path <path_to_BIRDS>/verification/_target/deps/super/src
     ```
+  * Installing coreutils: 
+    * For Ubuntu: `apt-get install coreutils`. 
+    * For MacOS: `brew install coreutils` and then create a symbolic link `ln -s /usr/local/bin/gtimeout /usr/local/bin/timeout`
   * Compilation: To compile the Lean package of BIRDS, type:
     ```bash 
     cd BIRDS/verification
@@ -64,11 +70,6 @@ BIRDS is integrated with other systems to enable some features of the `birds` co
     leanpkg build
     ```
 * Rosette: After installing [Racket](https://racket-lang.org) (Minimal Racket can work well), [Rosette](https://github.com/emina/rosette) can be installed by `raco pkg install rosette`.
-* PostgreSQL database >= 9.6: [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
-  * PL/sh extension for PostgreSQL: available at [https://github.com/petere/plsh](https://github.com/petere/plsh)
-* coreutils: 
-  * For Ubuntu: `apt-get install coreutils`. 
-  * For MacOS: `brew install coreutils` and then create a symbolic link `ln -s /usr/local/bin/gtimeout /usr/local/bin/timeout`
 
 ## Docker 
 

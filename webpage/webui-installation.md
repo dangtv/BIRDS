@@ -4,7 +4,7 @@ layout: default
 
 # BIRDS Web-based Datalog editor
 
-The Web-based User Interface is for writing and compiling the Datalog program of view update strategy to SQL. By connecting to a database, the compiled SQL can be also executed in the database.
+The Web-based User Interface is for writing and compiling the Datalog program of view update strategy into SQL code. By connecting to a database, the SQL code can be also executed in the database.
 
 [BIRDS's docker image](https://hub.docker.com/r/dangtv/birds) runs the WebUI on port 3010:
 

@@ -479,16 +479,13 @@ let debug_putget (log:bool) prog =
                     | exception End_of_file -> exit 0
             ) else false in
         if using_fact then                     
-            print_endline ("Type a number to inspect one fact in " ^
+            print_endline ("Type a number from 1 to "^string_of_int (List.length buggy_facts)  ^" to inspect one fact in " ^
                 String.concat ", " (List.map (fun x -> colored_string "red" (string_of_fact x)) buggy_facts)
-                ^ " (0 is the first, "^string_of_int (List.length buggy_facts - 1)  ^" is the last, type others to exit)")
+                ^ " (type others to exit)")
         else
-            let rec gen_rule_numbers ind n =
-                if ind<n then ( "("^(string_of_int ind)^")")::(gen_rule_numbers (ind+1) n) 
-                else [] in
-            print_endline ("Type a number to choose one rule in: \n" ^
-                String.concat "" (List.map (fun (num, clause) -> colored_string "red" (num ^ ": "^string_of_stt clause)) (List.combine (gen_rule_numbers 1 (List.length all_clauses + 1)) all_clauses)) ^
-                " (1 is the first, "^string_of_int (List.length all_clauses )  ^" is the last, type others to exit)");
+            print_endline ("Type a number from 1 to "^string_of_int (List.length all_clauses )  ^" to choose one rule in: \n" ^
+                String.concat "" (List.mapi (fun num clause -> colored_string "red" (string_of_int (num+1) ^ ": "^string_of_stt clause)) (List.filter (Lib.non is_builtin_rule) all_clauses)) ^
+                " (type others to exit)");
                 
             let option = match (Scanf.scanf " %d" (fun d -> d))  with 
                         | d -> if (d > (List.length all_clauses) || d < 1) then exit 0 else d

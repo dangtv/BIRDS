@@ -142,6 +142,6 @@ meta def preprocess_only_hyps: tactic unit :=
 -- z3 "temp.smt2"]
 
 meta def z3_smt : tactic unit := 
-`[try{simp only [imp_false, true_implies_iff, iff_def, not_forall_not.symm, not_not],},
+`[preprocess_only_hyps, try{simp only [not_exists, not_and_distrib, not_or_distrib, exists_of_non, imp_false, true_implies_iff, iff_def, not_forall_not.symm, not_not] at *,},
 z3]
 

@@ -1,8 +1,10 @@
 # Changelog
 
-### 2020-08-30
+### 2020-12-02
 * Fix bugs in the Datalog evaluator
 * Accept `'` in the end of a variable name
+* SQL functions to force BXs to propagate updates between views and sources in a transaction
+* Fix bugs in the SQl generation
 
 ### 0.0.4 (2020-04-01)
 * CLI: Update some options and add new options

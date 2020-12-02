@@ -1601,6 +1601,7 @@ let term_of_var (is_neg:bool) ~tbl var  = match var with
           )))
     else mk_var (getvar ~tbl (Expr.string_of_var var))
   | Expr.AnonVar    -> 
+      if is_neg then raise (Utils.SemErr ( "Datalog Evaluator: Anonymous variables '_' in negated atoms are currently not supported, please use mediate relations instead! For example, 'not r(X, _)' can be rewritten into 'not r_t(X)', where r_t is defined by a rule 'r_t(X) :- r(X, _).' " ));
       let n = tbl.vartbl_count in
       Hashtbl.add tbl.vartbl_tbl ("ANON_"^string_of_int n) n;
       tbl.vartbl_count <- n + 1;
@@ -1658,7 +1659,10 @@ let clause_of_rule_fact r = match r with
   | Expr.Rule (a, l) ->
     let tbl = mk_vartbl (2* List.length (Utils.get_termlst_vars l)) in
     let a = literal_of_rterm false ~tbl a in
-    let l = List.map (literal_of_term ~tbl) l in
+    let (p_rt,n_rt,all_eqs,all_ineqs) = Rule_preprocess.split_terms l in
+    let p_t = List.map (fun x -> Expr.Rel x) p_rt in 
+    let n_t = List.map (fun x -> Expr.Not x) n_rt in
+    let l = List.map (literal_of_term ~tbl) (p_t @ all_eqs @ n_t @ all_ineqs) in
     mk_clause a l
   | Expr.Fact a ->
     let tbl = mk_vartbl (Expr.get_arity a) in

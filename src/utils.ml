@@ -470,6 +470,13 @@ let rename_rterm (prefix:string) (rt:rterm) = match rt with
   | Deltadelete (x, vl) -> Deltadelete (prefix^x, vl)
 ;;
 
+(** Given a rterm, rename it by adding its name a prefix*)
+let rename2_rterm (postfix:string) (rt:rterm) = match rt with
+  | Pred (x, vl) -> Pred (x^postfix, vl)
+  | Deltainsert (x, vl) -> Deltainsert (x^postfix, vl)
+  | Deltadelete (x, vl) -> Deltadelete (x^postfix, vl)
+;;
+
 (** Given a rterm, change its var list*)
 let change_vars rt vs = match rt with 
             Pred (n,_) -> Pred (n,vs)
