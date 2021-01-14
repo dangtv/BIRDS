@@ -28,9 +28,9 @@ LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
 
 TOP_FILES=\
-    expr utils parser lexer\
+	expr utils parser lexer\
 	expr2 parser2\
-    conn_ops\
+	conn_ops\
 	rule_preprocess stratification derivation \
 	bottom_up evaluation\
 	ast2fol ast2sql ast2ros\
