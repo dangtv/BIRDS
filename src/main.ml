@@ -113,7 +113,7 @@ let print_conn_info conn =
 ;;
 
 let main () =
-  if (!print_version) then ((print_endline "BIRDS version 0.0.4"); exit 0);
+  if (!print_version) then ((print_endline "BIRDS version 0.0.5"); exit 0);
   if (!importschema) then 
     (if !log then print_endline "importing schema from the database"; 
     let c = new connection ~conninfo () in
@@ -140,7 +140,8 @@ let main () =
   (* add information of the file name to lexbuf *)
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname =  (if !inputf = "" then "stdin" else !inputf)};
   (* while true do *)
-  let original_ast = Parser.main Lexer.token lexbuf in 
+  let new_ast = Parser.main Lexer.token lexbuf in 
+  let original_ast = Conversion.expr_of_expr2 new_ast in 
   let shell_script = if !inputshell = "" then "#!/bin/sh\necho \"true\"" else (String.concat "\n" @@ read_file (!inputshell)) in
   let ast =  original_ast in
   let edb = extract_edb ast in 
@@ -368,7 +369,8 @@ let test() =
     lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname =  (if  inputf = "" then "stdin" else  inputf)};
     (* while true do *)
     try
-      let ast1 = Parser.main Lexer.token lexbuf in 
+      let new_ast = Parser.main Lexer.token lexbuf in 
+      let ast1 = Conversion.expr_of_expr2 new_ast in
       let ast = (constraint2rule ast1) in
       (* let edb = import_dbschema c ( dbschema) in  *)
       let edb = extract_edb ast in 

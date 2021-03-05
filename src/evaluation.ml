@@ -104,6 +104,7 @@ let eval (log:bool) explain_lst prog =
   let add_goal p =
     let lexbuf = Lexing.from_string p in
     let rterm = Parser.parse_rterm Lexer.token lexbuf in
+    let rterm = Conversion.rterm_of_rterm2 rterm in
     let rterm = Bottom_up.literal_of_rterm false rterm in
     goals := rterm :: !goals in
  
@@ -111,6 +112,7 @@ let eval (log:bool) explain_lst prog =
   let add_explain p =
     let lexbuf = Lexing.from_string p in
     let rterm = Parser.parse_rterm Lexer.token lexbuf in
+    let rterm = Conversion.rterm_of_rterm2 rterm in
     let rterm = Bottom_up.literal_of_rterm false rterm in
     explains := rterm :: !explains in
 
@@ -119,6 +121,7 @@ let eval (log:bool) explain_lst prog =
     try
       let lexbuf = Lexing.from_string q_str in
       let ast = Parser.parse_query Lexer.token lexbuf in
+      let ast = Conversion.conj_query_of_conj_query2 ast in
       let q = Bottom_up.query_of_ast ast in
       queries := q :: !queries
     with Parsing.Parse_error ->

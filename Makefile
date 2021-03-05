@@ -28,18 +28,21 @@ LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
 
 TOP_FILES=\
-    expr utils parser lexer\
-    conn_ops\
+	expr expr2 conversion utils parser lexer\
+	conn_ops\
 	rule_preprocess stratification derivation \
 	bottom_up evaluation\
 	ast2fol ast2sql ast2ros\
 	ast2theorem \
 	bx\
-	debugger \
+	debugger\
+
+TOP_FILES_WITH_MLI=\
+	parser expr2 conversion\
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
-    $(TOP_FILES)
+    $(TOP_FILES) \
 	
 .PHONY: all release clean depend #annot
 all: $(BIN_DIR)/$(EX_NAME)
@@ -57,26 +60,22 @@ $(OBJ_DIR)/$(MAIN_FILE).cmo: $(FILES:%=$(OBJ_DIR)/%.cmo) $(SOURCE_DIR)/$(MAIN_FI
 #Special rules for creating the lexer and parser
 $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/parser.mli: $(SOURCE_DIR)/parser.mly
 	ocamlyacc $<
-$(OBJ_DIR)/parser.cmi:	$(SOURCE_DIR)/parser.mli
-	$(DIR_GUARD)
-	ocamlc $(OCAMLC_FLAGS) -o $(OBJ_DIR)/parser -c $<
-$(OBJ_DIR)/parser.cmo:	$(SOURCE_DIR)/parser.ml $(OBJ_DIR)/parser.cmi
-	$(DIR_GUARD)
-	ocamlc $(OCAMLC_FLAGS) -o $(OBJ_DIR)/parser -c $<
 $(SOURCE_DIR)/lexer.ml:	$(SOURCE_DIR)/lexer.mll
 	ocamllex $<
+
+#With mli files.
+$(TOP_FILES_WITH_MLI:%=$(OBJ_DIR)/%.cmi): $(OBJ_DIR)/%.cmi: $(SOURCE_DIR)/%.mli
+	$(DIR_GUARD)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -o $(OBJ_DIR)/$* -c $<
+
+$(TOP_FILES_WITH_MLI:%=$(OBJ_DIR)/%.cmo): $(OBJ_DIR)/%.cmo: $(SOURCE_DIR)/%.ml $(OBJ_DIR)/%.cmi
+	$(DIR_GUARD)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$* -c $<
 
 #General rule for compiling
 $(OBJ_DIR)/%.cmi $(OBJ_DIR)/%.cmo $(OBJ_DIR)/%.cmt: $(SOURCE_DIR)/%.ml
 	$(DIR_GUARD)
 	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$* -c $<
-
-# annot: $(FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt)
-
-# $(FILES:%=$(SOURCE_DIR)/%.cmt) $(MAIN_FILE:%=$(SOURCE_DIR)/%.cmt): $(LOGIC_FILES:%=$(LOGIC_OBJ_DIR)/%.cmt) $(TOP_FILES:%=$(OBJ_DIR)/%.cmt) $(MAIN_FILE:%=$(OBJ_DIR)/%.cmt)
-# 	cp $(LOGIC_FILES:%=$(LOGIC_OBJ_DIR)/%.cmt) $(LOGIC_SOURCE_DIR)/
-# 	cp $(TOP_FILES:%=$(OBJ_DIR)/%.cmt) $(SOURCE_DIR)/
-# 	cp $(MAIN_FILE:%=$(OBJ_DIR)/%.cmt) $(SOURCE_DIR)/
 
 include depend
 
@@ -102,10 +101,23 @@ $(RELEASE_DIR)/$(MAIN_FILE).cmx: $(FILES:%=$(RELEASE_DIR)/%.cmx) $(SOURCE_DIR)/$
 #Special rules for creating the lexer and parser
 $(RELEASE_DIR)/parser.cmi:	$(SOURCE_DIR)/parser.mli
 	$(DIR_GUARD)
-	ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/parser -c $<
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/parser -c $<
 $(RELEASE_DIR)/parser.cmx:	$(SOURCE_DIR)/parser.ml $(RELEASE_DIR)/parser.cmi
 	$(DIR_GUARD)
-	ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/parser -c $<
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/parser -c $<
+
+#With mli files.
+$(TOP_FILES_WITH_MLI:%=$(RELEASE_DIR)/%.cmi): $(RELEASE_DIR)/%.cmi: $(SOURCE_DIR)/%.mli
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/$* -c $<
+
+$(TOP_FILES_WITH_MLI:%=$(RELEASE_DIR)/%.cmo): $(RELEASE_DIR)/%.cmo: $(SOURCE_DIR)/%.ml $(RELEASE_DIR)/%.cmi
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(RELEASE_DIR)/$* -c $<
+
+$(TOP_FILES_WITH_MLI:%=$(RELEASE_DIR)/%.cmx): $(RELEASE_DIR)/%.cmx: $(SOURCE_DIR)/%.ml $(RELEASE_DIR)/%.cmi
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(RELEASE_DIR)/$* -c $<
 
 #General rule for compiling
 $(RELEASE_DIR)/%.cmi $(RELEASE_DIR)/%.cmx: $(SOURCE_DIR)/%.ml
