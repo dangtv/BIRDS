@@ -7,19 +7,19 @@ BX algorithms on Datalog programs
 @author: Vandang Tran
 *)
 
-open Lib;;
-open Formulas;;
-open Fol;;
-open Fol_ex;;
-open Ast2fol;;
-open Ast2theorem;;
-open Utils;;
+open Lib
+open Formulas
+open Fol
+open Fol_ex
+open Ast2fol
+open Ast2theorem
+open Utils
 
-(* take a view update put datalog program and generate the FO sentence of checking whether view is unique or not *)
+(** Take a put datalog program and generate the FO sentence of checking whether the view is unique or not. *)
 let view_uniqueness_sentence_of_stt (debug:bool) prog = 
     let fm = sourcestability_sentence_of_stt ( debug) prog in
-    let view_name = Expr.get_rterm_predname (Expr.get_schema_rterm (get_view prog)) in
-    let view_vars = List.map (fun x -> Expr.string_of_var x) @@ Expr.get_rterm_varlist (Expr.get_schema_rterm (get_view prog)) in
+    let view_name = Expr2.get_rterm_predname (Expr2.get_schema_rterm (get_view prog)) in
+    let view_vars = List.map (fun x -> Expr2.string_of_var x) @@ Expr2.get_rterm_varlist (Expr2.get_schema_rterm (get_view prog)) in
     let phi, lst = ranf2lvnf view_name fm in 
     (* we do not need vars any more because it must be all free variables in vfol and phi_i *)
     let lst2 = List.map (fun (vars, vfol, phi_i) -> 
@@ -57,16 +57,16 @@ let view_uniqueness_sentence_of_stt (debug:bool) prog =
     let sentence_of_view_uniqueness = generalize (Iff(view_upper_fol, view_lower_fol)) in 
     if debug then (print_endline @@ "FO sentence of view uniqueness : " ^ (lean_string_of_fol_formula ((sentence_of_view_uniqueness)));
     print_endline "_______________________________________\n");
-    sentence_of_view_uniqueness ;;
+    sentence_of_view_uniqueness 
 
-(* take a view update put datalog program and generate the theorem of checking view uniqueness *)
+(* Take a view update put datalog program and generate the theorem of checking view uniqueness. *)
 let lean_simp_theorem_of_view_uniqueness (debug:bool) prog = 
     if debug then (print_endline "==> generating theorem for view uniqueness";) else ();
     "theorem view_uniqueness " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
      ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt debug prog, 
-     view_uniqueness_sentence_of_stt debug prog)));;
+     view_uniqueness_sentence_of_stt debug prog)))
 
-(* take a view update put datalog program and derive the corresponding get datalog *)
+(* Take a view update put datalog program and derive the corresponding get datalog. *)
 let derive_get_datalog (debug:bool) (speedup:bool) timeout inputprog = 
     (* verifying djsdelta property *)
     let prog = constraint2rule inputprog in
@@ -80,8 +80,8 @@ let derive_get_datalog (debug:bool) (speedup:bool) timeout inputprog =
             raise (ChkErr ("Deltas in the datalog program are not disjoint" ^ (if (debug) then "\nError messange: "^ disdel_mess else "") ));););
     let fm = Or(sourcestability_sentence_of_stt ( debug) prog, Not ( view_constraint_sentence_of_stt debug prog)) in
     (* let fm = sourcestability_sentence_of_stt ( debug) prog in *)
-    let view_name = Expr.get_rterm_predname (Expr.get_schema_rterm (get_view prog)) in
-    let view_vars = List.map (fun x -> Expr.string_of_var x) @@ Expr.get_rterm_varlist (Expr.get_schema_rterm (get_view prog)) in
+    let view_name = Expr2.get_rterm_predname (Expr2.get_schema_rterm (get_view prog)) in
+    let view_vars = List.map (fun x -> Expr2.string_of_var x) @@ Expr2.get_rterm_varlist (Expr2.get_schema_rterm (get_view prog)) in
     if debug then (
     print_endline "===> solving sourcestability & constraint to check view existence";
     print_endline @@ "original sourcestability & constraint sentence: " ^(lean_string_of_fol_formula fm);
@@ -136,22 +136,22 @@ let derive_get_datalog (debug:bool) (speedup:bool) timeout inputprog =
         if not (exists=0) then 
             (
             (* print_endline @@ "Program is not validated \nExit code: " ^ string_of_int is_unique; *)
-            raise (ChkErr ("view does not exist" ^ (if (debug) then "\nError messange: "^ message else "")));););
-    (* choose the lower bound as FO formula of view *)
+            raise (ChkErr ("Fail to construct a view definition, the program may not be well-behaved" ^ (if (debug) then "\nError messange: "^ message else "")));););
+    (* choose the lower bound as a FO formula of the view *)
     let view_fo = view_lower_fol in 
     let refined_view_fo = remove_trivial (ranf (Skolem.simplify (normalize_comparison view_fo))) in
     if debug then print_endline @@ "FO formula of the view: " ^ Fol_ex.lean_string_of_fol_formula refined_view_fo ;
     if (refined_view_fo = False) then raise (ChkErr "fail to construct the view definition, make sure there is no self-join or projection on the view");
-    let raw_get_ast = view_fol2datalog debug (Expr.get_schema_stts prog) view_vars (refined_view_fo ) in
-    let get_ast = Ast2fol.optimize_query_datalog debug (Expr.insert_stt (Query (Expr.get_schema_rterm (get_view prog))) raw_get_ast) in
+    let raw_get_ast = view_fol2datalog debug (get_view prog) prog.sources view_vars (refined_view_fo ) in
+    let get_ast = Ast2fol.optimize_query_datalog debug {raw_get_ast with query = Some (Expr2.get_schema_rterm (get_view prog))} in
     if debug then (
         print_endline "______get datalog program:_______";
-        print_endline (Expr.string_of_prog get_ast);
+        print_endline (Expr2.string_of_prog get_ast);
         print_endline "_________________________________";
     );
-    (* verify putget property *)
-    let get_rules exp = fst (Rule_preprocess.seperate_rules exp) in 
-    let bi_prog = Expr.add_stts (get_rules get_ast) inputprog in
+    (* verify the putget property *)
+    (* let get_rules exp = fst (Rule_preprocess.seperate_rules exp) in  *)
+    let bi_prog = Expr2.add_rules get_ast.rules inputprog in
     let putget_thm = (lean_simp_theorem_of_putget (debug) (constraint2rule bi_prog)) in
     let lean_code_putget = gen_lean_code_for_theorems [ putget_thm ] in
 
@@ -176,4 +176,4 @@ let derive_get_datalog (debug:bool) (speedup:bool) timeout inputprog =
             ^ (if (debug) then "\nError messange: "^ message else ""))));
     );
     print_endline @@ "-- Program is validated and the view definition is derived --";
-    get_ast;;
+    get_ast

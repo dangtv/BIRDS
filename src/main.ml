@@ -4,51 +4,51 @@
 
 (**  main file, Execution from command line, connection info, help printouts for command line usage etc. 
 *)
-open Lib;;
-open Formulas;;
-open Fol;;
-open Skolem;;
-open Fol_ex;;
-open Lexer;;
-exception Eof;;
-open Printf;;
-open Postgresql;;
-open Conn_ops;;
-open Utils;;
-open Derivation;;
-open Arg;;
-open Ast2theorem;;
-open Ast2fol;;
-open Bx;;
-open Expr;;
+open Lib
+open Formulas
+open Fol
+open Skolem
+open Fol_ex
+open Lexer
+exception Eof
+open Printf
+open Postgresql
+open Conn_ops
+open Utils
+open Derivation
+open Arg
+open Ast2theorem
+open Ast2fol
+open Bx
+open Expr2
 
 (** check for options of command line*)
 (*default values*)
-let host = ref "192.168.56.101";;
-let port = ref 5432;;
-let user = ref "postgres";;
-let dejima_user = ref "dejima";;
-let password = ref "12345678";;
-let dbname = ref "datalogdb";;
-let log = ref false;;
-let debug = ref false;;
-let explain = ref false;;
-let print_version = ref false;;
-let connectdb = ref false;;
-let importschema = ref false;;
-let dejima_ud = ref false;;
-let verification = ref false;;
-let cex_generation = ref false;;
-let cex_max = ref 5;;
-let inc = ref false;;
-let optimize = ref false;;
-let speedup = ref false;;
-let inputf = ref "";;
-let inputshell = ref "";;
-let outputf = ref "";;
-let outputlean = ref "";;
-let dbschema = ref "public";;
-let timeout = ref 180;;
+let host = ref "192.168.56.101"
+let port = ref 5432
+let user = ref "postgres"
+let dejima_user = ref "dejima"
+let password = ref "12345678"
+let dbname = ref "datalogdb"
+let log = ref false
+let debug = ref false
+let explain = ref false
+let print_version = ref false
+let connectdb = ref false
+let importschema = ref false
+let dejima_ud = ref false
+let verification = ref false
+let cex_generation = ref false
+let cex_max = ref 5
+let inc = ref false
+let optimize = ref false
+let speedup = ref false
+let inputf = ref ""
+let inputshell = ref ""
+let outputf = ref ""
+let outputlean = ref ""
+let dbschema = ref "public"
+let timeout = ref 180
 
 let usage = "usage: " ^ Sys.argv.(0) ^ " [OPTIONS]"
 let speclist = [
@@ -81,7 +81,7 @@ let speclist = [
   ("-w", Arg.String (fun s -> password := s),  "<password> Database user password (default: 12345678)");
   ("-d", Arg.String (fun s -> dbname := s),    "<dbname> Database name to connect to (default: \"datalogdb\")");
   ("-t", Arg.Int (fun d -> timeout := d),    "<timeout> Timeout (second) (default: 120s)");
-];;
+]
 
 let () =
   (* Read the arguments *)
@@ -90,13 +90,12 @@ let () =
     (fun x ->
        raise (Arg.Bad ("Bad argument : " ^ x))
     )
-    usage;
-;;
+    usage
 
 (** assign postgreSQL connection parameters to conninfo variable *)
 let conninfo =
   sprintf "host=%s port=%d user=%s password=%s dbname=%s"
-    !host !port !user !password !dbname;;
+    !host !port !user !password !dbname
 
 (* pretty print connection informations *)
 let print_conn_info conn =
@@ -109,8 +108,7 @@ let print_conn_info conn =
   printf "tty       = %s\n" conn#tty;
   printf "options   = %s\n" conn#options;
   printf "pid       = %i\n" conn#backend_pid;
-  print_endline "--------------\n";
-;;
+  print_endline "--------------\n"
 
 let main () =
   if (!print_version) then ((print_endline "BIRDS version 0.0.5"); exit 0);
@@ -125,12 +123,12 @@ let main () =
     c#finish; 
     if (!log) then (
       print_endline "------imported DB Schema:--------";
-      print_endline @@ Expr.string_of_prog @@ Prog (schema);
+      print_endline @@ Expr2.string_of_prog {get_empty_expr with sources = schema};
       print_endline "--------------\n";
       flush stdout;
       );
     let oc =if !outputf = "" then stdout else open_out !outputf  in 
-    fprintf oc "%s\n" (Expr.string_of_prog @@ Prog (schema));
+    fprintf oc "%s\n" (Expr2.string_of_prog {get_empty_expr with sources = schema});
     close_out oc;
     exit 0;
     );
@@ -141,14 +139,15 @@ let main () =
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname =  (if !inputf = "" then "stdin" else !inputf)};
   (* while true do *)
   let new_ast = Parser.main Lexer.token lexbuf in 
-  let original_ast = Conversion.expr_of_expr2 new_ast in 
+  (* let original_ast = Conversion.expr_of_expr2 new_ast in  *)
+  let original_ast = new_ast in 
   let shell_script = if !inputshell = "" then "#!/bin/sh\necho \"true\"" else (String.concat "\n" @@ read_file (!inputshell)) in
   let ast =  original_ast in
   let edb = extract_edb ast in 
-  (* edb is set of rules whose head is tablename with column, and its body is none*)
+
   if !log then (
     print_endline "------DB Schema:--------";
-    print_endline @@ Expr.string_of_prog @@ Prog (Expr.get_schema_stts ast);
+    print_endline @@ string_of_prog {get_empty_expr with view = ast.view; sources = ast.sources} ;
     (* print_symtable edb; *)
     print_endline "--------------\n";
     flush stdout;
@@ -237,7 +236,7 @@ let main () =
                   else
                     if (exitcode=1 && !cex_generation) then 
                       (let error, counterexample = Debugger.gen_counterexample !log "disdelta" !cex_max !timeout constr_ast in
-                      let m = if (error = "") then ("% Invalidity: The following counterexample shows that deltas in the datalog program are not disjoint:\n" ^ string_of_prog (Prog counterexample)) 
+                      let m = if (error = "") then ("% Invalidity: The following counterexample shows that deltas in the datalog program are not disjoint:\n" ^ (string_of_prog {get_empty_expr with facts = counterexample}) ) 
                               else "% Fail to generate a couterexample of delta disjointness: " ^ error in 
                       if (!log) then print_endline m;
                       counterexample_mess := (!counterexample_mess) ^ "\n\n" ^ m
@@ -266,7 +265,7 @@ let main () =
                   else
                     if (exitcode=1 && !cex_generation) then 
                       (let error, counterexample = Debugger.gen_counterexample !log "getput" !cex_max !timeout constr_ast in
-                      let m = if (error = "") then ("% Invalidity: The following counterexample shows that getput is not satisfied:\n" ^ string_of_prog (Prog counterexample)) 
+                      let m = if (error = "") then ("% Invalidity: The following counterexample shows that getput is not satisfied:\n" ^ string_of_prog {get_empty_expr with facts = counterexample} ) 
                               else "% Fail to generate a couterexample of getput: " ^error in 
                       if (!log) then print_endline m;
                         counterexample_mess := (!counterexample_mess) ^ "\n\n" ^ m
@@ -295,7 +294,7 @@ let main () =
                   else
                     if (exitcode=1 && !cex_generation) then 
                       (let error, counterexample = Debugger.gen_counterexample !log "putget" !cex_max !timeout constr_ast in
-                      let m = if (error = "") then ("% Invalidity: The following counterexample shows that putget is not satisfied:\n" ^ string_of_prog (Prog counterexample)) 
+                      let m = if (error = "") then ("% Invalidity: The following counterexample shows that putget is not satisfied:\n" ^ string_of_prog {get_empty_expr with facts = counterexample}) 
                               else "% Fail to generate a couterexample of putget: " ^error in 
                       if (!log) then print_endline m;
                       counterexample_mess := (!counterexample_mess) ^ "\n\n" ^ m
@@ -319,14 +318,14 @@ let main () =
         ast, "")
       else (
         let get_ast = Bx.derive_get_datalog (!log) (!speedup) (!timeout) ast in
-        let get_rules exp = fst (Rule_preprocess.seperate_rules exp) in 
-        let bi_prog = Expr.add_stts (get_rules get_ast) ast in
+        (* let get_rules exp = fst (Rule_preprocess.seperate_rules exp) in  *)
+        let bi_prog = Expr2.add_rules get_ast.rules ast in
         if !log then (
           print_endline "_____get&put (bidirectional) datalog program_______"; 
-          print_string (Expr.string_of_prog  bi_prog); 
+          print_string (Expr2.string_of_prog  bi_prog); 
           print_endline "______________\n";
               ) else ();
-        bi_prog, (Expr.string_of_prog (Prog (get_rules get_ast)))) in
+        bi_prog, (Expr2.string_of_prog {get_empty_expr with rules = get_ast.rules})) in
     let lean_code = 
     (
       if has_get then validity_lean_code_of_bidirectional_datalog (!log) (constraint2rule ast2) else
@@ -354,8 +353,7 @@ let main () =
       c#set_notice_processor (fun s -> eprintf "postgresql error [%s]\n" s); 
     print_creating_sql c (sql^trigger_sql);
     close_out oc;
-    c#finish);  
-;; 
+    c#finish)
 
 let test() = 
     let log = true in
@@ -370,7 +368,8 @@ let test() =
     (* while true do *)
     try
       let new_ast = Parser.main Lexer.token lexbuf in 
-      let ast1 = Conversion.expr_of_expr2 new_ast in
+      (* let ast1 = Conversion.expr_of_expr2 new_ast in *)
+      let ast1 = new_ast in
       let ast = (constraint2rule ast1) in
       (* let edb = import_dbschema c ( dbschema) in  *)
       let edb = extract_edb ast in 
@@ -388,14 +387,14 @@ let test() =
                     print_symtable idb;print_endline "______________\n";
                 ) else (); *)
       if  log then (
-        print_endline (Expr.string_of_prog ast);
+        print_endline (Expr2.string_of_prog ast);
                     print_endline "______________\n";
                 ) else ();
       let oc =if  outputf = "" then stdout else open_out  outputf  in
       let ol =if  outputf = "" then stdout else open_out  outputlean  in
       (* fprintf oc "/*";
         fprintf oc "_____ datalog program _______\n";
-        fprintf oc "%s\n" (Expr.string_of_prog  ast);
+        fprintf oc "%s\n" (Expr2.string_of_prog  ast);
         fprintf oc "______________";
         fprintf oc "*/\n\n"; *)
 
@@ -409,15 +408,15 @@ let test() =
       fprintf oc "%s\n" (z3_string_of_fol_formula ( fm)); *)
       (* fprintf oc "%s\n" (lean_string_of_fol_formula (srnf fm)); *)
       (* fprintf oc "%s\n" (string_of_fol_formula (ranf fm)); *)
-      (* let constructed_prog = ( Expr.add_stts (Expr.get_schema_stts ast) (fol2datalog (fv fm) fm)) in *)
-      (* let constructed_prog = fol2datalog (get_query ast) (Expr.get_schema_stts ast) (fv fm) fm in *)
+      (* let constructed_prog = ( Expr2.add_stts (Expr2.get_schema_stts ast) (fol2datalog (fv fm) fm)) in *)
+      (* let constructed_prog = fol2datalog (get_query ast) (Expr2.get_schema_stts ast) (fv fm) fm in *)
       (* let constructed_prog = optimize_query_datalog (log) ast in *)
-      (* fprintf oc "%s\n" (Expr.string_of_prog constructed_prog); *)
+      (* fprintf oc "%s\n" (Expr2.string_of_prog constructed_prog); *)
       (* fprintf oc "%s\n" (Ast2sql.unfold_program_query "public" false constructed_prog); *)
       (* fprintf oc "%s\n" (lean_string_of_fol_formula (srnf (fol_of_stt ( log) edb (fol2datalog (fv fm) fm)))); *)
       (* if Fol_ex.is_safe_range fm then fprintf oc "OK === \n"; *)
     
-      (* fprintf oc "%s\n" (Expr.string_of_prog (Expr.add_stts (Derivation.datalog_of_new_view log ast) (Expr.add_stts (Derivation.datalog_of_delta_appliation ( log) ast) ast))); *)
+      (* fprintf oc "%s\n" (Expr2.string_of_prog (Expr2.add_stts (Derivation.datalog_of_new_view log ast) (Expr2.add_stts (Derivation.datalog_of_delta_appliation ( log) ast) ast))); *)
       (* let trigger_sql = Ast2sql.unfold_delta_trigger_stt "public" log true true ast in
         fprintf oc "%s\n" trigger_sql; *)
       (* let constr_sql = Ast2sql.view_constraint_sql_of_stt "public" log false ast in *)
@@ -426,14 +425,14 @@ let test() =
       
       
       (* let get_ast = derive_get_datalog log false 500 ast in
-      fprintf oc "view datalog: %s \n" (Expr.string_of_prog get_ast); *)
+      fprintf oc "view datalog: %s \n" (Expr2.string_of_prog get_ast); *)
 
       let error, counterexample = Debugger.gen_counterexample log "getput" 5 120 ast in
       fprintf oc "\n===== getput counterexample ===== \n" ;
-      let buggy_prog = Expr.add_stts counterexample ast in
+      let buggy_prog = {ast with facts = counterexample} in
       fprintf oc "%s \n" (string_of_prog buggy_prog);
       let resulted_facts, explanation = Evaluation.eval log (get_delta_rterms buggy_prog) buggy_prog in
-      fprintf oc "\n===== results ===== \n%s \n" (string_of_prog (Prog resulted_facts));
+      fprintf oc "\n===== results ===== \n%s \n" (string_of_prog {get_empty_expr with facts = resulted_facts} );
       fprintf oc "%s" ( String.concat "\n" (List.map (Debugger.string_of_explanation) explanation));
 
       (* Debugger.debug_getput log ast; *)
@@ -454,7 +453,6 @@ let small_test() =
   let l = ["a4"; "a2"; "a3"] in 
   let sortlst = Lib.sort (fun a b -> a < b) l in
   List.iter (fun a -> print_endline a) sortlst
-;;
 
 (** mainly a call to the above main function *)
 let _ =
@@ -471,4 +469,3 @@ let _ =
   | Invalid_argument msg -> fprintf stderr "%s\n"  msg; exit 1;
   | Eof -> fprintf stderr "%s\n"  "Lexer.Eof"; exit 1;
   | e -> prerr_endline (Printexc.to_string e)
-;;

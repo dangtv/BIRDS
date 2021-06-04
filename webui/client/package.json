@@ -1,6 +1,6 @@
 {
   "name": "birds-editor-front-end",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "proxy": "http://localhost:3010",
   "dependencies": {

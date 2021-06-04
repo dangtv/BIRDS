@@ -1,10 +1,10 @@
 (** Operations for a db-connection, such as fetching columns or printing the results  
  *)
 
-open Printf ;;
-open Postgresql ;;
-open Utils;;
-open Expr;;
+open Printf 
+open Postgresql 
+open Utils
+open Expr2
 
 (** Extract response column-names and tuples to lists 
  *  Returns: empty_query, tuples_ok or error messages in case of problems *)
@@ -16,14 +16,14 @@ let res_to_lst conn res =
   | Nonfatal_error -> failwith (sprintf "Non fatal error: %s\n" res#error)
   | Fatal_error -> failwith (sprintf "Fatal error: %s\n" res#error)
   | _             -> failwith "error: unexpected status"
-;;
+
 
 
 (** catch answers from the db server and return a (cn,t) tuple,
  * where cn is a list with the column-names and t the tuples*)
 let get_query_result (conn:Postgresql.connection) sql =
     res_to_lst conn (conn#exec sql)
-;;
+
 
 (** Given a table's headers and columns calculates the
  * length of the longest element in each column*)
@@ -32,14 +32,14 @@ let max_col_length head rows =
     let max_length len row = List.map2 get_max len row in
     let head_l = List.map String.length head in
     List.fold_left max_length head_l rows
-;;
+
 
 (** Calculates the table's horizontal separator: a line of '-' characters*)
 let get_sep col_l =
     let extra = (List.length col_l)*3+1 in
     let row_l = List.fold_left (fun x y->x+y) extra col_l in
     String.make row_l '-'
-;;
+
 
 (** Pritty-prints a query's result*)
 let print_res (head,rows) =
@@ -57,7 +57,7 @@ let print_res (head,rows) =
     List.iter print_row rows;
     print_endline sep;
     flush stdout
-;;
+
 
 (** Execute the provided SQL and print its resulting table
  * through the stdin *)
@@ -65,7 +65,7 @@ let print_sql_res (conn:Postgresql.connection) sql =
     let res_t = get_query_result conn sql in
     print_endline "";
     print_res res_t
-;;
+
 
 (** Execute the provided SQL of creating views, triggers,... and print its result through the stdin *)
 let print_creating_sql (conn:Postgresql.connection) sql =
@@ -74,7 +74,7 @@ let print_creating_sql (conn:Postgresql.connection) sql =
     match res#status with 
     | Command_ok -> print_endline "-- run SQL successfully"
     | _             -> failwith "error of executing SQL: unexpected status"
-;;
+
 
 let type_of_postgrestype str = match str with 
     | "smallint" -> Sint
@@ -108,8 +108,8 @@ let import_table_schema (conn:Postgresql.connection) tname =
         let type_of_var = type_of_postgrestype (List.nth t 1) in 
         col,type_of_var in
     let col_types = List.map tuple_to_var_and_type stuples in
-    Source (tname, col_types)
-;;
+    (tname, col_types)
+
 
 (** Looks in the db for the description of all the tables and views (exluding materialized view)
  * and returns a symtable with their descriptions*)
@@ -124,4 +124,4 @@ let import_dbschema (conn:Postgresql.connection) (dbschema:string) =
     (* List.map (insert_t_pred conn symt) t_names; *)
     (* symt *)
     List.map (import_table_schema conn) t_names;
-;;
+

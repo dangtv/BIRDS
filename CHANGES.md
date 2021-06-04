@@ -1,5 +1,10 @@
 # Changelog
 
+### 0.0.5 (2021-06-04)
+* Send transaction IDs when detecting updates on Dejima views
+* No Greek alphabet characters in generated SQL code
+* Switch to a new ast in Expr2.ml
+
 ### 2020-12-02
 * Fix bugs in the Datalog evaluator
 * Accept `'` in the end of a variable name

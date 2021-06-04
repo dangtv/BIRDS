@@ -5,8 +5,8 @@
 (**  Evaluate the fixpoint of a Datalog program
 *)
 
-exception Eof;;
-open Printf;;
+exception Eof
+open Printf
 
 (* Evaluate the fixpoint of a Datalog program, also caculate the explanation *)
 let eval (log:bool) explain_lst prog = 
@@ -56,7 +56,7 @@ let eval (log:bool) explain_lst prog =
       try
         let a = int_of_string (Bottom_up.StringSymbol.to_string a)
         and b = int_of_string (Bottom_up.StringSymbol.to_string b) in
-        Pervasives.compare a b
+        Stdlib.compare a b
       with Failure _ | Invalid_argument _ -> compare a b
     in
     match (Bottom_up.open_literal lit :> string * Bottom_up.term list) with
@@ -104,7 +104,7 @@ let eval (log:bool) explain_lst prog =
   let add_goal p =
     let lexbuf = Lexing.from_string p in
     let rterm = Parser.parse_rterm Lexer.token lexbuf in
-    let rterm = Conversion.rterm_of_rterm2 rterm in
+    (* let rterm = Conversion.rterm_of_rterm2 rterm in *)
     let rterm = Bottom_up.literal_of_rterm false rterm in
     goals := rterm :: !goals in
  
@@ -112,7 +112,7 @@ let eval (log:bool) explain_lst prog =
   let add_explain p =
     let lexbuf = Lexing.from_string p in
     let rterm = Parser.parse_rterm Lexer.token lexbuf in
-    let rterm = Conversion.rterm_of_rterm2 rterm in
+    (* let rterm = Conversion.rterm_of_rterm2 rterm in *)
     let rterm = Bottom_up.literal_of_rterm false rterm in
     explains := rterm :: !explains in
 
@@ -121,13 +121,13 @@ let eval (log:bool) explain_lst prog =
     try
       let lexbuf = Lexing.from_string q_str in
       let ast = Parser.parse_query Lexer.token lexbuf in
-      let ast = Conversion.conj_query_of_conj_query2 ast in
+      (* let ast = Conversion.conj_query_of_conj_query2 ast in *)
       let q = Bottom_up.query_of_ast ast in
       queries := q :: !queries
     with Parsing.Parse_error ->
       failwith ("could not parse the query string " ^ q_str) in
 
-  (** Compute fixpoint of clauses *)
+  (** Compute the fixpoint of clauses *)
   let process_clauses clauses =
     if not !quiet then Format.printf "%% process %d clauses@." (List.length clauses);
     if !print_input then (
@@ -244,32 +244,31 @@ let eval (log:bool) explain_lst prog =
     );
     () in
 
-  let clauses = (Expr.get_all_facts prog)@(Stratification.get_stratified_rules prog) in
-  let clauses = List.filter (fun x -> match x with Expr.Rule _ -> List.length (Expr.rule_body x) > 0 | _ -> true) clauses in
+  let stratified_rules = Stratification.get_stratified_rules prog in
+  (* let clauses = List.filter (fun x -> match x with Expr2.Rule _ -> List.length (Expr2.rule_body x) > 0 | _ -> true) clauses in *)
   if log then (
     print_endline "_____stratified rules for evalation____";
-    print_endline (Expr.string_of_prog (Expr.Prog clauses));
+    print_endline (Expr2.string_of_prog {Expr2.get_empty_expr with rules = stratified_rules});
     print_endline "_________________________"
   );
   let rterm_list = List.map (Bottom_up.literal_of_rterm false) explain_lst in
   (* patterns := rterm_list @ !patterns; *)
   (* print_result := true; *)
-  (* explains := (Bottom_up.literal_of_rterm false (Expr.Pred ("+s1", [Expr.ConstVar (Expr.Int 0); Expr.ConstVar (Expr.Int (-2)) ]))) :: !explains;
-  explains := (Bottom_up.literal_of_rterm false (Expr.Pred ("s1", [Expr.ConstVar (Expr.Int 0); Expr.ConstVar (Expr.Int (-2)) ]))) :: !explains; *)
+  (* explains := (Bottom_up.literal_of_rterm false (Expr2.Pred ("+s1", [Expr2.ConstVar (Expr2.Int 0); Expr2.ConstVar (Expr2.Int (-2)) ]))) :: !explains;
+  explains := (Bottom_up.literal_of_rterm false (Expr2.Pred ("s1", [Expr2.ConstVar (Expr2.Int 0); Expr2.ConstVar (Expr2.Int (-2)) ]))) :: !explains; *)
   explains := rterm_list @ !explains;
-  let clauses = List.map Bottom_up.clause_of_rule_fact clauses in
+  let clauses = (List.map Bottom_up.clause_of_fact prog.facts) @ (List.map Bottom_up.clause_of_rule stratified_rules) in
   process_clauses clauses; 
   let get_original_rule clause= 
-  let all_rules = Expr.get_all_rules prog in 
-  let matched_rules = List.filter (fun x -> clause = Bottom_up.clause_of_rule_fact x ) all_rules in 
+  let all_rules = prog.rules in 
+  let matched_rules = List.filter (fun x -> clause = Bottom_up.clause_of_rule x ) all_rules in 
   if (List.length matched_rules > 0) then List.hd matched_rules else Bottom_up.rule_of_clause clause in 
-  (List.map (fun x -> Expr.Fact (Bottom_up.rterm_of_literal x)) (!returned_facts),
+  (List.map (fun x -> (Bottom_up.rterm_of_literal x)) (!returned_facts),
   List.map (fun (fact, edb_facts, all_clauses, detail) -> (
-  Expr.Fact (Bottom_up.rterm_of_literal fact ),
-  List.map (fun x -> Expr.Fact (Bottom_up.rterm_of_literal x )) edb_facts,
-  List.map (fun cl -> get_original_rule cl) all_clauses,
-  List.map (fun (f, cl, premises) -> (Expr.Fact (Bottom_up.rterm_of_literal f ), get_original_rule cl, List.map (fun x -> Expr.Fact (Bottom_up.rterm_of_literal x )) premises ) ) detail
-  )
-  ) 
-  (!returned_explanation)
+    (Bottom_up.rterm_of_literal fact ),
+    List.map (fun x ->(Bottom_up.rterm_of_literal x )) edb_facts,
+    List.map (fun cl -> get_original_rule cl) all_clauses,
+    List.map (fun (f, cl, premises) -> ((Bottom_up.rterm_of_literal f ), get_original_rule cl, List.map (fun x -> (Bottom_up.rterm_of_literal x )) premises ) ) detail
+    )
+  ) (!returned_explanation)
   )

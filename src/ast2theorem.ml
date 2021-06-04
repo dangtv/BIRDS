@@ -7,13 +7,11 @@ Theorem generation for verification
 @author: Vandang Tran
 *)
 
-open Expr;;
-open Utils;;
-open Rule_preprocess;;
-open Stratification;;
+open Expr2
+open Utils
+open Rule_preprocess
+open Stratification
 
-(** for non-recursive datalog, we do not need stratification, we just need recursively translate each idb predicate (identified symkey) to a lambda expression, 
-this function take a symtkey of a rterm and generate its lambda expreesion recursively (this function is recursive because of unfolding all the idb predicate)*)
 let rec lambda_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:symtkey)  =
     let rule_lst = 
         try Hashtbl.find idb goal 
@@ -58,9 +56,9 @@ let rec lambda_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:symtkey)  =
         "λ " ^ String.concat " " cols ^ ", " ^
         String.concat " ∨ "  (List.map (fun pred -> "(" ^ pred^ ") " ^ String.concat " " cols) lambda_list) in
     let lambda_expr = lambda_of_rule_lst idb cnt rule_lst in
-    lambda_expr;;
+    lambda_expr
 
-(** take a query term and rules of idb relations stored in a symtable, generate lambda expression for it *)
+(** Take a query term and rules of IDB relations stored in a symtable, generate lambda expression for it. *)
 let lambda_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) =
     (* query is just a rterm which is a predicate therefore need to create a new temporary rule for this query term 
     for example if query is q(X,Y,_,5) we create a rule for it: _dummy_(X,Y) :- q(X,Y,_,Z), Z=5. (_dummy_ is a fixed name in the function rule_of_query)
@@ -70,11 +68,9 @@ let lambda_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) =
         let local_idb = Hashtbl.copy idb in 
         (* because insert a temporary dummy qrule, we should work with a local variable of idb *)
         symt_insert local_idb qrule;
-        lambda_of_symtkey local_idb cnt (symtkey_of_rterm (rule_head qrule));;
+        lambda_of_symtkey local_idb cnt (symtkey_of_rterm (rule_head qrule))
 
-(** generate lambda expression from the ast, the goal is the query predicate of datalog program, receives a symtable of the database's edb description.
-The boolean variable debug indicates whether debugging information should be printed
-*)
+(** Generate lambda expression from the ast, the goal is the query predicate of datalog program. *)
 let lambda_of_stt (debug:bool) prog =
     let edb = extract_edb prog in
     (* todo: need to check if prog is non-recursive *)
@@ -87,7 +83,7 @@ let lambda_of_stt (debug:bool) prog =
     let cnt = build_colnamtab edb idb in
     (*Return the desired lambda expression*)
     let lambda = lambda_of_query idb cnt view_rt  in
-    lambda;;
+    lambda
 
 (* transform edb relations to a list of functions from product of n (the arity) types to Prop *)
 let edb_to_func_types edb =
@@ -96,7 +92,7 @@ let edb_to_func_types edb =
         String.concat " → " ( List.map (fun x -> "ℤ") (get_rterm_varlist rel)) ^ " → Prop" in 
     let p_el funcs s = (rel_to_function (rule_head s))::funcs in
     let p_lst _ lst funcs = (List.fold_left p_el [] lst)@funcs in
-    Hashtbl.fold p_lst edb [];;
+    Hashtbl.fold p_lst edb []
 
 let stype_to_lean_type st = match st with 
     (* | Sint -> "ℤ" *)
@@ -116,62 +112,30 @@ let stype_to_z3_type st = match st with
     | Sstring -> "String"
 
 (* transform source relations in program to a list of functions from product of n (the arity) types to Prop *)
-let source_to_lean_func_types prog = match prog with 
-    Prog sttlst ->
+let source_to_lean_func_types prog =
     (* currently just set all the types are int (ℤ) *)
-    let p_el funcs s = match s with 
-        Rule _ -> funcs
-        | Query _ -> funcs
-        | Constraint _ -> funcs 
-        | Pk _ -> funcs 
-        | Fact _ -> funcs 
-        | View _ -> funcs 
-        | Source (name, lst) -> ( name ^ ": " ^ String.concat " → " ( List.map (fun (col,typ) -> stype_to_lean_type typ) lst) ^ " → Prop" )::funcs in
-    List.fold_left p_el [] sttlst;;
+    let p_el funcs (name, lst) = ( name ^ ": " ^ String.concat " → " ( List.map (fun (col,typ) -> stype_to_lean_type typ) lst) ^ " → Prop" )::funcs in
+    List.fold_left p_el [] prog.sources
 
 (* transform source relations in program to a list of functions from product of n (the arity) types to Prop *)
-let source_to_z3_func_types prog = match prog with 
-    Prog sttlst ->
+let source_to_z3_func_types prog = 
     (* currently just set all the types are int (ℤ) *)
-    let p_el funcs s = match s with 
-        Rule _ -> funcs
-        | Query _ -> funcs
-        | Constraint _ -> funcs 
-        | Pk _ -> funcs 
-        | Fact _ -> funcs 
-        | View _ -> funcs 
-        | Source (name, lst) -> ( "(declare-fun " ^name ^ " (" ^ 
+    let p_el funcs (name, lst) = ( "(declare-fun " ^name ^ " (" ^ 
         String.concat " " ( List.map (fun (col,typ) -> stype_to_z3_type typ) lst) ^ ") Bool)" )::funcs in
-    List.fold_left p_el [] sttlst;;
+    List.fold_left p_el [] prog.sources
 
 (* transform source and view relations in program to a list of functions from product of n (the arity) types to Prop *)
-let source_view_to_lean_func_types prog =match prog with 
-    Prog sttlst ->
+let source_view_to_lean_func_types prog = 
     (* currently just set all the types are int (ℤ) *)
-    let p_el funcs s = match s with 
-        Rule _ -> funcs
-        | Query _ -> funcs
-        | Constraint _ -> funcs 
-        | Pk _ -> funcs 
-        | Fact _ -> funcs 
-        | Source (name, lst)  
-        | View (name, lst) -> ( name ^ ": " ^ String.concat " → " ( List.map (fun (col,typ) -> stype_to_lean_type typ) lst) ^ " → Prop" )::funcs in
-    List.fold_left p_el [] sttlst;;
+    let p_el funcs (name, lst) = ( name ^ ": " ^ String.concat " → " ( List.map (fun (col,typ) -> stype_to_lean_type typ) lst) ^ " → Prop" )::funcs in
+    List.fold_left p_el [] (get_schema_stts prog)
 
 (* transform source and view relations in program to a list of functions from product of n (the arity) types to Prop *)
-let source_view_to_z3_func_types prog =match prog with 
-    Prog sttlst ->
+let source_view_to_z3_func_types prog = 
     (* currently just set all the types are int (ℤ) *)
-    let p_el funcs s = match s with 
-        Rule _ -> funcs
-        | Query _ -> funcs
-        | Constraint _ -> funcs 
-        | Pk _ -> funcs 
-        | Fact _ -> funcs 
-        | Source (name, lst)  
-        | View (name, lst) -> ( "(declare-fun " ^name ^ " (" ^ 
+    let p_el funcs (name, lst) = ( "(declare-fun " ^name ^ " (" ^ 
         String.concat " " ( List.map (fun (col,typ) -> stype_to_z3_type typ) lst) ^ ") Bool)" )::funcs in
-    List.fold_left p_el [] sttlst;;
+    List.fold_left p_el [] (get_schema_stts prog)
 
 (* take a view update datalog program and generate the theorem of checking whether all delta relations are disjoint *)
 let lean_theorem_of_disjoint_delta (debug:bool) prog = 
@@ -179,7 +143,7 @@ let lean_theorem_of_disjoint_delta (debug:bool) prog =
     let edb = extract_edb prog in 
     let view_rt = get_schema_rterm (get_view prog) in
     (* need to convert the query to be an edb relation *)
-    symt_insert edb (Rule(view_rt,[]));
+    symt_insert edb (view_rt,[]);
     let idb = extract_idb prog in
     preprocess_rules idb;
     let cnt = build_colnamtab edb idb in
@@ -196,42 +160,42 @@ let lean_theorem_of_disjoint_delta (debug:bool) prog =
         let cols = gen_cols 0 (get_arity ins_rel) in
         "∃ " ^ String.concat " " cols ^ ", (" ^  (lambda_of_query idb cnt ins_rel) ^ ") "  ^ String.concat " " cols ^ " ∧ " ^ "(" ^  (lambda_of_query idb cnt del_rel) ^ ") "  ^ String.concat " " cols in
     let djsjoint_sen_lst = List.map (fun (r1,r2) -> disjoint_fo_sentence r1 r2) delta_pair_lst in 
-    "theorem disjoint_deltas " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_view_to_lean_func_types prog)) ^ ": " ^ (String.concat " ∨ " (List.map (fun pred -> "(" ^ pred^ ")") djsjoint_sen_lst)) ^ " → false";;
+    "theorem disjoint_deltas " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_view_to_lean_func_types prog)) ^ ": " ^ (String.concat " ∨ " (List.map (fun pred -> "(" ^ pred^ ")") djsjoint_sen_lst)) ^ " → false"
 
 (* take a view update datalog program and generate the theorem of checking whether all delta relations are disjoint *)
 let lean_simp_theorem_of_disjoint_delta (debug:bool) prog = 
     if debug then (print_endline "==> generating theorem for disjoint deltas";) else ();
-    "theorem disjoint_deltas " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_view_to_lean_func_types prog)) ^ ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt debug prog, (Imp(Ast2fol.disjoint_delta_sentence_of_stt debug prog, False)))));;
+    "theorem disjoint_deltas " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_view_to_lean_func_types prog)) ^ ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt debug prog, (Imp(Ast2fol.disjoint_delta_sentence_of_stt debug prog, False)))))
 
 let lean_simp_theorem_of_getput (debug:bool) prog = 
     if debug then (print_endline "==> generating theorem of getput property";) else ();
     "theorem getput " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
      ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.non_view_constraint_sentence_of_stt debug prog, 
-     (Imp(Ast2fol.getput_sentence_of_stt debug prog, False)))));;
+     (Imp(Ast2fol.getput_sentence_of_stt debug prog, False)))))
 
 let lean_simp_theorem_of_putget (debug:bool) prog = 
     if debug then (print_endline "==> generating theorem of putget property";) else ();
-    "theorem putget " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_view_to_lean_func_types prog)) ^ ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt debug prog, Ast2fol.putget_sentence_of_stt debug prog)));;
+    "theorem putget " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_view_to_lean_func_types prog)) ^ ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt debug prog, Ast2fol.putget_sentence_of_stt debug prog)))
 
 (* take a view update datalog program and generate the theorem of checking whether all delta relations are disjoint *)
 let z3_assert_of_disjoint_delta (debug:bool) prog = 
     if debug then (print_endline "==> generating z3 assert for disjoint deltas";) else ();
     String.concat "\n"  (source_view_to_z3_func_types prog) ^ 
     "\n (assert " ^ (Fol_ex.z3_string_of_fol_formula (Not (Imp (Ast2fol.constraint_sentence_of_stt debug prog, 
-    (Imp(Ast2fol.disjoint_delta_sentence_of_stt debug prog, False)))))) ^ ") \n (check-sat)";;
+    (Imp(Ast2fol.disjoint_delta_sentence_of_stt debug prog, False)))))) ^ ") \n (check-sat)"
 
 let z3_assert_of_getput (debug:bool) prog = 
     if debug then (print_endline "==> generating z3 assert of getput property";) else ();
     String.concat "\n"  (source_to_z3_func_types prog) ^
      "\n(assert " ^ (Fol_ex.z3_string_of_fol_formula (Not (Imp (Ast2fol.non_view_constraint_sentence_of_stt debug prog, 
-     (Imp(Ast2fol.getput_sentence_of_stt debug prog, False)))))) ^") \n (check-sat)";;
+     (Imp(Ast2fol.getput_sentence_of_stt debug prog, False)))))) ^") \n (check-sat)"
 
 let z3_assert_of_putget (debug:bool) prog = 
     if debug then (print_endline "==> generating z3 assert of putget property";) else ();
     String.concat " " (source_view_to_z3_func_types prog) ^ 
     "\n (assert " ^ (Fol_ex.lean_string_of_fol_formula 
     (Not (Imp (Ast2fol.constraint_sentence_of_stt debug prog, Ast2fol.putget_sentence_of_stt debug prog)))) ^ 
-    ")\n (check-sat)";;
+    ")\n (check-sat)"
 
 (* (unnecessary now see sourcestability_sentence_of_stt in ast2fol.ml) take a view update datalog program and generate SourceStability constraint (put s v = s) for its view update strategy *)
 let sourcestability_of_stt (debug:bool) prog =
@@ -239,7 +203,7 @@ let sourcestability_of_stt (debug:bool) prog =
     (* need to change the view (in query predicate) to a edb relation *)
     let view_rt = get_schema_rterm (get_view prog) in
     (* need to convert the view to be an edb relation *)
-    symt_insert edb (Rule(view_rt,[]));
+    symt_insert edb (view_rt,[]);
     let idb = extract_idb prog in
     symt_remove idb (symtkey_of_rterm view_rt);
     preprocess_rules idb;
@@ -251,10 +215,10 @@ let sourcestability_of_stt (debug:bool) prog =
         "∃ " ^ String.concat " " cols ^ ", (" ^  (lambda_of_query idb cnt rel) ^ ") "  ^ String.concat " " cols  in
     let delta_lambda_exp_lst = List.map emptiness_fo_sentence delta_rt_lst in 
     "theorem sourcestability " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_view_to_lean_func_types prog)) ^ ": " ^ (String.concat " ∨ " (List.map (fun pred -> "(" ^ pred^ ")") delta_lambda_exp_lst)) ^ " → false"
-;;
+
 
 let lean_simp_sourcestability_theorem_of_stt (debug:bool) prog = 
-    "theorem sourcestability " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^ ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp(Ast2fol.sourcestability_sentence_of_stt debug prog, False)));;
+    "theorem sourcestability " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^ ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp(Ast2fol.sourcestability_sentence_of_stt debug prog, False)))
 
 let gen_lean_code_for_theorems thms = 
     "import bx

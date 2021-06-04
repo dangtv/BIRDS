@@ -174,7 +174,7 @@ let index x =
   let rec ind n l =
     match l with
       [] -> failwith "index"
-    | (h::t) -> if Pervasives.compare x h = 0 then n else ind (n + 1) t in
+    | (h::t) -> if Stdlib.compare x h = 0 then n else ind (n + 1) t in
   ind 0;;
 
 let rec unzip l =
@@ -189,8 +189,8 @@ let rec unzip l =
 
 let rec earlier l x y =
   match l with
-    h::t -> (Pervasives.compare h y <> 0) &&
-            (Pervasives.compare h x = 0 || earlier t x y)
+    h::t -> (Stdlib.compare h y <> 0) &&
+            (Stdlib.compare h x = 0 || earlier t x y)
   | [] -> false;;
 
 (* ------------------------------------------------------------------------- *)
@@ -208,12 +208,12 @@ let rec do_list f l =
 
 let rec assoc a l =
   match l with
-    (x,y)::t -> if Pervasives.compare x a = 0 then y else assoc a t
+    (x,y)::t -> if Stdlib.compare x a = 0 then y else assoc a t
   | [] -> failwith "find";;
 
 let rec rev_assoc a l =
   match l with
-    (x,y)::t -> if Pervasives.compare y a = 0 then x else rev_assoc a t
+    (x,y)::t -> if Stdlib.compare y a = 0 then x else rev_assoc a t
   | [] -> failwith "find";;
 
 (* ------------------------------------------------------------------------- *)
@@ -245,9 +245,9 @@ let sort ord =
 (* Common measure predicates to use with "sort".                             *)
 (* ------------------------------------------------------------------------- *)
 
-let increasing f x y = Pervasives.compare (f x) (f y) < 0;;
+let increasing f x y = Stdlib.compare (f x) (f y) < 0;;
 
-let decreasing f x y = Pervasives.compare (f x) (f y) > 0;;
+let decreasing f x y = Stdlib.compare (f x) (f y) > 0;;
 
 (* ------------------------------------------------------------------------- *)
 (* Eliminate repetitions of adjacent elements, with and without counting.    *)
@@ -256,14 +256,14 @@ let decreasing f x y = Pervasives.compare (f x) (f y) > 0;;
 let rec uniq l =
   match l with
     x::(y::_ as t) -> let t' = uniq t in
-                      if Pervasives.compare x y = 0 then t' else
+                      if Stdlib.compare x y = 0 then t' else
                       if t'==t then l else x::t'
  | _ -> l;;
 
 let repetitions =
   let rec repcount n l =
     match l with
-      x::(y::_ as ys) -> if Pervasives.compare y x = 0 then repcount (n + 1) ys
+      x::(y::_ as ys) -> if Stdlib.compare y x = 0 then repcount (n + 1) ys
                   else (x,n)::(repcount 1 ys)
     | [x] -> [x,n]
     | [] -> failwith "repcount" in
@@ -297,10 +297,10 @@ let maximize f l = optimize (>) f l and minimize f l = optimize (<) f l;;
 let setify =
   let rec canonical lis =
      match lis with
-       x::(y::_ as rest) -> Pervasives.compare x y < 0 && canonical rest
+       x::(y::_ as rest) -> Stdlib.compare x y < 0 && canonical rest
      | _ -> true in
   fun l -> if canonical l then l
-           else uniq (sort (fun x y -> Pervasives.compare x y <= 0) l);;
+           else uniq (sort (fun x y -> Stdlib.compare x y <= 0) l);;
 
 let union =
   let rec union l1 l2 =
@@ -374,7 +374,7 @@ let unions s = setify(itlist (@) s []);;
 let rec mem x lis =
   match lis with
     [] -> false
-  | (h::t) -> Pervasives.compare x h = 0 || mem x t;;
+  | (h::t) -> Stdlib.compare x h = 0 || mem x t;;
 
 (* ------------------------------------------------------------------------- *)
 (* Finding all subsets or all subsets of a given size.                       *)
@@ -509,7 +509,7 @@ let ran f = setify(foldl (fun a x y -> y::a) [] f);;
 let applyd =
   let rec apply_listd l d x =
     match l with
-      (a,b)::t -> let c = Pervasives.compare x a in
+      (a,b)::t -> let c = Stdlib.compare x a in
                   if c = 0 then b else if c > 0 then apply_listd t d x else d x
     | [] -> d x in
   fun f d x ->
@@ -538,7 +538,7 @@ let undefine =
   let rec undefine_list x l =
     match l with
       (a,b as ab)::t ->
-          let c = Pervasives.compare x a in
+          let c = Stdlib.compare x a in
           if c = 0 then t
           else if c < 0 then l else
           let t' = undefine_list x t in
@@ -579,7 +579,7 @@ let (|->),combine =
   let rec define_list (x,y as xy) l =
     match l with
       (a,b as ab)::t ->
-          let c = Pervasives.compare x a in
+          let c = Stdlib.compare x a in
           if c = 0 then xy::t
           else if c < 0 then xy::l
           else ab::(define_list xy t)
@@ -589,7 +589,7 @@ let (|->),combine =
       [],_ -> l2
     | _,[] -> l1
     | ((x1,y1 as xy1)::t1,(x2,y2 as xy2)::t2) ->
-          let c = Pervasives.compare x1 x2 in
+          let c = Stdlib.compare x1 x2 in
           if c < 0 then xy1::(combine_list op z t1 l2)
           else if c > 0 then xy2::(combine_list op z l1 t2) else
           let y = op y1 y2 and l = combine_list op z t1 t2 in

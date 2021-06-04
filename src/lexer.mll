@@ -78,6 +78,7 @@
     | ":-"          				{ IMPLIEDBY }  
     | "<-"          				{ IMPLIEDBY }  
     | "?-"            				{ QMARK }  (* query mark *)
+    | "?_"                                       { ANONVAR }
     | "<>"            				{ NE }
     | "\\="            				{ NE }
     | "<="                                      { LE }
@@ -85,6 +86,7 @@
     | "^"                                       { CONCAT }
     | "←"           				{ IMPLIEDBY } 
     | "¬"           				{ NOT }  
+    | "!"           				{ NOT }  
     | '.'            				{ DOT }    (* end of rule or query *)
     | ','            				{ SEP }
     | '('            				{ LPAREN }

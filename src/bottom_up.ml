@@ -1590,35 +1590,35 @@ let getvar ~tbl name =
     n
 
 let term_of_var (is_neg:bool) ~tbl var  = match var with
-  | Expr.NamedVar _
-  | Expr.NumberedVar _ ->
-    if is_neg then (try mk_var (Hashtbl.find tbl.vartbl_tbl (Expr.string_of_var var))
+  | Expr2.NamedVar _
+  | Expr2.NumberedVar _ ->
+    if is_neg then (try mk_var (Hashtbl.find tbl.vartbl_tbl (Expr2.string_of_var var))
           with Not_found ->
             raise (Utils.SemErr (
-              "Program is unsafe, variable "^(Expr.string_of_var var)^
+              "Program is unsafe, variable "^(Expr2.string_of_var var)^
               " in negated call to predicate does not appear in a positive "^
               "goal or strict equation. Try anonimous variables."
           )))
-    else mk_var (getvar ~tbl (Expr.string_of_var var))
-  | Expr.AnonVar    -> 
+    else mk_var (getvar ~tbl (Expr2.string_of_var var))
+  | Expr2.AnonVar    -> 
       if is_neg then raise (Utils.SemErr ( "Datalog Evaluator: Anonymous variables '_' in negated atoms are currently not supported, please use mediate relations instead! For example, 'not r(X, _)' can be rewritten into 'not r_t(X)', where r_t is defined by a rule 'r_t(X) :- r(X, _).' " ));
       let n = tbl.vartbl_count in
       Hashtbl.add tbl.vartbl_tbl ("ANON_"^string_of_int n) n;
       tbl.vartbl_count <- n + 1;
       mk_var n
-  | Expr.ConstVar c -> mk_const (Symbol.make (Expr.string_of_const c)) 
-  | _ -> invalid_arg "function term_of_var called with a Aggregation Var";;
+  | Expr2.ConstVar c -> mk_const (Symbol.make (Expr2.string_of_const c)) 
+  | _ -> invalid_arg "function term_of_var called with a Aggregation Var"
 
 let literal_of_rterm (is_neg:bool) ?(tbl=mk_vartbl 100) rt  = match rt with
-  | Expr.Pred (s, args) ->
+  | Expr2.Pred (s, args) ->
     let s = Symbol.make s in
     let args = List.map (term_of_var is_neg ~tbl) args in
     mk_literal s args
-  | Expr.Deltadelete (s, args) ->
+  | Expr2.Deltadelete (s, args) ->
     let s = Symbol.make ("-"^s) in
     let args = List.map (term_of_var is_neg ~tbl) args in
     mk_literal s args
-  | Expr.Deltainsert (s, args) ->
+  | Expr2.Deltainsert (s, args) ->
     let s = Symbol.make ("+"^s) in
     let args = List.map (term_of_var is_neg ~tbl) args in
     mk_literal s args
@@ -1626,60 +1626,64 @@ let literal_of_rterm (is_neg:bool) ?(tbl=mk_vartbl 100) rt  = match rt with
 let rterm_of_literal lit= 
   let predname, args = open_literal lit in
   let var_of_term t = match t with
-  | Const s -> Expr.ConstVar (Expr.String (Symbol.to_string s))
-  | Var i -> Expr.NumberedVar i in
-  Expr.Pred ( Symbol.to_string predname, List.map  var_of_term args )
+  | Const s -> Expr2.ConstVar (Expr2.String (Symbol.to_string s))
+  | Var i -> Expr2.NumberedVar i in
+  Expr2.Pred ( Symbol.to_string predname, List.map  var_of_term args )
 
 let literal_of_term ?(tbl=mk_vartbl 100) t = match t with
-  | Expr.Rel rt -> literal_of_rterm false ~tbl rt 
-  | Expr.Not rt -> 
+  | Expr2.Rel rt -> literal_of_rterm false ~tbl rt 
+  | Expr2.Not rt -> 
     let delta_to_pred r = match r with     
-      | Expr.Pred (pn,vars) -> Expr.Pred (pn,vars)
-      | Expr.Deltainsert (pn,vars) -> Expr.Pred ("+"^ pn,vars)
-      | Expr.Deltadelete (pn,vars) -> Expr.Pred ("-"^ pn,vars) in
+      | Expr2.Pred (pn,vars) -> Expr2.Pred (pn,vars)
+      | Expr2.Deltainsert (pn,vars) -> Expr2.Pred ("+"^ pn,vars)
+      | Expr2.Deltadelete (pn,vars) -> Expr2.Pred ("-"^ pn,vars) in
     literal_of_rterm true ~tbl (Utils.rename_rterm "!" (delta_to_pred rt))  (* negative predicate *)
-  | Expr.Equal (vt1, vt2) -> literal_of_rterm false ~tbl (Pred("=",[Expr.vterm2var vt1 ;Expr.vterm2var vt2])) 
-  | Expr.Ineq (op,vt1,vt2) -> literal_of_rterm false ~tbl (Pred(op,[Expr.vterm2var vt1 ;Expr.vterm2var vt2])) 
-  (* | _ -> invalid_arg ("function literal_of_term called with: "^(Expr.string_of_term t));; *)
+  | Expr2.Equat (Equation(op,vt1, vt2)) -> literal_of_rterm false ~tbl (Pred(op,[Expr2.vterm2var vt1 ;Expr2.vterm2var vt2])) 
+  | Expr2.Noneq e ->
+    let neg_e = Expr2.negate_eq e in 
+    (match neg_e with 
+    (Equation(op,vt1, vt2)) -> literal_of_rterm false ~tbl (Pred(op,[Expr2.vterm2var vt1 ;Expr2.vterm2var vt2])) )
+  (* | _ -> invalid_arg ("function literal_of_term called with: "^(Expr2.string_of_term t)) *)
 
 let term_of_literal lit= 
   let predname, args = open_literal lit in
   let var_of_term t = match t with
-  | Const s -> Expr.ConstVar (Expr.String (Symbol.to_string s))
-  | Var i -> Expr.NumberedVar i in
+  | Const s -> Expr2.ConstVar (Expr2.String (Symbol.to_string s))
+  | Var i -> Expr2.NumberedVar i in
   let name= Symbol.to_string predname in 
     (match name.[0] with 
-      '!' -> Expr.Not (Expr.Pred (String.sub name 1 (String.length name -1), List.map  var_of_term args ))
-      | '+' -> Expr.Rel (Expr.Deltainsert (String.sub name 1 (String.length name -1), List.map  var_of_term args ))
-      | '-' -> Expr.Rel (Expr.Deltadelete (String.sub name 1 (String.length name -1), List.map  var_of_term args ))
-      | _ -> Expr.Rel (Expr.Pred (name, List.map  var_of_term args ))
+      '!' -> Expr2.Not (Expr2.Pred (String.sub name 1 (String.length name -1), List.map  var_of_term args ))
+      | '+' -> Expr2.Rel (Expr2.Deltainsert (String.sub name 1 (String.length name -1), List.map  var_of_term args ))
+      | '-' -> Expr2.Rel (Expr2.Deltadelete (String.sub name 1 (String.length name -1), List.map  var_of_term args ))
+      | _ -> Expr2.Rel (Expr2.Pred (name, List.map  var_of_term args ))
     )
   
-let clause_of_rule_fact r = match r with
-  | Expr.Rule (a, l) ->
+let clause_of_rule r = match r with
+  | (a, l) ->
     let tbl = mk_vartbl (2* List.length (Utils.get_termlst_vars l)) in
     let a = literal_of_rterm false ~tbl a in
-    let (p_rt,n_rt,all_eqs,all_ineqs) = Rule_preprocess.split_terms l in
-    let p_t = List.map (fun x -> Expr.Rel x) p_rt in 
-    let n_t = List.map (fun x -> Expr.Not x) n_rt in
+    let (p_rt,n_rt,all_eqs,all_ineqs) = Utils.split_terms l in
+    let p_t = List.map (fun x -> Expr2.Rel x) p_rt in 
+    let n_t = List.map (fun x -> Expr2.Not x) n_rt in
     let l = List.map (literal_of_term ~tbl) (p_t @ all_eqs @ n_t @ all_ineqs) in
     mk_clause a l
-  | Expr.Fact a ->
-    let tbl = mk_vartbl (Expr.get_arity a) in
+
+let clause_of_fact r = match r with
+  | a ->
+    let tbl = mk_vartbl (Expr2.get_arity a) in
     let a = literal_of_rterm false ~tbl a in
     let l = List.map (literal_of_term ~tbl) [] in
     mk_clause a l
-  | _ -> invalid_arg "function clause_of_rule_fact called with not a rule or fact";;
 
 let rule_of_clause clause =
   let head = clause.(0) in
   let head = rterm_of_literal head in
   let body = Array.to_list (Array.sub clause 1 (Array.length clause - 1)) in
   let body = List.map term_of_literal body in
-  Expr.Rule(head,body);;
+  (head,body)
 
 let query_of_ast q = match q with
-  | Expr.Conj_query (vars, lits, neg) ->
+  | Expr2.Conj_query (vars, lits, neg) ->
     let tbl = mk_vartbl (List.length (Utils.get_rtermlst_vars lits)) in
     let lits = List.map (literal_of_rterm false ~tbl) lits in
     let neg = List.map (literal_of_rterm true ~tbl) neg in
@@ -1690,4 +1694,4 @@ let query_of_ast q = match q with
       | Const _ -> failwith "query_of_ast: expected variables")
       vars
     in
-    vars, lits, neg;;
+    vars, lits, neg

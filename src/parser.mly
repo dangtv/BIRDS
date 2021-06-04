@@ -1,8 +1,8 @@
 %{ (* OCaml preamble *)
 
-  open Expr2 ;;
-  open Utils ;;
-  (* let parse_error (s : string) = spec_parse_error s 1;; *)
+  open Expr2 
+  open Utils 
+  (* let parse_error (s : string) = spec_parse_error s 1 *)
   (* end preamble *)
  %}
 

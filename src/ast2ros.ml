@@ -7,14 +7,13 @@ AST-to-Racket functions
 @author: Vandang Tran
 *)
 
-open Expr ;;
-open Utils;;
-open Rule_preprocess;;
-open Stratification;;
-open Derivation;;
+open Expr2 
+open Utils
+open Rule_preprocess
+open Stratification
+open Derivation
 
-(** Given an aggregate function name, checks if it is supported and
-  returns it*)
+(** Given an aggregate function name, check if it is supported and returns it. *)
 let check_agg_function fn =
     let allowed = ["MAX";"MIN";"SUM";"AVG";"COUNT"] in
     if List.mem fn allowed then fn
@@ -23,7 +22,7 @@ let check_agg_function fn =
         "allowed functions are: "^(String.concat ", " allowed)
     ))
 
-(** given an arithmetric expression, return in racket string , this function is similar to string_of_vterm*)
+(** Given an arithmetic expression, return it in racket, this function is similar to string_of_vterm. *)
 let racket_of_vterm (vt:vartab) (eqt:eqtab) (expr:vterm)  = 
         let open_paren prec op_prec = 
             if prec > op_prec then  "(" else "" in 
@@ -47,18 +46,19 @@ let racket_of_vterm (vt:vartab) (eqt:eqtab) (expr:vterm)  =
                         "goal or strict equality relation."
                     )
                 )
-            | Sum(f,g) -> (open_paren prec 0)^ (racket_of 0 f) ^ "+" ^ (racket_of 0 g) ^ (close_paren prec 0)
-            | Diff(f,g) -> (open_paren prec 0) ^ (racket_of 0 f) ^  "-" ^ (racket_of 1 g) ^ (close_paren prec 0)
-            | Times(f,g) -> (open_paren prec 2) ^ (racket_of 2 f) ^  "*" ^ (racket_of 2 g) ^ (close_paren prec 2)
-            | Div (f,g) -> (open_paren prec 2)^ (racket_of 2 f) ^ "/" ^ (racket_of 3 g) ^ (close_paren prec 2)
-            | Neg e ->  (open_paren prec 4)^ "-" ^ (racket_of 5 e)^(close_paren prec 4)
-            | Concat(f,g) -> (open_paren prec 0)^ (racket_of 0 f) ^ "||" ^ (racket_of 0 g) ^ (close_paren prec 0)
-            | BoolAnd (f,g) -> (open_paren prec 2) ^ (racket_of 2 f) ^  "*" ^ (racket_of 2 g) ^ (close_paren prec 2)
+            | BinaryOp("+",f,g) -> (open_paren prec 0)^ (racket_of 0 f) ^ "+" ^ (racket_of 0 g) ^ (close_paren prec 0)
+            | BinaryOp("-",f,g) -> (open_paren prec 0) ^ (racket_of 0 f) ^  "-" ^ (racket_of 1 g) ^ (close_paren prec 0)
+            | BinaryOp("*",f,g) -> (open_paren prec 2) ^ (racket_of 2 f) ^  "*" ^ (racket_of 2 g) ^ (close_paren prec 2)
+            | BinaryOp("/",f,g) -> (open_paren prec 2)^ (racket_of 2 f) ^ "/" ^ (racket_of 3 g) ^ (close_paren prec 2)
+            | UnaryOp ("-", e) ->  (open_paren prec 4)^ "-" ^ (racket_of 5 e)^(close_paren prec 4)
+            | BinaryOp("^",f,g) -> (open_paren prec 0)^ (racket_of 0 f) ^ "||" ^ (racket_of 0 g) ^ (close_paren prec 0)
+            | BinaryOp(op,_,_) | UnaryOp (op, _) -> failwith "Function sql_of_vterm is called with an unknown operator" ^ op
+            (* | BoolAnd (f,g) -> (open_paren prec 2) ^ (racket_of 2 f) ^  "*" ^ (racket_of 2 g) ^ (close_paren prec 2)
             | BoolOr (f,g) -> (open_paren prec 0)^ (racket_of 0 f) ^ "+" ^ (racket_of 0 g) ^ (close_paren prec 0)
-            | BoolNot e ->  (open_paren prec 4)^ "-" ^ (racket_of 5 e)^(close_paren prec 4)
-        in racket_of 0 expr;;
+            | BoolNot e ->  (open_paren prec 4)^ "-" ^ (racket_of 5 e)^(close_paren prec 4) *)
+        in racket_of 0 expr
 
-(** Given a variable, returns the name of a EDB/IDB column that defines it, or if it is equal to a constant, the value of the constant.*)
+(** Given a variable, returns the name of an EDB/IDB column that defines it, or if it is equal to a constant, the value of the constant. *)
 let var_to_col (vt:vartab) (eqt:eqtab) key (variable:var) =
     (*If the variable appears in a positive rterm, the value
      * is the name of the respective rterm's table column*)
@@ -77,8 +77,7 @@ let var_to_col (vt:vartab) (eqt:eqtab) key (variable:var) =
         )
     )
 
-(** Given the head of the rule, the vartab, and te eqtab, returns the code that
-  must be in the select clause. All columns are aliased as col0, col1, ...*)
+(** Given the head of the rule, the vartab, and te eqtab, returns the code that must be in the select clause. All columns are aliased as col0, col1, ... *)
 let get_select_clause (vt:vartab) (eqt:eqtab) rterm =
     let vlst = get_rterm_varlist rterm in 
     let key = symtkey_of_rterm rterm in
@@ -321,7 +320,7 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
     let racket = unfold_racket_of_rule_lst idb cnt rule_lst in
     racket
 
-(** take a query term and generate unfolded racket for it *)
+(** Take a query term and generate unfolded racket source code for it. *)
 let non_rec_unfold_racket_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) =
     let qrule = rule_of_query query idb in
     (* qrule is in the form of _dummy_(x,y) :- query_predicate(x,y), x=1 *)
@@ -340,10 +339,9 @@ let non_rec_unfold_racket_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) 
     (* by inserting the dummy rule to idb, we now find racket for this dummy predicate *)
     "("^non_rec_unfold_racket_of_symtkey local_idb cnt (symtkey_of_rterm (rule_head qrule))^")"
 
-(** generate racket functions from the ast, the goal is the query predicate of datalog program, the query is a query over source relations, receives a symtable with the database's edb description.
-*)
+(** Generate racket functions from the ast, the goal is the query predicate, the query is a query over source relations. *)
 let unfold_query_racket_stt (debug:bool) (edb:symtable) prog =
-    let query_rt = get_query_rterm (get_query prog) in
+    let query_rt = get_query prog in
     (*Extract and pre-process the IDB from the program*)
     let idb = extract_idb prog in
     preprocess_rules idb; 
@@ -353,15 +351,15 @@ let unfold_query_racket_stt (debug:bool) (edb:symtable) prog =
     (*Return the desired racket*)
     let racket = non_rec_unfold_racket_of_query idb cnt query_rt  in
     racket
-;;
+
 
 let unfold_program_query (debug:bool) prog =
-    if (debug) then print_endline ("==> generating racket function for a query of a datalog program"^ string_of_stt (get_query prog)) else ();
+    if (debug) then print_endline ("==> generating racket function for a query of a datalog program"^ string_of_query (get_query prog)) else ();
     let edb = extract_edb prog in
     unfold_query_racket_stt debug edb prog
-;;
 
-(** take a view update datalog program (containing both get and put directions) and generate racket query of contraints involving view *)
+
+(** Take a view update datalog program (containing both get and put directions) and generate racket query of constraints involving view. *)
 let view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:bool) prog =
     let clean_prog = keep_only_constraint_of_view debug prog in
     if inc then     
@@ -370,14 +368,15 @@ let view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) (opt
         let view_rt = get_schema_rterm view_sch in
         let new_view_rt = rename_rterm "new_" view_rt in
         let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
-        let prog2 = add_stts [
-        (Source(get_rterm_predname (view_rt), get_schema_col_typs view_sch ));
-        (Source(get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch ));
-        (Source(get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch ));
-        (Rule(get_inc_original view_rt,[Rel (view_rt)]));
-        (Rule(get_inc_ins view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]));
-        (Rule(get_inc_del view_rt,[Rel (get_temp_delta_deletion_rterm view_rt)]))
-        ] subst_prog in
+        let prog2 = {subst_prog with sources = [
+            get_rterm_predname (view_rt), get_schema_col_typs view_sch;
+            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
+            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
+        ]@subst_prog.sources; rules = [
+            (get_inc_original view_rt,[Rel (view_rt)]);
+            (get_inc_ins view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]);
+            (get_inc_del view_rt,[Rel (get_temp_delta_deletion_rterm view_rt)])
+        ]@subst_prog.rules} in
         (* let edb = extract_edb prog2 in *)
         let idb = extract_idb prog2 in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
@@ -387,9 +386,9 @@ let view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) (opt
             (* let cnt = build_colnamtab edb idb in *)
             if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
                 let remain_rules = rules_of_symt idb in
-                let prog3 = Prog((get_schema_stts prog2)@remain_rules) in
+                let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules}  in
                 (* non_rec_unfold_racket_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug (insert_stt (Query get_empty_pred) prog3)) else (insert_stt (Query get_empty_pred) prog3) in
+                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
                 (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
                 if (has_query prog4) then
                     (unfold_program_query debug prog4)
@@ -401,13 +400,14 @@ let view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) (opt
         let view_rt = get_schema_rterm view_sch in
         let new_view_rt = rename_rterm "new_" view_rt in
         let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) (delete_rule_of_predname (get_rterm_predname view_rt) clean_prog) in
-        let prog2 = add_stts [
-        (Source(get_rterm_predname (view_rt), get_schema_col_typs view_sch ));
-        (Source(get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch ));
-        (Source(get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch ));
-        (Rule(new_view_rt,[Rel (view_rt); Not (get_temp_delta_deletion_rterm view_rt)]));
-        (Rule(new_view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]))
-        ] subst_prog in
+        let prog2 = {subst_prog with sources = [
+            get_rterm_predname (view_rt), get_schema_col_typs view_sch;
+            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
+            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
+        ]@subst_prog.sources; rules = [
+            (new_view_rt,[Rel (view_rt); Not (get_temp_delta_deletion_rterm view_rt)]);
+            (new_view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)])
+        ]@subst_prog.rules} in
         (* let edb = extract_edb prog2 in *)
         let idb = extract_idb prog2 in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
@@ -417,18 +417,18 @@ let view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) (opt
             (* let cnt = build_colnamtab edb idb in *)
             if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
                 let remain_rules = Hashtbl.fold (fun k rules lst -> rules@lst) idb [] in
-                let prog3 = Prog((get_schema_stts prog2)@remain_rules) in
+                let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
                 (* non_rec_unfold_racket_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug (insert_stt (Query get_empty_pred) prog3)) else (insert_stt (Query get_empty_pred) prog3) in
+                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
                 (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
                 if (has_query prog4) then
                     (unfold_program_query debug prog4)
                 else "SELECT WHERE false"
             else "SELECT WHERE false")
         else "SELECT WHERE false"
-;;
 
-(** take a view update datalog program (containing both get and put directions) and generate racket query of contraints not involving view *)
+
+(** Take a view update datalog program (containing both get and put directions) and generate a racket query of constraints not involving view. *)
 let non_view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:bool) prog =
     let clean_prog = remove_constraint_of_view debug prog in
     if inc then
@@ -437,14 +437,15 @@ let non_view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) 
         let view_rt = get_schema_rterm view_sch in
         let new_view_rt = rename_rterm "new_" view_rt in
         let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
-        let prog2 = add_stts [
-        (Source(get_rterm_predname (view_rt), get_schema_col_typs view_sch ));
-        (Source(get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch ));
-        (Source(get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch ));
-        (Rule(get_inc_original view_rt,[Rel (view_rt)]));
-        (Rule(get_inc_ins view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]));
-        (Rule(get_inc_del view_rt,[Rel (get_temp_delta_deletion_rterm view_rt)]))
-        ] subst_prog in
+        let prog2 = {subst_prog with sources = [
+            get_rterm_predname (view_rt), get_schema_col_typs view_sch;
+            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
+            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
+        ]@subst_prog.sources; rules = [
+            (get_inc_original view_rt,[Rel (view_rt)]);
+            (get_inc_ins view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]);
+            (get_inc_del view_rt,[Rel (get_temp_delta_deletion_rterm view_rt)])
+        ]@subst_prog.rules} in
         (* let edb = extract_edb prog2 in *)
         let idb = extract_idb prog2 in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
@@ -454,9 +455,9 @@ let non_view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) 
             (* let cnt = build_colnamtab edb idb in *)
             if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
                 let remain_rules = rules_of_symt idb in
-                let prog3 = Prog((get_schema_stts prog2)@remain_rules) in
+                let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
                 (* non_rec_unfold_racket_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug (insert_stt (Query get_empty_pred) prog3)) else (insert_stt (Query get_empty_pred) prog3) in
+                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
                 (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
                 if (has_query prog4) then
                     (unfold_program_query debug prog4)
@@ -468,13 +469,14 @@ let non_view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) 
         let view_rt = get_schema_rterm view_sch in
         let new_view_rt = rename_rterm "new_" view_rt in
         let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) (delete_rule_of_predname (get_rterm_predname view_rt) clean_prog) in
-        let prog2 = add_stts [
-        (Source(get_rterm_predname (view_rt), get_schema_col_typs view_sch ));
-        (Source(get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch ));
-        (Source(get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch ));
-        (Rule(new_view_rt,[Rel (view_rt); Not (get_temp_delta_deletion_rterm view_rt)]));
-        (Rule(new_view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]))
-        ] subst_prog in
+        let prog2 = {subst_prog with sources = [
+            get_rterm_predname (view_rt), get_schema_col_typs view_sch;
+            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
+            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
+        ]@subst_prog.sources; rules = [
+            (new_view_rt,[Rel (view_rt); Not (get_temp_delta_deletion_rterm view_rt)]);
+            (new_view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)])
+        ]@subst_prog.rules} in
         (* let edb = extract_edb prog2 in *)
         let idb = extract_idb prog2 in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
@@ -484,16 +486,16 @@ let non_view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) 
             (* let cnt = build_colnamtab edb idb in *)
             if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
                 let remain_rules = Hashtbl.fold (fun k rules lst -> rules@lst) idb [] in
-                let prog3 = Prog((get_schema_stts prog2)@remain_rules) in
+                let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules}  in
                 (* non_rec_unfold_racket_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug (insert_stt (Query get_empty_pred) prog3)) else (insert_stt (Query get_empty_pred) prog3) in
+                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
                 (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
                 if (has_query prog4) then
                     (unfold_program_query debug prog4)
                 else "SELECT WHERE false"
             else "SELECT WHERE false")
         else "SELECT WHERE false"
-;;
+
 
 let stype_to_racket_type st = match st with 
     | Sint -> "integer?"
@@ -502,44 +504,28 @@ let stype_to_racket_type st = match st with
     | Sstring -> "integer?"
 
 (* transform source relations in program into symbolic tables in rosette *)
-let gen_symbolic_source size vocsize prog = match prog with 
-    Prog sttlst ->
+let gen_symbolic_source size vocsize prog = 
     (* currently just set all the types are int (ℤ) *)
-    let p_el sym_table_lst s = match s with 
-        Rule _ -> sym_table_lst
-        | Query _ -> sym_table_lst
-        | Constraint _ -> sym_table_lst 
-        | Pk _ -> sym_table_lst 
-        | Fact _ -> sym_table_lst
-        | View _ -> sym_table_lst 
-        | Source (name, lst) -> 
+    let p_el sym_table_lst (name, lst) = 
         let tup num = 
         (( String.concat "\n" ( List.map (fun (col,typ) -> "(define-symbolic "^name^"$"^col^"$"^ string_of_int num ^" " ^ stype_to_racket_type typ^")" ^(if (typ = Sstring) then "\n (assert (and (< -1  "^name^"$"^col^"$"^ string_of_int num ^") (< " ^name^"$"^col^"$"^ string_of_int num ^ " "^ string_of_int vocsize^")))" else "") ) lst) )
         ^ "\n\n(define "^name^"_tuple_"^ string_of_int num ^ " (list "^ String.concat " " ( List.map (fun (col,typ) -> name^"$"^col^"$"^ string_of_int num) lst)^")" ^")") in 
         let rec sym_tuples sz = if sz <= 0 then "" else sym_tuples (sz-1) ^ "\n\n" ^ (tup sz) in
         let rec sym_table sz = if sz <= 0 then "" else sym_table (sz-1) ^ " " ^name^"_tuple_" ^string_of_int sz in
         ((sym_tuples size) ^ "\n\n(define "^name^ " (list " ^ sym_table size ^ "))") ::sym_table_lst in
-    List.fold_left p_el [] sttlst;;
+    List.fold_left p_el [] prog.sources
 
 (* transform source relations in program into symbolic tables in rosette *)
-let gen_symbolic_source_view size vocsize prog = match prog with 
-    Prog sttlst ->
+let gen_symbolic_source_view size vocsize prog = 
     (* currently just set all the types are int (ℤ) *)
-    let p_el sym_table_lst s = match s with 
-        Rule _ -> sym_table_lst
-        | Query _ -> sym_table_lst
-        | Constraint _ -> sym_table_lst 
-        | Pk _ -> sym_table_lst 
-        | Fact _ -> sym_table_lst
-        | View (name, lst) 
-        | Source (name, lst) -> 
+    let p_el sym_table_lst (name, lst) =
         let tup num = 
         (( String.concat "\n" ( List.map (fun (col,typ) -> "(define-symbolic "^name^"$"^col^"$"^ string_of_int num ^" " ^ stype_to_racket_type typ^")" ^(if (typ = Sstring) then "\n (assert (and (< -1  "^name^"$"^col^"$"^ string_of_int num ^") (< " ^name^"$"^col^"$"^ string_of_int num ^ " "^ string_of_int vocsize^")))" else "") ) lst) )
         ^ "\n\n(define "^name^"_tuple_"^ string_of_int num ^ " (list "^ String.concat " " ( List.map (fun (col,typ) -> name^"$"^col^"$"^ string_of_int num) lst)^")" ^")") in 
         let rec sym_tuples sz = if sz <= 0 then "" else sym_tuples (sz-1) ^ "\n\n" ^ (tup sz) in
         let rec sym_table sz = if sz <= 0 then "" else sym_table (sz-1) ^ " " ^name^"_tuple_" ^string_of_int sz in
         ((sym_tuples size) ^ "\n\n(define "^name^ " (list " ^ sym_table size ^ "))") ::sym_table_lst in
-    List.fold_left p_el [] sttlst;;
+    List.fold_left p_el [] (get_schema_stts prog)
 
 (* take a view update datalog program (containing both get and put directions) and generate a rosette constraint of getput property for its view update strategy *)
 let ros_getput_of_stt (debug:bool) prog =
@@ -548,12 +534,12 @@ let ros_getput_of_stt (debug:bool) prog =
     (* remove overlap of delta and the source *)
     let dummy_delta_rules = List.map (fun delta -> let dummy = rename_rterm "__dummy__" delta in
                 match delta with 
-                    Deltadelete (p,vars) -> Rule(dummy, [Rel (Deltadelete (p,vars)); Rel(Pred(p,vars))]) 
-                    | Deltainsert (p,vars) -> Rule(dummy, [Rel (Deltainsert (p,vars)); Not(Pred(p,vars))])  
+                    Deltadelete (p,vars) -> (dummy, [Rel (Deltadelete (p,vars)); Rel(Pred(p,vars))]) 
+                    | Deltainsert (p,vars) -> (dummy, [Rel (Deltainsert (p,vars)); Not(Pred(p,vars))])  
                     | _ -> invalid_arg "Function ros_getput_of_stt called with not a delta predicate")  delta_rt_lst in
     let dummy_delta_rt_lst =  List.map (rename_rterm "__dummy__")  delta_rt_lst in
     (* get the emptiness FO sentence of a relation *)
-    let getput_prog = Expr.add_stts dummy_delta_rules prog in
+    let getput_prog = Expr2.add_rules dummy_delta_rules prog in
     let edb = extract_edb getput_prog in
     let idb = extract_idb getput_prog in
     preprocess_rules idb;
@@ -570,7 +556,7 @@ let ros_getput_of_stt (debug:bool) prog =
     let emptiness = "(define emptiness (append "^String.concat " " (List.map get_rterm_predname dummy_delta_rt_lst) ^"))" in
     let ros_constraint = "(solve (assert (< 0 (length emptiness))))" in 
      (String.concat "\n\n" delta_definition_lst) ^ "\n\n"^ emptiness ^ "\n\n" ^ ros_constraint
-;;
+
 
 (* take a view update datalog program (containing both get and put directions) and generate a rosette constraint of delta disjointness property for its view update strategy *)
 let ros_disdelta_of_stt (debug:bool) prog =
@@ -578,7 +564,7 @@ let ros_disdelta_of_stt (debug:bool) prog =
     (* need to change the view (in query predicate) to a edb relation *)
     let view_rt = get_schema_rterm (get_view prog) in
     (* need to convert the view to be an edb relation *)
-    symt_insert edb (Rule(view_rt,[]));
+    symt_insert edb (view_rt,[]);
     let idb = extract_idb prog in
     symt_remove idb (symtkey_of_rterm view_rt);
     let emptiness = Pred ("__emptiness",[]) in
@@ -589,7 +575,7 @@ let ros_disdelta_of_stt (debug:bool) prog =
             let del_rels = List.filter (is_delta_pair ins_rel) delta_rt_lst in 
             if (List.length del_rels = 0) then lst else (ins_rel, (List.hd del_rels))::lst in 
         List.fold_left pair_of_delta_insert [] delta_rt_lst in 
-    List.iter (fun (r1,r2) -> symt_insert idb (Rule(emptiness,[ Rel r1; Rel r2]))) delta_pair_lst;
+    List.iter (fun (r1,r2) -> symt_insert idb (emptiness,[ Rel r1; Rel r2])) delta_pair_lst;
     preprocess_rules idb;
     if debug then (
         print_endline "_____preprocessed datalog rules_______"; 
@@ -601,7 +587,7 @@ let ros_disdelta_of_stt (debug:bool) prog =
     let disdelta_emptiness = "(define disdelta_emptiness ("^disdelta_ros^"))" in
     let ros_constraint = "(solve (assert (< 0 (length disdelta_emptiness))))" in 
     disdelta_emptiness ^ "\n\n" ^ ros_constraint
-;;
+
 
 (* take a view update datalog program (containing both get and put directions) and generate a rosette constraint of putget property for its view update strategy *)
 let ros_putget_of_stt (debug:bool) prog =
@@ -610,13 +596,13 @@ let ros_putget_of_stt (debug:bool) prog =
     (* need to change the view (in query predicate) to a edb relation *)
     let view_rt = get_schema_rterm (get_view putget_prog) in
     (* need to convert the view to be an edb relation *)
-    symt_insert edb (Rule(view_rt,[]));
+    symt_insert edb (view_rt,[]);
     let idb = extract_idb putget_prog in
     (* symt_remove idb (symtkey_of_rterm view_rt); *)
     let new_view_rt = rename_rterm "__dummy_new_" view_rt in
     let emptiness = rename_rterm "__emptiness" view_rt in
-    symt_insert idb (Rule(emptiness,[ Rel new_view_rt; Not view_rt]));
-    symt_insert idb (Rule(emptiness,[ Rel view_rt; Not new_view_rt]));
+    symt_insert idb (emptiness,[ Rel new_view_rt; Not view_rt]);
+    symt_insert idb (emptiness,[ Rel view_rt; Not new_view_rt]);
     preprocess_rules idb;
     if debug then (
         print_endline "_____preprocessed datalog rules_______"; 
@@ -628,7 +614,7 @@ let ros_putget_of_stt (debug:bool) prog =
     let putget_emptiness = "(define putget_emptiness ("^putget_ros^"))" in
     let ros_constraint = "(solve (assert (< 0 (length putget_emptiness))))" in 
     putget_emptiness ^ "\n\n" ^ ros_constraint
-;;
+
 
 (* take a view update datalog program (may contain both get and put directions) and generate FO sentence of all contraints *)
 let ros_constraint_sentence_of_stt (debug:bool) prog =
@@ -639,7 +625,7 @@ let ros_constraint_sentence_of_stt (debug:bool) prog =
         (* need to change the view (in query predicate) to a edb relation *)
         let view_rt = get_schema_rterm (get_view prog) in
         (* need to convert the view to be an edb relation *)
-        symt_insert edb (Rule(view_rt,[]));
+        symt_insert edb (view_rt,[]);
         (* if having get (view rules) then remove it *)
         if Hashtbl.mem idb (symtkey_of_rterm view_rt) then
             symt_remove idb (symtkey_of_rterm view_rt);
@@ -655,7 +641,7 @@ let ros_constraint_sentence_of_stt (debug:bool) prog =
         let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in 
         constr_emptiness ^ "\n\n" ^ ros_constraint
     else ""
-;;
+
 
 (* take a view update datalog program (may contain both get and put directions) and generate FO sentence of contraints not involving view *)
 let ros_non_view_constraint_sentence_of_stt (debug:bool) prog =
@@ -668,7 +654,7 @@ let ros_non_view_constraint_sentence_of_stt (debug:bool) prog =
         let view_rt = get_schema_rterm (get_view clean_prog) in
         (* need to convert the view to be an edb relation *)
         (* remove_constraint_of_view debug view_rt edb idb ; *)
-        symt_insert edb (Rule(view_rt,[]));
+        symt_insert edb (view_rt,[]);
         symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
         if debug then (
@@ -682,7 +668,7 @@ let ros_non_view_constraint_sentence_of_stt (debug:bool) prog =
         let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in 
         constr_emptiness ^ "\n\n" ^ ros_constraint
     else ""
-;;
+
 
 (* take a view update datalog program (may contain both get and put directions) and generate FO sentence of only contraints involving view *)
 let ros_view_constraint_sentence_of_stt (debug:bool) prog =
@@ -695,7 +681,7 @@ let ros_view_constraint_sentence_of_stt (debug:bool) prog =
         let view_rt = get_schema_rterm (get_view clean_prog) in
         (* need to convert the view to be an edb relation *)
         (* remove_constraint_of_view debug view_rt edb idb ; *)
-        symt_insert edb (Rule(view_rt,[]));
+        symt_insert edb (view_rt,[]);
         symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
         if debug then (
@@ -709,7 +695,7 @@ let ros_view_constraint_sentence_of_stt (debug:bool) prog =
         let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in 
         constr_emptiness ^ "\n\n" ^ ros_constraint
     else ""
-;;
+
 
 let predefined_ros = 
 "#lang rosette/safe
@@ -740,15 +726,15 @@ let predefined_ros =
 
 let ros_check_disdelta_of_stt (debug:bool) srcsize vocsize prog =
     predefined_ros^ (String.concat "\n" (gen_symbolic_source_view srcsize vocsize prog)) ^ "\n\n"^ ros_constraint_sentence_of_stt debug prog ^ "\n\n"^ ros_disdelta_of_stt debug prog
-;;
+
 
 let ros_check_getput_of_stt (debug:bool) srcsize vocsize prog =
     predefined_ros^ (String.concat "\n" (gen_symbolic_source srcsize vocsize prog)) ^ "\n\n"^ ros_non_view_constraint_sentence_of_stt debug prog ^ "\n\n"^ ros_getput_of_stt debug prog
-;;
+
 
 let ros_check_putget_of_stt (debug:bool) srcsize vocsize prog =
     predefined_ros^ (String.concat "\n" (gen_symbolic_source_view srcsize vocsize prog)) ^ "\n\n"^ ros_constraint_sentence_of_stt debug prog ^ "\n\n"^ ros_putget_of_stt debug prog
-;;
+
 
 type cellkey = (string*string*int) (* table name, column name, rowid *)
 type celltable = (cellkey, string) Hashtbl.t (* value of cells*)
@@ -775,7 +761,7 @@ let get_default_val_of_type t = match t with
     | Sreal -> "0.0"
     | Sbool -> "true"
     | Sstring -> "'none'"
-;;
+
 
 let const_of_string str = 
     try  (Int (int_of_string str)) with
@@ -791,14 +777,14 @@ let const_of_string str =
                 | "#t" -> (Bool true)
                 | "#f" -> (Bool false)
                 | _ -> String str
-;;
+
 
 let instantiate_relation size string_adom (data:celltable) rel_chema = 
     let col_types = get_schema_col_typs rel_chema in
     let rel_name = get_schema_name rel_chema in
     let rec tuple_lst id = if (id<=0) then []
         else try
-        (Fact (Pred (rel_name, List.map (fun (col,typ) -> ConstVar (const_of_string (
+        ( (Pred (rel_name, List.map (fun (col,typ) -> ConstVar (const_of_string (
             if Hashtbl.mem data (rel_name, col, id) then
                 let value = Hashtbl.find data (rel_name, col, id) in 
                 if typ = Sstring then (

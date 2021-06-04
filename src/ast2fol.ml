@@ -7,32 +7,28 @@ Functions to transform datalog ast to first-order logic formula and vice versa
 @author: Vandang Tran
 *)
 
-open Lib;;
-open Formulas;;
-open Fol;;
-open Skolem;;
-open Fol_ex;;
-open Expr;;
-open Utils;;
-open Rule_preprocess;;
-open Stratification;;
-open Derivation;;
+open Lib
+open Formulas
+open Fol
+open Skolem
+open Fol_ex
+open Expr2
+open Utils
+open Rule_preprocess
+open Stratification
+open Derivation
 
-(** convert the vterm type into a Fol.term *)
+(** convert vterm into Fol.term *)
 let rec folterm_of_vterm ae =
     match ae with 
       Const c -> Fn (string_of_const c,[]) 
     | Var v -> Fol.Var (string_of_var v)
-    | Sum(f,g) -> Fn("+",[folterm_of_vterm f; folterm_of_vterm g])
-    | Diff(f,g) -> Fn("-",[folterm_of_vterm f; folterm_of_vterm g])
-    | Times(f,g) -> Fn("*",[folterm_of_vterm f; folterm_of_vterm g])
-    | Div (f,g) -> Fn("/",[folterm_of_vterm f; folterm_of_vterm g])
-    | Neg e ->  Fn("-",[folterm_of_vterm e])
-    | Concat(f,g) -> Fn("^",[folterm_of_vterm f; folterm_of_vterm g])
-    | BoolAnd (f,g) -> Fn("and",[folterm_of_vterm f; folterm_of_vterm g])
+    | BinaryOp(op, f,g) -> Fn(op,[folterm_of_vterm f; folterm_of_vterm g])
+    | UnaryOp (op,e) ->  Fn(op,[folterm_of_vterm e])
+    (* | BoolAnd (f,g) -> Fn("and",[folterm_of_vterm f; folterm_of_vterm g])
     | BoolOr (f,g) -> Fn("or",[folterm_of_vterm f; folterm_of_vterm g])
-    | BoolNot e ->  Fn("not",[folterm_of_vterm e])
-;;
+    | BoolNot e ->  Fn("not",[folterm_of_vterm e]) *)
+
 
 let const_of_string str = 
     try  (Int (int_of_string str)) with
@@ -45,22 +41,20 @@ let const_of_string str =
             (* try test () with *)
             | Failure e | Invalid_argument e -> if (str = "null") then  Null else  (String str)
 
-(** convert the Fol.term to vterm type*)
+(** convert Fol.term into vterm*)
 let rec vterm_of_folterm ft =
     match ft with 
       Fol.Var s -> (Var (NamedVar s))
     | Fol.Fn(c,[]) -> Const (const_of_string c)
-    | Fol.Fn("/",[tm1;tm2]) -> Div (vterm_of_folterm tm1, vterm_of_folterm tm2)
-    | Fol.Fn("*",[tm1;tm2]) -> Times (vterm_of_folterm tm1, vterm_of_folterm tm2)
-    | Fol.Fn("-",[tm1;tm2]) -> Diff (vterm_of_folterm tm1, vterm_of_folterm tm2)
-    | Fol.Fn("+",[tm1;tm2]) -> Sum (vterm_of_folterm tm1, vterm_of_folterm tm2)
-    | Fol.Fn("^",[tm1;tm2]) ->  Concat(vterm_of_folterm tm1, vterm_of_folterm tm2)
-    | Fol.Fn("::",[tm1;tm2]) -> Concat (vterm_of_folterm tm1, vterm_of_folterm tm2)
+    | Fol.Fn(op,[tm1;tm2]) -> (match op with
+        "/" | "*" | "-" | "+" | "^" | "::" -> BinaryOp (op, vterm_of_folterm tm1, vterm_of_folterm tm2)
+        | _ -> raise (SemErr ("unkown arithmetic operator " ^op)))
+    | Fol.Fn("-",[tm1]) -> UnaryOp ("-", vterm_of_folterm tm1)
     | Fol.Fn(f,_) -> raise (SemErr ("unkown arithmetic operator " ^f))
-;;
 
-(** for non-recursive datalog, we do not need stratification, we just need recursively translate each idb predicate (identified symkey) to a FO formula, 
-this function take a symtkey of a rterm and generate its FO formula recursively (this function is recursive because of unfolding all the idb predicate)*)
+
+(** For non-recursive datalog, we do not need stratification, we just need to recursively translate each idb predicate (identified symtkey) into a FO formula, 
+this function takes a symtkey of a rterm and generates its FO formula recursively (this function is recursive because of unfolding all the idb predicate)*)
 let rec fol_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:symtkey)  =
     let rule_lst = try Hashtbl.find idb goal 
         with Not_found -> raise(SemErr( "Not_found in func fol_of_symtkey"))
@@ -114,14 +108,20 @@ and fol_of_rterm r (idb:symtable) (cnt:colnamtab)=
     Atom(R(get_rterm_predname r, (List.map (fun x -> Fol.Var x) cols))) in
     let fm2 = itlist mk_exists excols fm in
     subst subfn fm2
+and fol_or_eterm et = match et with 
+    Equation(op, exp1, exp2) -> Atom(R(op,[folterm_of_vterm exp1; folterm_of_vterm exp2]))
 and fol_of_eq eq = match eq with 
-    Equal(exp1, exp2) -> Atom(R("=",[folterm_of_vterm exp1; folterm_of_vterm exp2]))
+    Equat (Equation("=", exp1, exp2))
+    | Noneq (Equation("<>", exp1, exp2)) -> Atom(R("=",[folterm_of_vterm exp1; folterm_of_vterm exp2]))
     | _ -> failwith "not a equality"
 and fol_of_ineq ineq = match ineq with 
-    Ineq(str, exp1, exp2) -> Atom(R(str,[folterm_of_vterm exp1; folterm_of_vterm exp2]))
-    | _ -> failwith "not a inequality";;
+    Equat (Equation("=", exp1, exp2)) -> failwith "not a inequality"
+    | Noneq (Equation("<>", exp1, exp2)) -> failwith "not a inequality"
+    | Equat et -> fol_or_eterm et
+    | Noneq et -> fol_or_eterm (negate_eq et)
+    | _ -> failwith "not a inequality"
 
-(** take a query term and rules of idb relations stored in a symtable, generate a FO formula for it *)
+(** Take a query term and rules of idb relations stored in a symtable, generate a FO formula for it *)
 let fol_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) =
     (* query is just a rterm which is a predicate therefore need to create a new temporary rule for this query term 
     for example if query is q(X,Y,_,5) we create a rule for it: _dummy_(X,Y) :- q(X,Y,_,Z), Z=5. (_dummy_ is a fixed name in the function rule_of_query)
@@ -140,11 +140,9 @@ let fol_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) =
         with Not_found -> raise(SemErr("Not found in cnt the atom "^string_of_symtkey key));
         , fol_of_symtkey local_idb local_cnt (symtkey_of_rterm (rule_head qrule)))
 
-(** generate FO formula from the ast, the goal is the view predicate of datalog program, receives a symtable of the database's edb description.
-The boolean variable debug indicates whether debugging information should be printed
-*)
+(** Generate a FO formula from the ast, the goal is the view predicate. *)
 let fol_of_stt (debug:bool) prog =
-    if (debug) then print_endline ("==> generating FOL formula of view " ^ string_of_stt (get_view prog)^ " in datalog program" ) else ();
+    if (debug) then print_endline ("==> generating FOL formula of view " ^ string_of_view (get_view prog)^ " in datalog program" ) else ();
     (* todo: need to check if prog is non-recursive *)
     let edb = extract_edb prog in 
     let view_rt = get_schema_rterm (get_view prog) in
@@ -162,14 +160,12 @@ let fol_of_stt (debug:bool) prog =
     (*Return the desired lambda expression*)
     fol_of_query idb cnt view_rt
 
-(** generate FO formula from the ast, the goal is the query predicate of datalog program, receives a symtable of the database's edb description.
-The boolean variable debug indicates whether debugging information should be printed
-*)
+(** Generate FO formula from the ast, the goal is the query predicate of datalog program. *)
 let fol_of_program_query (debug:bool) prog =
-    if (debug) then print_endline ("==> generating FOL formula of datalog program of query " ^ string_of_stt (get_query prog)) else ();
+    if (debug) then print_endline ("==> generating FOL formula of datalog program of query " ^ string_of_query (get_query prog)) else ();
     (* todo: need to check if prog is non-recursive *)
     let edb = extract_edb prog in 
-    let query_rt = get_query_rterm (get_query prog) in
+    let query_rt = (get_query prog) in
     (*Extract and pre-process the IDB from the program*)
     let idb = extract_idb prog in
     preprocess_rules idb; 
@@ -184,13 +180,13 @@ let fol_of_program_query (debug:bool) prog =
     (*Return the desired lambda expression*)
     fol_of_query idb cnt query_rt
 
-(* take a view update datalog program and generate the FO sentence of checking whether all delta relations are disjoint *)
+(** Take a view update datalog program and generate the FO sentence of checking whether all delta relations are disjoint. *)
 let disjoint_delta_sentence_of_stt (debug:bool) prog = 
     let edb = extract_edb prog in
     (* need to change the view (in query predicate) to a edb relation *)
     let view_rt = get_schema_rterm (get_view prog) in
     (* need to convert the view to be an edb relation *)
-    symt_insert edb (Rule(view_rt,[]));
+    symt_insert edb (view_rt,[]);
     let idb = extract_idb prog in
     symt_remove idb (symtkey_of_rterm view_rt);
     preprocess_rules idb;
@@ -214,15 +210,15 @@ let disjoint_delta_sentence_of_stt (debug:bool) prog =
         itlist mk_exists cols (And(snd (fol_of_query idb cnt ins_rel), snd (fol_of_query idb cnt del_rel))) in
     let djsjoint_sen_lst = List.map (fun (r1,r2) -> disjoint_fo_sentence r1 r2) delta_pair_lst in 
     Prop.list_disj djsjoint_sen_lst
-;;
 
-(* take a view update datalog program and generate FO sentence of SourceStability constraint (put s v = s) for its view update strategy *)
+
+(** Take a view update datalog program and generate FO sentence of SourceStability (put s v = s) for its view update strategy. *)
 let sourcestability_sentence_of_stt (debug:bool) prog =
     let edb = extract_edb prog in
     (* need to change the view (in query predicate) to a edb relation *)
     let view_rt = get_schema_rterm (get_view prog) in
     (* need to convert the view to be an edb relation *)
-    symt_insert edb (Rule(view_rt,[]));
+    symt_insert edb (view_rt,[]);
     let idb = extract_idb prog in
     symt_remove idb (symtkey_of_rterm view_rt);
     preprocess_rules idb;
@@ -245,10 +241,10 @@ let sourcestability_sentence_of_stt (debug:bool) prog =
          ) in
         itlist mk_exists cols min_delta in
     let delta_fo_sentence_lst = List.map emptiness_fo_sentence delta_rt_lst in 
-    Prop.list_disj delta_fo_sentence_lst;;
-;;
+    Prop.list_disj delta_fo_sentence_lst
 
-(* take a view update datalog program (containing both get and put directions) and generate FO sentence of getput property for its view update strategy *)
+
+(** Take a view update datalog program (containing both get and put directions) and generate FO sentence of getput property for its view update strategy. *)
 let getput_sentence_of_stt (debug:bool) prog =
     let edb = extract_edb prog in
     let idb = extract_idb prog in
@@ -272,17 +268,17 @@ let getput_sentence_of_stt (debug:bool) prog =
          ) in
         itlist mk_exists cols min_delta in
     let delta_fo_sentence_lst = List.map emptiness_fo_sentence delta_rt_lst in 
-    Prop.list_disj delta_fo_sentence_lst;;
-;;
+    Prop.list_disj delta_fo_sentence_lst
 
-(* take a view update datalog program (containing both get and put directions) and generate FO sentence of putget property for its view update strategy *)
+
+(** Take a view update datalog program (containing both get and put directions) and generate FO sentence of putget property for its view update strategy. *)
 let putget_sentence_of_stt (debug:bool) prog =
     let putget_prog =  datalog_of_putget debug false prog in
     let edb = extract_edb putget_prog in
     (* need to change the view (in query predicate) to a edb relation *)
     let view_rt = get_schema_rterm (get_view putget_prog) in
     (* need to convert the view to be an edb relation *)
-    symt_insert edb (Rule(view_rt,[]));
+    symt_insert edb (view_rt,[]);
     let idb = extract_idb putget_prog in
     symt_remove idb (symtkey_of_rterm view_rt);
     preprocess_rules idb;
@@ -296,9 +292,9 @@ let putget_sentence_of_stt (debug:bool) prog =
     let putget_fm = snd (fol_of_query idb cnt new_view_rt) in
     let view_fm = snd (fol_of_query idb cnt view_rt) in
     generalize (Iff(putget_fm, view_fm))
-;;
 
-(* take a view update datalog program (may contain both get and put directions) and generate FO sentence of all contraints *)
+
+(** Take a view update datalog program (may contain both get and put directions) and generate the FO sentence of all constraints. *)
 let constraint_sentence_of_stt (debug:bool) prog =
     if debug then (print_endline "==> generating all constraints";) else ();
     let edb = extract_edb prog in
@@ -307,7 +303,7 @@ let constraint_sentence_of_stt (debug:bool) prog =
         (* need to change the view (in query predicate) to a edb relation *)
         let view_rt = get_schema_rterm (get_view prog) in
         (* need to convert the view to be an edb relation *)
-        symt_insert edb (Rule(view_rt,[]));
+        symt_insert edb (view_rt,[]);
         (* if having get (view rules) then remove it *)
         if Hashtbl.mem idb (symtkey_of_rterm view_rt) then
             symt_remove idb (symtkey_of_rterm view_rt);
@@ -320,9 +316,9 @@ let constraint_sentence_of_stt (debug:bool) prog =
         let cnt = build_colnamtab edb idb in
         Imp(snd (fol_of_query idb cnt get_empty_pred), False)
     else True
-;;
 
-(* take a view update datalog program (may contain both get and put directions) and generate FO sentence of contraints not involving view *)
+
+(** Take a view update datalog program (may contain both get and put directions) and generate FO sentence of constraints not involving view. *)
 let non_view_constraint_sentence_of_stt (debug:bool) prog =
     if debug then (print_endline "==> generating constraint not involving view";) else ();
     let clean_prog = remove_constraint_of_view debug prog in
@@ -333,7 +329,7 @@ let non_view_constraint_sentence_of_stt (debug:bool) prog =
         let view_rt = get_schema_rterm (get_view clean_prog) in
         (* need to convert the view to be an edb relation *)
         (* remove_constraint_of_view debug view_rt edb idb ; *)
-        symt_insert edb (Rule(view_rt,[]));
+        symt_insert edb (view_rt,[]);
         symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
         if debug then (
@@ -346,9 +342,9 @@ let non_view_constraint_sentence_of_stt (debug:bool) prog =
             Imp(snd (fol_of_query idb cnt get_empty_pred), False)
         else True
     else True
-;;
 
-(* take a view update datalog program (may contain both get and put directions) and generate FO sentence of only contraints involving view *)
+
+(** Take a view update datalog program (may contain both get and put directions) and generate FO sentence of only constraints involving view. *)
 let view_constraint_sentence_of_stt (debug:bool) prog =
     if debug then (print_endline "==> generating a sentence of only constraints involving view";) else ();
     let clean_prog = keep_only_constraint_of_view debug prog in
@@ -359,7 +355,7 @@ let view_constraint_sentence_of_stt (debug:bool) prog =
         let view_rt = get_schema_rterm (get_view clean_prog) in
         (* need to convert the view to be an edb relation *)
         (* remove_constraint_of_view debug view_rt edb idb ; *)
-        symt_insert edb (Rule(view_rt,[]));
+        symt_insert edb (view_rt,[]);
         symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
         if debug then (
@@ -372,16 +368,16 @@ let view_constraint_sentence_of_stt (debug:bool) prog =
             Imp(snd (fol_of_query idb cnt get_empty_pred), False)
         else True
     else True
-;;
+
 
 let get_goal_predicate freevars  goal_num = Pred("p_"^(string_of_int goal_num), (List.map (fun x -> NamedVar x) freevars))
 
-(** take a RANF formula and return the equivalent datalog program *)
+(** Take a RANF formula and return the equivalent datalog program. *)
 let rec ranf2datalog fm freevars (goal_num:int) (last_goal_num:int)= 
     match fm with 
     Atom(R("=",[Var x; Fn (c,[])]))
     | Atom(R("=",[Fn (c,[]); Var x])) -> let goal_predicate = get_goal_predicate freevars goal_num in
-        ([Rule (goal_predicate, [Equal(Var (NamedVar x), Const (const_of_string c))])], goal_predicate, (max (goal_num+1) last_goal_num))
+        ([(goal_predicate, [Equat (Equation("=", Var (NamedVar x), Const (const_of_string c)))])], goal_predicate, (max (goal_num+1) last_goal_num))
     | Atom(R(_,_))
     | Exists(_,_) 
     | Formulas.Not _ -> datalog_of_conj [fm] freevars goal_num last_goal_num
@@ -395,13 +391,13 @@ let rec ranf2datalog fm freevars (goal_num:int) (last_goal_num:int)=
 and datalog_of_conj conj_lst freevars (goal_num:int) (last_goal_num:int)= 
     let rec datalog_of_subfm subfm (rule_termlst, prog, sub_num, local_last_goal_num) = 
         (match subfm with 
-              False -> ((Equal (Const (Int 1), Const (Int 2)))::rule_termlst, prog,sub_num+1, local_last_goal_num)
-            | True -> ((Equal (Const (Int 1), Const (Int 1)))::rule_termlst, prog, sub_num+1, local_last_goal_num)
+              False -> ((Equat (Equation("=", Const (Int 1), Const (Int 2))))::rule_termlst, prog,sub_num+1, local_last_goal_num)
+            | True -> ((Equat (Equation("=",Const (Int 1), Const (Int 1))))::rule_termlst, prog, sub_num+1, local_last_goal_num)
             | Atom(R(p,args)) -> 
                 if (List.mem p ["="; "<"; "<="; ">"; ">="; "<>"]) then
                     (match args with 
-                        [term1;term2] -> if (p = "=") then ((Equal (vterm_of_folterm term1, vterm_of_folterm term2))::rule_termlst, prog, sub_num+1, local_last_goal_num)
-                            else ((Ineq (p, vterm_of_folterm term1, vterm_of_folterm term2))::rule_termlst, prog, sub_num+1, local_last_goal_num)
+                        [term1;term2] -> if (p = "=") then ((Equat (Equation("=", vterm_of_folterm term1, vterm_of_folterm term2)))::rule_termlst, prog, sub_num+1, local_last_goal_num)
+                            else ((Equat (Equation(p, vterm_of_folterm term1, vterm_of_folterm term2)))::rule_termlst, prog, sub_num+1, local_last_goal_num)
                         | _ -> failwith ("fail to get datalog predicate of " ^ Fol_ex.string_of_fol_formula subfm )
                     )
                 else
@@ -411,7 +407,7 @@ and datalog_of_conj conj_lst freevars (goal_num:int) (last_goal_num:int)=
                         match t with 
                             Fol.Var v -> (NamedVar v::varlst, eqlst,i) 
                             | Fol.Fn (c,[]) -> (ConstVar (const_of_string c)::varlst, eqlst,i) 
-                            | _ -> ((NamedVar ("VAR_"^(string_of_int sub_num)^"_"^(string_of_int i)))::varlst, Equal(Var (NamedVar ("VAR_"^(string_of_int sub_num)^"_"^(string_of_int i))), vterm_of_folterm t) ::eqlst,i+1) in
+                            | _ -> ((NamedVar ("VAR_"^(string_of_int sub_num)^"_"^(string_of_int i)))::varlst, Equat (Equation("=", Var (NamedVar ("VAR_"^(string_of_int sub_num)^"_"^(string_of_int i))), vterm_of_folterm t)) ::eqlst,i+1) in
                     let varlst, eqlst,_ = List.fold_right convert_term args ([],[],0) in
                     ( (Rel (Pred(p, varlst)))::eqlst@rule_termlst, prog, sub_num+1, local_last_goal_num)
                 else failwith ("fail to get datalog program of " ^ Fol_ex.string_of_fol_formula subfm )
@@ -467,53 +463,53 @@ and datalog_of_conj conj_lst freevars (goal_num:int) (last_goal_num:int)=
                 (((Rel(subgoal_pred)))::rule_termlst, subprog@prog, sub_num+1, new_local_last_goal_num) ) in
     let goal_predicate = get_goal_predicate freevars goal_num in 
     let rule_termlst, prog, _, new_last_goal_num = List.fold_right datalog_of_subfm conj_lst ([],[],0, (max (goal_num+1) last_goal_num) ) in
-    ((Rule (goal_predicate, rule_termlst))::prog, goal_predicate, new_last_goal_num);;
+    ( (goal_predicate, rule_termlst))::prog, goal_predicate, new_last_goal_num
 
-(** transform a safe range FO fomula to datalog program*)
+(** Transform a safe range FO formula to a Datalog program. *)
 let fol2datalog freevars fm = 
     if set_eq (setify freevars) (fv fm) then
         let lst, rt, _ = ranf2datalog (ranf (simplify (normalize_comparison fm))) freevars 0 0 in 
-        Prog ((Query rt)::lst)
-    else failwith "the list of variables must be exactly the free varilabes in FO formula";;
+        {get_empty_expr with query = Some rt; rules = lst}
+    else failwith "the list of variables must be exactly the free varilabes in FO formula"
 
-(** transform a safe range FO fomula of a view to datalog program, we need all schema statements for source and view*)
-let view_fol2datalog (debug:bool) schema_stts freevars fm = 
-    let view_rt = get_schema_rterm (get_view (Prog schema_stts)) in  
+(** Transform a safe range FO formula of a view to a datalog program, we need all schema statements for source and view. *)
+let view_fol2datalog (debug:bool) view sources freevars fm = 
+    let view_rt = get_schema_rterm view in  
     if (debug) then print_endline ("==> generating datalog program of view " ^ string_of_rterm (view_rt)) else ();
     if set_eq (setify freevars) (fv fm) then
         let lst, rt, _ = ranf2datalog (ranf (simplify (normalize_comparison fm))) freevars 0 0 in 
-        Prog (schema_stts@Rule (Pred((get_rterm_predname view_rt), get_rterm_varlist rt ), [Rel rt])::lst)
-    else failwith "the list of variables must be exactly the free varilabes in FO formula";;
+        {get_empty_expr with view = Some view; sources = sources; rules = (Pred((get_rterm_predname view_rt), get_rterm_varlist rt ), [Rel rt])::lst}
+    else failwith "the list of variables must be exactly the free varilabes in FO formula"
 
-(** transform a safe range FO fomula of a view to datalog program, we need all schema statements for source and view*)
-let fol2datalog (debug:bool) (is_ranf:bool) query schema_stts freevars fm = 
-    if (debug) then print_endline ("==> generating datalog program of query " ^ string_of_stt (query)) else ();
-    let query_rt = get_query_rterm query in  
+(** Transform a safe range FO formula of a view to a datalog program, we need all schema statements for source and view. *)
+let fol2datalog (debug:bool) (is_ranf:bool) query sources freevars fm = 
+    if (debug) then print_endline ("==> generating datalog program of query " ^ string_of_query query) else ();
+    (* let query_rt = get_query_rterm query in   *)
     if set_eq (setify freevars) (fv fm) then
         let ranf_fm = if is_ranf then fm else (ranf (simplify (normalize_comparison fm))) in
         let lst, rt, _ = ranf2datalog ranf_fm freevars 0 0 in 
-        Prog (schema_stts@Rule (change_vars query_rt (get_rterm_varlist rt), [Rel rt])::lst@[query])
-    else failwith "the list of variables must be exactly the free varilabes in FO formula";;
+        {get_empty_expr with query = Some query; sources = sources; rules = (change_vars query (get_rterm_varlist rt), [Rel rt])::lst}
+    else failwith "the list of variables must be exactly the free varilabes in FO formula"
 
 let optimize_query_datalog (debug:bool) prog =
     let query = (get_query prog) in
     (* let query_rt = get_query_rterm query in *)
-    if (debug) then print_endline ("==> optimizing datalog program of query " ^ string_of_stt query) else ();
+    if (debug) then print_endline ("==> optimizing datalog program of query " ^ string_of_query query) else ();
     let freevars, fm = fol_of_program_query ( debug) prog in
-    if (debug) then print_endline ("==> intermediate FOL formula of datalog optimization of query " ^ string_of_stt (get_query prog) ^ "is: \n" ^ lean_string_of_fol_formula fm^ "\n________\n") else ();
+    if (debug) then print_endline ("==> intermediate FOL formula of datalog optimization of query " ^ string_of_query (get_query prog) ^ "is: \n" ^ lean_string_of_fol_formula fm^ "\n________\n") else ();
 
     (* fm is already in ranf so we do not need to transform in to ranf more *)
     let refined_fm = remove_trivial fm in
     (* if the obtained formula is false then the query is always empty, we just need to remove it from prog *)
     if refined_fm = False then
-        Prog(get_schema_stts prog)
+        {get_empty_expr with view = prog.view; sources = prog.sources}
     else
-        let new_prog = fol2datalog debug true query (Expr.get_schema_stts prog) freevars refined_fm in 
+        let new_prog = fol2datalog debug true query prog.sources freevars refined_fm in 
         if debug then (
-            print_endline ("_____optimized datalog program of query " ^ string_of_stt query^"_______"); 
+            print_endline ("_____optimized datalog program of query " ^ string_of_query query^"_______"); 
             print_endline (string_of_prog new_prog); 
             print_endline "______________\n";
         ) else ();
         new_prog
-;;
+
 
