@@ -123,7 +123,7 @@ export const actions = store => ({
         }
       });
 
-      if (connectionId == 'noconnection') {
+      if (connectionId === 'noconnection') {
         return {
           schema: {
             ...schema,

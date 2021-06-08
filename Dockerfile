@@ -8,6 +8,8 @@ ENV OS_LOCALE="en_US.UTF-8" \
     PG_VERSION=9.6 \
     OCAML_VERSION=4.07.0 \
     Z3_VERSION=4.8.6 \
+    RACKET_VERSION=8.0 \
+    NODE_VERSION=8.16.0 \
     PG_USER=postgres \
     PG_HOME=/var/lib/postgresql \
     PG_RUN_DIR=/run/postgresql \
@@ -74,16 +76,15 @@ WORKDIR /root/
 RUN BUILD_PKGS="wget" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
- && wget https://nodejs.org/dist/v8.16.0/node-v8.16.0-linux-x64.tar.gz \
- && tar xvfz node-v8.16.0-linux-x64.tar.gz \
+ && wget https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz \
+ && tar xvfz node-v${NODE_VERSION}-linux-x64.tar.gz \
  && mkdir -p /usr/local/nodejs \
- && mv node-v8.16.0-linux-x64/* /usr/local/nodejs \
+ && mv node-v${NODE_VERSION}-linux-x64/* /usr/local/nodejs \
  && ln -s /usr/local/nodejs/bin/node /usr/local/bin/node \
  && ln -s /usr/local/nodejs/bin/npm /usr/local/bin/npm \
  && ln -s /usr/local/nodejs/bin/npx /usr/local/bin/npx \
- && npm install npm -g \
- && rm -rf node-v8.16.0-linux-x64 \
- && rm node-v8.16.0-linux-x64.tar.gz \
+ && rm -rf node-v${NODE_VERSION}-linux-x64 \
+ && rm node-v${NODE_VERSION}-linux-x64.tar.gz \
  && apt-get purge -y --auto-remove ${BUILD_PKGS} \
  && rm -rf /var/lib/apt/lists/*
 
@@ -107,13 +108,12 @@ WORKDIR /root/
 RUN BUILD_PKGS="wget libgtk2.0" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
- && wget https://mirror.racket-lang.org/installers/7.6/racket-minimal-7.6-x86_64-linux.sh \
- && chmod a+x racket-minimal-7.6-x86_64-linux.sh \
- && bash racket-minimal-7.6-x86_64-linux.sh --unix-style --create-dir --dest /usr/local/racket \
+ && wget https://mirror.racket-lang.org/installers/${RACKET_VERSION}/racket-minimal-${RACKET_VERSION}-x86_64-linux.sh \
+ && echo "yes\n1\n" | sh racket-minimal-${RACKET_VERSION}-x86_64-linux.sh --unix-style --create-dir --dest /usr/ \
  && ln -s /usr/local/racket/bin/racket /usr/local/bin/racket \
  && ln -s /usr/local/racket/bin/raco /usr/local/bin/raco \
  && raco pkg install --auto rosette \
- && rm racket-minimal-7.6-x86_64-linux.sh \
+ && rm racket-minimal-${RACKET_VERSION}-x86_64-linux.sh \
  && apt-get purge -y --auto-remove ${BUILD_PKGS} \
  && rm -rf /var/lib/apt/lists/*
 
@@ -135,10 +135,10 @@ WORKDIR /root/
 RUN BUILD_PKGS="wget build-essential git make opam m4" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
- && wget https://github.com/ocaml/ocaml/archive/4.07.0.tar.gz \
- && tar -xzvf 4.07.0.tar.gz && cd ocaml-4.07.0 && ./configure && make world.opt && umask 022 && make install \ 
- && rm -rf /root/ocaml-4.07.0 \
- && rm /root/4.07.0.tar.gz \
+ && wget https://github.com/ocaml/ocaml/archive/${OCAML_VERSION}.tar.gz \
+ && tar -xzvf ${OCAML_VERSION}.tar.gz && cd ocaml-${OCAML_VERSION} && ./configure && make world.opt && umask 022 && make install \ 
+ && rm -rf /root/ocaml-${OCAML_VERSION} \
+ && rm /root/${OCAML_VERSION}.tar.gz \
  && echo "y" | opam init && eval `opam config env` \
  && opam install -y num postgresql \
  && cd /root/birds && make depend && make release \
