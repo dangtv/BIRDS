@@ -564,7 +564,7 @@ let constraint2rule expr =
         let allattrlst2 = List.map (fun x -> if (List.mem x attrlst) then x else x^"2") allattrlst in
         let nonkeyattrlst = List.filter (fun x -> not (List.mem x attrlst)) allattrlst in 
         (List.map (fun x -> (get_empty_pred, [Rel (Pred(relname, List.map (fun t -> NamedVar t) allattrlst)); Rel (Pred(relname, List.map (fun t -> NamedVar t) allattrlst2)); Equat (Equation("<>", Var (NamedVar x), Var (NamedVar (x^"2"))))] )) nonkeyattrlst )@lst in 
-    { expr with constraints = List.fold_right trans_pk expr.primary_keys expr.constraints}     
+    { expr with rules = (List.fold_right trans_pk expr.primary_keys expr.constraints)@expr.rules}     
 
 (* 
 Color	Code
