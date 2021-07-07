@@ -30,6 +30,7 @@ let user = ref "postgres"
 let dejima_user = ref "dejima"
 let password = ref "12345678"
 let dbname = ref "datalogdb"
+let environment = ref false
 let log = ref false
 let debug = ref false
 let explain = ref false
@@ -53,6 +54,7 @@ let timeout = ref 180
 let usage = "usage: " ^ Sys.argv.(0) ^ " [OPTIONS]"
 let speclist = [
   ("--version", Arg.Unit (fun () -> print_version := true),  " Print version");
+  ("--environment", Arg.Unit (fun () -> environment := true),      " Check external commands and configurations");
   ("--log", Arg.Unit (fun () -> log := true),  " Print running information");
   ("--debug", Arg.Unit (fun () -> debug := true),  " Enable debugging mode");
   ("--explain", Arg.Unit (fun () -> explain := true),  " Show only explanations in the debugging mode");
@@ -111,7 +113,56 @@ let print_conn_info conn =
   print_endline "--------------\n"
 
 let main () =
-  if (!print_version) then ((print_endline "BIRDS version 0.0.5"); exit 0);
+  if (!print_version) then ((print_endline "BIRDS version 0.0.6"); exit 0);
+  if (!environment) then (
+    print_endline "...Checking external tools (this may take a few minutes)...";
+    (try 
+      ignore (check_command_version "timeout");
+    with 
+      | EnvErr msg -> fprintf stderr "%s\n" "WARNING: Command 'timeout' can not be called! Verifications and counterexample generation will not be performed correctly, and hence Datalog rules of the view definition must be explicitly written.";
+      | e -> prerr_endline (Printexc.to_string e));
+
+    (try 
+      let lean_version = check_command_version "lean" in 
+      print_endline ("INFO: The current version of Lean is: \'"^lean_version^"\'. Please be sure it is greater than or equal to 3.4.2 to avoid unexpected errors of verification.");
+      (* check lean paths *)
+      let tmp_chklib_file = Filename.temp_file "" ".lean" in
+      let chklib =  open_out tmp_chklib_file in  
+      fprintf chklib "%s\n" "import bx";
+      close_out chklib;
+      let leanstatus, leanmessage = exe_command @@ "lean "^tmp_chklib_file in
+      if not (leanstatus = 0) then 
+        fprintf stderr "%s\n" ("WARNING: Lean paths to BIRDS's verification folder are not configured correctly! Verifications will not be performed correctly, and hence Datalog rules of the view definition must be explicitly written. Please change the Lean path configuration in ~/.lean/leanpkg.path and check by 'lean --path'. More details at https://github.com/dangtv/BIRDS.")
+      else ();
+    with 
+      | EnvErr msg -> fprintf stderr "%s\n" "WARNING: Command 'lean' can not be called! Verifications will not be performed correctly, and hence Datalog rules of the view definition must be explicitly written.";
+      | e -> prerr_endline (Printexc.to_string e));
+
+    (try 
+      let z3_version = check_command_version "z3" in 
+      print_endline ("INFO: The current version of Z3 is: \'"^z3_version^"\'. Please be sure it is greater than or equal to 4.8.7 to avoid unexpected errors of verification.");
+    with 
+      | EnvErr msg -> fprintf stderr "%s\n" "WARNING: Command 'z3' can not be called! Verifications will not be performed correctly, and hence Datalog rules of the view definition must be explicitly written.";
+      | e -> prerr_endline (Printexc.to_string e));
+    
+    (try 
+      ignore (check_command_version "racket");
+      (* check racket libs *)
+      let tmp_chklib_file = Filename.temp_file "" ".rkt" in
+      let chklib =  open_out tmp_chklib_file in  
+      fprintf chklib "%s\n" "#lang rosette";
+      close_out chklib;
+      let racketstatus, racketmessage = exe_command @@ "racket "^tmp_chklib_file in
+      if not (racketstatus = 0) then 
+        fprintf stderr ("WARNING: Package rosette is not installed correctly! Counterexamples generators will not work. Please install by 'raco pkg install rosette'. More details at https://github.com/dangtv/BIRDS.")
+      else ();
+    with 
+      | EnvErr msg -> fprintf stderr "%s\n" "WARNING: Command 'racket' can not be called! Counterexamples generators will not work.";
+      | e -> prerr_endline (Printexc.to_string e));
+    
+    print_endline "...Checking is completed (\'birds\' can be fully used if there is no WARNING)...";
+    exit 0
+    );
   if (!importschema) then 
     (if !log then print_endline "importing schema from the database"; 
     let c = new connection ~conninfo () in
@@ -213,13 +264,13 @@ let main () =
                     ^ (if (!log) then "\nError messange: "^ message else ""))));
             )
           else (
-            (* verify delta disjointness property *)
+            (* verify the delta disjointness property *)
             let satisfying_getput = ref false in 
             let satisfying_putget = ref false in 
             let satisfying_deltadis = ref false in 
             let verification_mess = ref "" in
             let counterexample_mess = ref "" in
-            if (!log) then print_endline "==> verifying delta disjointness property";
+            if (!log) then print_endline "==> Verifying the delta disjointness property";
             let lean_code_disdelta = gen_lean_code_for_theorems [ disdelta_thm ] in
               let exitcode, message = verify_fo_lean (!log) (!timeout) lean_code_disdelta in 
               if not (exitcode=0) then 
@@ -243,12 +294,12 @@ let main () =
                         (* exit 0 *))
                     else
                       (let m = ("Invalidity: Deltas in the datalog program are not disjoint \nExit code: " ^ string_of_int exitcode
-                      ^ (if (!log) then "\nError messange: "^ message else "")) in 
+                      ^ (if (!log) then "\nError messange: "^ message else "") ^"\nHint: use option --counterexample to generate a counterexample") in 
                       if (!log) then print_endline m;
                       verification_mess := (!verification_mess) ^ "\n\n" ^ m)
               else satisfying_deltadis := true;
             (* verify getput property *)
-            if (!log) then print_endline "==> verifying getput property";
+            if (!log) then print_endline "==> verifying the getput property";
             let lean_code_getput = gen_lean_code_for_theorems [ getput_thm ] in
               let exitcode, message = verify_fo_lean (!log) (!timeout) lean_code_getput in 
               if not (exitcode=0) then 
@@ -266,27 +317,27 @@ let main () =
                     if (exitcode=1 && !cex_generation) then 
                       (let error, counterexample = Debugger.gen_counterexample !log "getput" !cex_max !timeout constr_ast in
                       let m = if (error = "") then ("% Invalidity: The following counterexample shows that getput is not satisfied:\n" ^ string_of_prog {get_empty_expr with facts = counterexample} ) 
-                              else "% Fail to generate a couterexample of getput: " ^error in 
+                              else "% Fail to generate a counterexample of getput: " ^error in 
                       if (!log) then print_endline m;
                         counterexample_mess := (!counterexample_mess) ^ "\n\n" ^ m
                       (* exit 0 *)
                       )
                     else
                       (let m = ("Invalidity: Property getput is not validated \nExit code: " ^ string_of_int exitcode
-                      ^ (if (!log) then "\nError messange: "^ message else "")) in 
+                      ^ (if (!log) then "\nError messange: "^ message else "")^"\nHint: use option --counterexample to generate a counterexample") in 
                       if (!log) then print_endline m;
                       verification_mess := (!verification_mess) ^ "\n\n" ^ m)
               else satisfying_getput := true;
-            (* verify putget property *)
-            if (!log) then print_endline "==> verifying putget property";
+            (* verify putget *)
+            if (!log) then print_endline "==> Verifying the putget property";
             let lean_code_putget = gen_lean_code_for_theorems [ putget_thm ] in
               let exitcode, message = verify_fo_lean (!log) (!timeout) lean_code_putget in 
               if not (exitcode=0) then 
                 if (exitcode = 124) then (
-                  if (!log) then print_endline "Stop verifying getput property: Timeout";
-                  verification_mess := (!verification_mess) ^ "\n\n" ^ ("Stop verifying getput property: Timeout"))
+                  if (!log) then print_endline "Stop verifying the getput property: Timeout";
+                  verification_mess := (!verification_mess) ^ "\n\n" ^ ("Stop verifying the getput property: Timeout"))
                 else
-                  if str_contains message "type mismatch at application" then 
+                  if str_contains message "Type mismatch at application" then 
                   (* type error *)
                   (let m = ("Invalidity of putget: Type mismatch: \n"^ cut_str_by_word message "error"
                     ^ (if (!log) then "\nError messange: "^ message else "")) in
@@ -295,13 +346,13 @@ let main () =
                     if (exitcode=1 && !cex_generation) then 
                       (let error, counterexample = Debugger.gen_counterexample !log "putget" !cex_max !timeout constr_ast in
                       let m = if (error = "") then ("% Invalidity: The following counterexample shows that putget is not satisfied:\n" ^ string_of_prog {get_empty_expr with facts = counterexample}) 
-                              else "% Fail to generate a couterexample of putget: " ^error in 
+                              else "% Fail to generate a counterexample of putget: " ^error in 
                       if (!log) then print_endline m;
                       counterexample_mess := (!counterexample_mess) ^ "\n\n" ^ m
                         (* exit 0 *))
                     else
                       (let m = ("Invalidity: Property putget is not validated \nExit code: " ^ string_of_int exitcode
-                      ^ (if (!log) then "\nError messange: "^ message else "")) in 
+                      ^ (if (!log) then "\nError messange: "^ message else "")^"\nHint: use option --counterexample to generate a counterexample") in 
                       if (!log) then print_endline m;
                       verification_mess := (!verification_mess) ^ "\n\n" ^ m)
               else satisfying_putget := true; 
@@ -444,7 +495,8 @@ let test() =
       close_out ol;
     with
       SemErr exp -> print_endline ("Semantic error: "^exp)
-    | ChkErr exp -> print_endline (exp)
+    | ChkErr msg -> print_endline ("Verification error: "^msg)
+    | EnvErr msg -> print_endline ("Environment error: "^msg)
     | Parsing.Parse_error ->  print_endline "Syntax error"
     | LexErr msg -> print_endline (msg^":\nError: Illegal characters")
     | ParseErr msg -> print_endline (msg^":\nError: Syntax error")
@@ -463,7 +515,8 @@ let _ =
   | SemErr exp -> fprintf stderr "%s\n" ("Semantic error: "^exp); exit 1;
   | Parsing.Parse_error ->  fprintf stderr "%s\n"  "Syntax error"; exit 1;
   | LexErr msg -> fprintf stderr "%s\n"  (msg^":\nError: Illegal characters"); exit 1;
-  | ChkErr exp -> fprintf stderr "%s\n"  (exp); exit 1;
+  | ChkErr msg -> fprintf stderr "%s\n"  ("Verification Error: "^msg); exit 1;
+  | EnvErr msg -> fprintf stderr "%s\n"  ("Environment Error: "^msg); exit 1;
   | ParseErr msg -> fprintf stderr "%s\n"  (msg^":\nError: Syntax error"); exit 1;
   | Failure msg -> fprintf stderr "%s\n"  msg; exit 1;
   | Invalid_argument msg -> fprintf stderr "%s\n"  msg; exit 1;

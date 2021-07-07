@@ -582,7 +582,7 @@ let rec ranf2lvnf view fm = if not (is_superformula_of_view view fm) then (fm, [
                 (Formulas.Not(phi_i), lstfol)
                 (* if it has a quantifier, we can not do it
                 just consider it as a phi_i (remained part of linear-view normal form)
-                should raise a warning hear, the formula is not linear-view
+                should raise a warning here, the formula is not linear-view
                 can be optimized here, when we can choose a V in vfol which does not have free variables in varlst
                 the we can pull it out
                 *)

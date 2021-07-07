@@ -211,7 +211,7 @@ let derive (log:bool) (edb:symtable) expr =
   (* print_endline "------"; print_endline (string_of_rterm (List.hd (pos_view_head_list view_rt new_idb cnt)) ); *)
   deltapred_to_pred "_derived_" {get_empty_expr with rules = (transformed_lst@[view_def]); sources = expr.sources; view = expr.view}
 
-(* take a view update datalog program and generate datalog rule for apply delta relation to the source *)
+(* take a view update datalog program and generate datalog rules for applying delta relations to the source *)
 let datalog_of_delta_appliation (log:bool) prog = 
     (* get all pair of delta relations *)
     let delta_rt_lst = get_delta_rterms prog in
@@ -339,7 +339,7 @@ let extract_projection rule ind= match rule with
             | Rel rt -> (t::termlst, rulelst, loc_ind)
             | Not rt -> let varlst = (get_rterm_varlist rt) in 
                 if (List.mem AnonVar varlst) then 
-                let new_rt = Pred("π_proj_"^string_of_int loc_ind, (List.filter (non is_anon) varlst) ) in
+                let new_rt = Pred("_pi_proj_"^string_of_int loc_ind, (List.filter (non is_anon) varlst) ) in
                 let new_rule = ( new_rt , [Rel rt]) in 
                 ((Not new_rt):: termlst, (anonvar2namedvar new_rule) ::rulelst, (loc_ind+1))
                 else (t:: termlst, rulelst, loc_ind)
@@ -354,7 +354,7 @@ let extract_projection rule ind= match rule with
             (new_rules@ [(h, new_b)] , new_ind)
         else 
             (* there is a projection *)
-            let new_h = Pred("π_proj_"^string_of_int new_ind,  body_varset) in
+            let new_h = Pred("_pi_proj_"^string_of_int new_ind,  body_varset) in
             (new_rules@ [(new_h, new_b); (h, [Rel new_h])], (new_ind+1))
 
 
@@ -404,7 +404,7 @@ let binarize rule ind= match rule with
             let t_vars = get_termlst_vars cons_eqs in 
             let new_rt = 
             (* print_string ("==> gen bin "^string_of_int loc_ind);  *)
-            Pred("π_bin_"^string_of_int ind, setify ((List.filter (non is_anon) (pre_vars@t_vars))) ) in
+            Pred("_pi_bin_"^string_of_int ind, setify ((List.filter (non is_anon) (pre_vars@t_vars))) ) in
             let new_rule = ( new_rt, fst::cons_eqs) in 
             ([new_rule], (Rel new_rt), (ind+1)) 
           else ([], fst, ind) in
@@ -413,7 +413,7 @@ let binarize rule ind= match rule with
           let t_vars = get_term_varlist t in 
           let new_rt = 
           (* print_string ("==> gen bin "^string_of_int loc_ind);  *)
-          Pred("π_bin_"^string_of_int loc_ind, setify ((List.filter (non is_anon) (pre_vars@t_vars))) ) in
+          Pred("_pi_bin_"^string_of_int loc_ind, setify ((List.filter (non is_anon) (pre_vars@t_vars))) ) in
           let new_rule = ( new_rt , [pre_head; t]) in 
           (rulelst@[new_rule], (Rel new_rt), (loc_ind+1)) in
         let rulelst, prehead, new_ind = List.fold_left pair_terms (init_lst, init_pre_head, init_ind) tail in 
@@ -441,7 +441,7 @@ let binarize_rules (st:symtable) =
         let new_rulehead (l,i) r = match r with 
           (h,b) -> 
           (* print_string ("==> gen bin "^string_of_int i);  *)
-          (l@[(Pred("π_bin_"^string_of_int i, get_rterm_varlist h),b)], (i+1)) in
+          (l@[(Pred("_pi_bin_"^string_of_int i, get_rterm_varlist h),b)], (i+1)) in
         let new_hrules, new_new_ind = List.fold_left new_rulehead ([], new_ind) hrules in 
         let head_lst = List.map (fun x -> rule_head x) new_hrules in 
         (match head_lst with 
@@ -451,7 +451,7 @@ let binarize_rules (st:symtable) =
           let pair_heads (rulelst, pre_head, loc_ind) t = 
             let new_rt = 
             (* print_string ("==> gen bin "^string_of_int loc_ind);  *)
-            Pred("π_bin_"^string_of_int loc_ind, vars ) in
+            Pred("_pi_bin_"^string_of_int loc_ind, vars ) in
             let new_rule1 = ( new_rt , [Rel (Pred(get_rterm_predname pre_head, vars))]) in 
             let new_rule2 = ( new_rt , [Rel (Pred(get_rterm_predname t, vars))]) in 
             (rulelst@[new_rule1; new_rule2], new_rt, (loc_ind+1)) in
@@ -548,8 +548,8 @@ let incrementalize_by_view (log:bool) prog =
                 Rule(get_inc_del head, [Rel (Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[NamedVar "DUMMY__C1"])); Rel (Pred(get_rterm_predname head ^ "__dummy__t2", (get_rterm_varlist head)@[NamedVar "DUMMY__C2"])); Equal(Var (NamedVar "DUMMY__C1"), Var (NamedVar "DUMMY__C2")) ]) *)
 
                 (* the sencond way not using count*)
-                (Pred(get_rterm_predname head ^ "π_1", (get_rterm_varlist head)), [Rel (p_rt)]);
-                (get_inc_del head, [Rel (get_inc_del p_rt); Not(Pred(get_rterm_predname head ^ "π_1", (get_rterm_varlist head)))])
+                (Pred(get_rterm_predname head ^ "_pi_1", (get_rterm_varlist head)), [Rel (p_rt)]);
+                (get_inc_del head, [Rel (get_inc_del p_rt); Not(Pred(get_rterm_predname head ^ "_pi_1", (get_rterm_varlist head)))])
                 ]@
                 if is_delta_or_empty head then
                   [(head,[Rel (get_inc_ins head)]) ]
@@ -734,8 +734,8 @@ let incrementalize_by_view (log:bool) prog =
                 (* Rule(get_inc_del head, [Rel(get_inc_del bb); Not(get_inc_original aa); Not(get_inc_ins aa)]);
                 Rule(get_inc_del head, [Rel(get_inc_del aa); Rel(get_inc_del bb)]); *)
                 (get_inc_del head, [Rel(get_inc_del bb); Not(aa)]);
-                (get_inc_ins head, [Rel (get_inc_ins aa)]); 
-                (get_inc_ins head, [Rel (get_inc_ins bb)])]@
+                (get_inc_ins head, [Rel (get_inc_ins aa); Not(get_inc_original bb)]); 
+                (get_inc_ins head, [Rel (get_inc_ins bb); Not(get_inc_original aa)])]@
                 if is_delta_or_empty head then
                   [(head,[Rel (get_inc_ins head)]) ]
                 else
@@ -789,7 +789,7 @@ let incrementalize_view_definition (log:bool) update_table_rt prog =
           (* projection *)
           if is_inc inc_key p_rt then
             let drop_vars = subtract (get_rterm_varlist p_rt) (get_rterm_varlist head) in
-             (*for special case, drop_vars is empty or vars of the head is empty  *)
+             (*for special cases, drop_vars is empty or vars of the head is empty  *)
             if ((List.length drop_vars = 0) || (List.length (get_rterm_varlist head) = 0)) then 
               ((symtkey_of_rterm head)::inc_key, 
               lst@[
@@ -799,23 +799,17 @@ let incrementalize_view_definition (log:bool) update_table_rt prog =
                 if is_delta_or_empty head then
                   [(head,[Rel (get_inc_ins head)]) ]
                 else
-                (* [Rule(head, [Rel (get_inc_original head); Not (get_inc_del head)]);
-                Rule(head,[Rel (get_inc_ins head)]) ] *)
                 rules
               )
             else ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 (get_inc_original head, [Rel (get_inc_original p_rt)]); 
-                (get_inc_ins head, [Rel (get_inc_ins p_rt); Not(get_inc_original head)]);
-
-                (* the first way using count*)
-                (* Rule(Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[AggVar("COUNT", string_of_var (List.hd drop_vars)) ]), [Rel (get_inc_del p_rt)]);
-                Rule(Pred(get_rterm_predname head ^ "__dummy__t2", (get_rterm_varlist head)@[AggVar("COUNT", string_of_var (List.hd drop_vars)) ]), [Rel (get_inc_original p_rt); Rel( Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[AnonVar])) ]);
-                Rule(get_inc_del head, [Rel (Pred(get_rterm_predname head ^ "__dummy__t1", (get_rterm_varlist head)@[NamedVar "DUMMY__C1"])); Rel (Pred(get_rterm_predname head ^ "__dummy__t2", (get_rterm_varlist head)@[NamedVar "DUMMY__C2"])); Equal(Var (NamedVar "DUMMY__C1"), Var (NamedVar "DUMMY__C2")) ]) *)
-
-                (* the sencond way not using count*)
-                (Pred(get_rterm_predname head ^ "π_1", (get_rterm_varlist head)), [Rel (p_rt)]);
-                (get_inc_del head, [Rel (get_inc_del p_rt); Not(Pred(get_rterm_predname head ^ "π_1", (get_rterm_varlist head)))])
+                (Pred(get_rterm_predname (get_inc_ins p_rt) ^ "_pi_1", (get_rterm_varlist head)), [Rel (get_inc_ins p_rt)]);
+                (rename_rterm "opt_" (get_inc_original head), [Rel (p_rt); Not(get_inc_ins p_rt); Rel(Pred(get_rterm_predname (get_inc_ins p_rt) ^ "_pi_1", (get_rterm_varlist head)))]);
+                (rename_rterm "opt_" (get_inc_original head), [Rel(get_inc_del p_rt); Rel(Pred(get_rterm_predname (get_inc_ins p_rt) ^ "_pi_1", (get_rterm_varlist head)))]);
+                (get_inc_ins head, [Rel (get_inc_ins p_rt); Not(rename_rterm "opt_" (get_inc_original head))]);
+                (Pred(get_rterm_predname head ^ "_pi_1", (get_rterm_varlist head)), [Rel (p_rt)]);
+                (get_inc_del head, [Rel (get_inc_del p_rt); Not(Pred(get_rterm_predname head ^ "_pi_1", (get_rterm_varlist head)))])
                 ]@
                 if is_delta_or_empty head then
                   [(head,[Rel (get_inc_ins head)]) ]
@@ -862,8 +856,9 @@ let incrementalize_view_definition (log:bool) update_table_rt prog =
             ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 (get_inc_original head, [Rel (get_inc_original aa); Rel (get_inc_original bb)]); 
-                (get_inc_del head, [Rel (get_inc_del aa); Rel(get_inc_original bb)]);
-                (get_inc_del head, [Rel(get_inc_original aa); Rel(get_inc_del bb)]);
+                (get_inc_del head, [Rel (get_inc_del aa); Rel(bb); Not(get_inc_ins bb)]);
+                (get_inc_del head, [Rel (get_inc_del aa); Rel(get_inc_del bb)]);
+                (get_inc_del head, [Rel(aa); Not(get_inc_ins aa); Rel(get_inc_del bb)]);
                 (get_inc_ins head, [Rel (get_inc_ins aa); Rel(bb)]); 
                 (get_inc_ins head, [Rel (aa); Rel(get_inc_ins bb)])]@
                 if is_delta_or_empty head then
@@ -910,8 +905,11 @@ let incrementalize_view_definition (log:bool) update_table_rt prog =
             ((symtkey_of_rterm head)::inc_key, 
               lst@[
                 (get_inc_original head, [Rel (get_inc_original aa); Not (get_inc_original bb)]); 
-                (get_inc_del head, [Rel (get_inc_del aa); Not(get_inc_original bb)]);
-                (get_inc_del head, [Rel(get_inc_original aa); Rel(get_inc_ins bb)]);
+                (rename_rterm "opt_" bb, [Rel (get_inc_del aa); Rel(bb); Not(get_inc_ins bb)]);
+                (rename_rterm "opt_" bb, [Rel (get_inc_del aa); Rel(get_inc_del bb)]);
+                (get_inc_del head, [Rel (get_inc_del aa); Not(rename_rterm "opt_" bb)]);
+                (get_inc_del head, [Rel(aa); Not(get_inc_ins aa); Rel(get_inc_ins bb)]);
+                (get_inc_del head, [Rel(get_inc_del aa); Rel(get_inc_ins bb)]);
                 (get_inc_ins head, [Rel (get_inc_ins aa); Not(bb)]); 
                 (get_inc_ins head, [Rel (aa); Rel(get_inc_del bb)])]@
                 if is_delta_or_empty head then
@@ -1000,8 +998,11 @@ let incrementalize_view_definition (log:bool) update_table_rt prog =
                 (* Rule(get_inc_del head, [Rel(get_inc_del bb); Not(get_inc_original aa); Not(get_inc_ins aa)]);
                 Rule(get_inc_del head, [Rel(get_inc_del aa); Rel(get_inc_del bb)]); *)
                 (get_inc_del head, [Rel(get_inc_del bb); Not(aa)]);
-                (get_inc_ins head, [Rel (get_inc_ins aa)]); 
-                (get_inc_ins head, [Rel (get_inc_ins bb)])]@
+                (get_inc_ins head, [Rel (get_inc_ins aa); Not(bb)]); 
+                (get_inc_ins head, [Rel (get_inc_ins aa); Not(get_inc_del bb)]); 
+                (get_inc_ins head, [Rel (get_inc_ins aa); Rel(get_inc_ins bb)]); 
+                (get_inc_ins head, [Rel (get_inc_ins bb); Not(aa)]); 
+                (get_inc_ins head, [Rel (get_inc_ins bb); Not(get_inc_del aa)])]@
                 if is_delta_or_empty head then
                   [(head,[Rel (get_inc_ins head)]) ]
                 else

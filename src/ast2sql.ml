@@ -205,7 +205,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
                     "("^idb_sql^")"^" AS "^pn_a^"_"^(string_of_int n)
                 in
                 let edb_alias pname arity n =
-                    if str_contains pname "__temp__" then pname^" AS "^pname^"_a"^(string_of_int arity)^"_"^(string_of_int n)
+                    if str_contains pname "__tmp_" then pname^" AS "^pname^"_a"^(string_of_int arity)^"_"^(string_of_int n)
                     else dbschema^"."^pname^" AS "^pname^"_a"^(string_of_int arity)^"_"^(string_of_int n) 
                 in
                 let set_alias rterm (a_lst,n) =
@@ -256,7 +256,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:coln
                             if Hashtbl.mem idb key then
                                 "\nFROM "^ "("^non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity) ^")"^" AS " ^ alias
                             else
-                                if str_contains pname "__temp__" then "\nFROM "^pname^" AS "^alias
+                                if str_contains pname "__tmp_" then "\nFROM "^pname^" AS "^alias
                                 else "\nFROM "^dbschema^"."^pname^" AS "^alias
                         in
                         (* print_endline "___neg sql___"; print_string from_sql; print_endline "___neg sql___"; *)
@@ -334,7 +334,7 @@ let non_rec_unfold_sql_of_query (dbschema:string) (idb:symtable) (cnt:colnamtab)
 
 (** Generate unfolded SQL statement from ast, the goal is the query predicate of datalog program, the query is a query over source relations.
 The result of this function is SQL query, whose returned table has column names of col0, col1,.... *)
-let unfold_query_sql_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
+let unfold_query_sql_stt (dbschema:string) (log:bool) (edb:symtable) prog =
     let query_rt = get_query prog in
     (*Extract and pre-process the IDB from the program*)
     let idb = extract_idb prog in
@@ -347,27 +347,27 @@ let unfold_query_sql_stt (dbschema:string) (debug:bool) (edb:symtable) prog =
     sql
 
 
-let unfold_view_sql (dbschema:string) (debug:bool) prog =
+let unfold_view_sql (dbschema:string) (log:bool) prog =
     let edb = extract_edb prog in
     let view_rt = get_schema_rterm (get_view prog) in 
     if (get_arity view_rt = 0) then raise (SemErr
             ("The view "^(string_of_rterm view_rt)^
             " has arity 0, which is not allowed to create a view"))
     else
-    "CREATE OR REPLACE VIEW "^ dbschema ^"."^(get_rterm_predname view_rt) ^ " AS \n" ^(unfold_query_sql_stt dbschema debug edb {prog with query = Some view_rt}) ^";"
+    "CREATE OR REPLACE VIEW "^ dbschema ^"."^(get_rterm_predname view_rt) ^ " AS \n" ^(unfold_query_sql_stt dbschema log edb {prog with query = Some view_rt}) ^";"
 
 
-let unfold_program_query (dbschema:string) (debug:bool) prog =
-    if (debug) then print_endline ("==> generating SQL query of datalog program of query "^ string_of_query (get_query prog)) else ();
+let unfold_program_query (dbschema:string) (log:bool) prog =
+    if (log) then print_endline ("==> generating SQL query of datalog program of query "^ string_of_query (get_query prog)) else ();
     let edb = extract_edb prog in
-    unfold_query_sql_stt dbschema debug edb prog
+    unfold_query_sql_stt dbschema log edb prog
 
 
-(** Take a view update datalog program (containing both get and put directions) and generate SQL query of constraints involving view. *)
-let view_constraint_sql_of_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:bool) prog =
-    let clean_prog = keep_only_constraint_of_view debug prog in
+(** Take a view update datalog program (containing both get and put directions) and generate SQL queries of constraints involving view. *)
+let view_constraint_sql_of_stt (dbschema:string) (log:bool) (inc:bool) (optimize:bool) prog =
+    let clean_prog = keep_only_constraint_of_view log prog in
     if inc then     
-        let inc_prog = incrementalize_by_view debug clean_prog in
+        let inc_prog = incrementalize_by_view log clean_prog in
         let view_sch = get_view inc_prog in
         let view_rt = get_schema_rterm view_sch in
         let new_view_rt = rename_rterm "new_" view_rt in
@@ -383,17 +383,17 @@ let view_constraint_sql_of_stt (dbschema:string) (debug:bool) (inc:bool) (optimi
         let idb = extract_idb prog2 in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
             (
-            (* keep_only_constraint_of_view debug view_rt edb idb ; *)
+            (* keep_only_constraint_of_view log view_rt edb idb ; *)
             preprocess_rules idb;
             (* let cnt = build_colnamtab edb idb in *)
             if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
                 let remain_rules = rules_of_symt idb in
                 let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
                 (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug {prog3 with query = Some (get_empty_pred)}) else {prog3 with query = Some (get_empty_pred)} in
+                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog log {prog3 with query = Some (get_empty_pred)}) else {prog3 with query = Some (get_empty_pred)} in
                 (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
                 if (has_query prog4) then
-                    (unfold_program_query dbschema debug prog4)
+                    (unfold_program_query dbschema log prog4)
                 else "SELECT WHERE false"
             else "SELECT WHERE false")
         else "SELECT WHERE false"
@@ -414,27 +414,27 @@ let view_constraint_sql_of_stt (dbschema:string) (debug:bool) (inc:bool) (optimi
         let idb = extract_idb prog2 in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
             (
-            (* keep_only_constraint_of_view debug view_rt edb idb ; *)
+            (* keep_only_constraint_of_view log view_rt edb idb ; *)
             preprocess_rules idb;
             (* let cnt = build_colnamtab edb idb in *)
             if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
                 let remain_rules = Hashtbl.fold (fun k rules lst -> rules@lst) idb [] in
                 let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
                 (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
+                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog log {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
                 (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
                 if (has_query prog4) then
-                    (unfold_program_query dbschema debug prog4)
+                    (unfold_program_query dbschema log prog4)
                 else "SELECT WHERE false"
             else "SELECT WHERE false")
         else "SELECT WHERE false"
 
 
 (** take a view update datalog program (containing both get and put directions) and generate SQL query of contraints not involving view *)
-let non_view_constraint_sql_of_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:bool) prog =
-    let clean_prog = remove_constraint_of_view debug prog in
+let non_view_constraint_sql_of_stt (dbschema:string) (log:bool) (inc:bool) (optimize:bool) prog =
+    let clean_prog = remove_constraint_of_view log prog in
     if inc then
-        let inc_prog = incrementalize_by_view debug clean_prog in
+        let inc_prog = incrementalize_by_view log clean_prog in
         let view_sch = get_view inc_prog in
         let view_rt = get_schema_rterm view_sch in
         let new_view_rt = rename_rterm "new_" view_rt in
@@ -452,17 +452,17 @@ let non_view_constraint_sql_of_stt (dbschema:string) (debug:bool) (inc:bool) (op
         let idb = extract_idb prog2 in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
             (
-            (* keep_only_constraint_of_view debug view_rt edb idb ; *)
+            (* keep_only_constraint_of_view log view_rt edb idb ; *)
             preprocess_rules idb;
             (* let cnt = build_colnamtab edb idb in *)
             if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
                 let remain_rules = rules_of_symt idb in
                 let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
                 (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug {prog3 with query = Some get_empty_pred}) else {prog3 with query=Some get_empty_pred} in
+                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog log {prog3 with query = Some get_empty_pred}) else {prog3 with query=Some get_empty_pred} in
                 (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
                 if (has_query prog4) then
-                    (unfold_program_query dbschema debug prog4)
+                    (unfold_program_query dbschema log prog4)
                 else "SELECT WHERE false"
             else "SELECT WHERE false")
         else "SELECT WHERE false"
@@ -483,28 +483,33 @@ let non_view_constraint_sql_of_stt (dbschema:string) (debug:bool) (inc:bool) (op
         let idb = extract_idb prog2 in
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
             (
-            (* keep_only_constraint_of_view debug view_rt edb idb ; *)
+            (* keep_only_constraint_of_view log view_rt edb idb ; *)
             preprocess_rules idb;
             (* let cnt = build_colnamtab edb idb in *)
             if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
                 let remain_rules = Hashtbl.fold (fun k rules lst -> rules@lst) idb [] in
                 let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
                 (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog debug {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
+                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog log {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
                 (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
                 if (has_query prog4) then
-                    (unfold_program_query dbschema debug prog4)
+                    (unfold_program_query dbschema log prog4)
                 else "SELECT WHERE false"
             else "SELECT WHERE false")
         else "SELECT WHERE false"
 
 
-(** Get SQL code for a delta term, the update SQL code contains two strings: SQL query for the delta, and SQL update for the delta. *)
-let non_rec_unfold_sql_of_update (dbschema:string) (debug:bool) (optimize:bool) prog (delta:rterm)  =
+(** Get SQL code for a delta term, the update SQL code contains two strings: SQL queries for the delta, and SQL updates for the delta. *)
+let non_rec_unfold_sql_of_update (dbschema:string) (log:bool) (optimize:bool) prog (delta:rterm)  =
     (* 
     *)
+    let view_sch = get_view prog in
+    let view_rt = get_schema_rterm view_sch in
     let prog2 = 
-        if (optimize) then (Ast2fol.optimize_query_datalog debug {prog with query = Some delta}) else 
+        if (optimize) then (
+            let opt_prog1 = Ast2fol.optimize_query_datalog log {prog with query = Some delta} in
+            Ast2fol.optimize_query_datalog log {opt_prog1 with query = Some delta}
+        ) else 
         prog in
         (* print_endline "___ optimized __";
         print_endline (string_of_prog prog2); *)
@@ -525,25 +530,32 @@ let non_rec_unfold_sql_of_update (dbschema:string) (debug:bool) (optimize:bool) 
         Deltainsert (pname, varlst) -> if Hashtbl.mem edb (pname, List.length varlst) 
             then  (
             (* variable with rowtype of the source relation *)
-            "temprec"^ (get_rterm_predname delta) ^" " ^dbschema^"."^ pname ^"%ROWTYPE;", 
+            "temprec_"^ (get_rterm_predname delta) ^" " ^dbschema^"."^ pname ^"%ROWTYPE;
+            array_"^ (get_rterm_predname delta)^" " ^dbschema^"."^ pname ^"[];", 
             (* calculate the delta relation by creating a temporary table *)
-            "CREATE TEMPORARY TABLE "^ (get_rterm_predname delta) ^" WITH OIDS ON COMMIT DROP AS " ^ 
+            "
+            WITH "^(get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)))^" AS (SELECT * FROM unnest(array_delta_del) as array_delta_del_alias limit delta_del_size),
+            "^(get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)))^" as (SELECT * FROM unnest(array_delta_ins) as array_delta_ins_alias limit delta_ins_size)
+            SELECT array_agg(tbl) INTO array_"^ (get_rterm_predname delta)^" FROM ("^ 
             "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").* 
             FROM ("^
-            (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))) ^") AS "^(get_rterm_predname delta)^"_extra_alia"
+            (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))) ^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl"
             (* ^" 
             EXCEPT 
             SELECT * FROM  "^dbschema^"."^ pname  *)
             ^";", 
             (* insert tuples using batch insertion *)
-            "INSERT INTO " ^dbschema^"."^ pname ^" (SELECT * FROM  "^ (get_rterm_predname delta) ^") ; " ^
+            "
+            IF array_"^ (get_rterm_predname delta)^" IS DISTINCT FROM NULL THEN 
+                INSERT INTO " ^dbschema^"."^ pname ^" (SELECT * FROM unnest(array_"^ (get_rterm_predname delta)^") as array_"^ (get_rterm_predname delta)^"_alias) ; 
+            END IF;"
             (* insert  each tuple by using a LOOP*)
             (* "FOR temprec"^ (get_rterm_predname delta) ^" IN ( SELECT * FROM " ^ (get_rterm_predname delta) ^ ") LOOP 
             " ^
             "INSERT INTO " ^dbschema^"."^ pname ^" SELECT (temprec"^ (get_rterm_predname delta) ^").*; 
             END LOOP; " ^ *)
 
-            "\nDROP TABLE "^ (get_rterm_predname delta)^";")
+            )
             else raise (SemErr "delta predicate is not of any base predicate")
         
         | Deltadelete (pname, varlst) -> if Hashtbl.mem edb (pname, List.length varlst) 
@@ -551,44 +563,51 @@ let non_rec_unfold_sql_of_update (dbschema:string) (debug:bool) (optimize:bool) 
             (* get all the columns of base predicate *)
             let cols = Hashtbl.find cnt (pname, List.length varlst) in
             (* convert these cols to string of tuple of these cols *)
-            let cols_tuple_str = "("^(String.concat "," cols) ^")" in
             (
             (* variable with rowtype of the source relation *)
-            "temprec"^ (get_rterm_predname delta) ^" " ^dbschema^"."^ pname ^"%ROWTYPE;", 
+            "temprec_"^ (get_rterm_predname delta) ^" " ^dbschema^"."^ pname ^"%ROWTYPE;
+            array_"^ (get_rterm_predname delta)^" " ^dbschema^"."^ pname ^"[];", 
             (* calculate the delta relation by creating a temporary table *)
-            "CREATE TEMPORARY TABLE "^ (get_rterm_predname delta) ^" WITH OIDS ON COMMIT DROP AS " ^ 
+            "
+            WITH "^(get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)))^" AS (SELECT * FROM unnest(array_delta_del) as array_delta_del_alias limit delta_del_size),
+            "^(get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)))^" as (SELECT * FROM unnest(array_delta_ins) as array_delta_ins_alias limit delta_ins_size)
+            SELECT array_agg(tbl) INTO array_"^ (get_rterm_predname delta)^" FROM (" ^ 
             "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").* 
             FROM ("^
-            (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))^") AS "^(get_rterm_predname delta)^"_extra_alias;", 
+            (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl;", 
             (* delete each tuple *)
-            "FOR temprec"^ (get_rterm_predname delta) ^" IN ( SELECT * FROM " ^ (get_rterm_predname delta) ^ ") LOOP 
+            "
+            IF array_"^ (get_rterm_predname delta)^" IS DISTINCT FROM NULL THEN 
+                FOREACH temprec_"^ (get_rterm_predname delta) ^" IN array array_"^ (get_rterm_predname delta)^"  LOOP 
             " ^
-            "DELETE FROM " ^dbschema^"."^ pname ^" WHERE ROW" ^cols_tuple_str^ (sql_of_operator "==") ^
-            " temprec"^ (get_rterm_predname delta) ^";" ^ "
-            END LOOP;\nDROP TABLE " ^ (get_rterm_predname delta)^";")
+            "       DELETE FROM " ^dbschema^"."^ pname ^" WHERE "^(String.concat " AND " (List.map (fun x -> x^ (sql_of_operator "==") ^" temprec_"^ (get_rterm_predname delta)^"."^x) cols)) ^ ";
+                END LOOP;
+            END IF;")
             
             else raise (SemErr "delta predicate is not of any base predicate")
         | _ -> raise (SemErr "the non_rec_unfold_sql_of_update is called without and delta predicate")
 
-let unfold_delta_sql_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:bool) prog =
+let unfold_delta_sql_stt (dbschema:string) (log:bool) (inc:bool) (optimize:bool) prog =
     if inc then 
-        let inc_prog = incrementalize_by_view debug prog in
+        let inc_prog = incrementalize_by_view log prog in
         let view_sch = get_view inc_prog in
         let view_rt = get_schema_rterm view_sch in
+        let get_ast = Ast2fol.optimize_query_datalog log {prog with query = Some view_rt} in
         let new_view_rt = rename_rterm "new_" view_rt in
         let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
+        (* let subst_prog = inc_prog in *)
         let prog2 = {subst_prog with sources = [
-            get_rterm_predname (view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
+            (* get_rterm_predname (view_rt), get_schema_col_typs view_sch; *)
+            get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)), get_schema_col_typs view_sch;
+            get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)), get_schema_col_typs view_sch
         ]@subst_prog.sources; rules = [
             (get_inc_original view_rt,[Rel (view_rt)]);
-            (get_inc_ins view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]);
-            (get_inc_del view_rt,[Rel (get_temp_delta_deletion_rterm view_rt)])
-        ]@subst_prog.rules} in
+            (get_inc_ins view_rt,[Rel (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt))]);
+            (get_inc_del view_rt,[Rel (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt))])
+        ]@subst_prog.rules@get_ast.rules} in
         let delta_rt_lst = get_delta_rterms inc_prog in
         (*Return the desired SQL*)
-        let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema debug optimize prog2 ) delta_rt_lst in 
+        let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema log optimize prog2 ) delta_rt_lst in 
         let concat_update_sql (v, d, u) (vardec,delquery, updateaction) = (v::vardec,d::delquery, u::updateaction) in 
         let (vars, deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([],[],[]) in 
         ((String.concat "\n" vars)^"",
@@ -600,18 +619,18 @@ let unfold_delta_sql_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:boo
         let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) (delete_rule_of_predname (get_rterm_predname view_rt) prog) in
         let prog2 = {subst_prog with sources = [
             get_rterm_predname view_rt , get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
+            get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)), get_schema_col_typs view_sch;
+            get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)), get_schema_col_typs view_sch
         ]@subst_prog.sources; rules = [
-            (new_view_rt,[Rel (view_rt); Not (get_temp_delta_deletion_rterm view_rt)]);
-            (new_view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)])
+            (new_view_rt,[Rel (view_rt); Not (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt))]);
+            (new_view_rt,[Rel (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt))])
         ]@subst_prog.rules} in
 
         (* need to insert a temporary predicate of query (view) to edb because for update sql we need to assume a tempoarary view is created. Suppose that query rterm contains only variables *)
 
         let delta_rt_lst = get_delta_rterms prog in
         (*Return the desired SQL*)
-        let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema debug optimize prog2 ) delta_rt_lst in 
+        let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema log optimize prog2 ) delta_rt_lst in 
         let concat_update_sql (v, d, u) (vardec,delquery, updateaction) = (v::vardec,d::delquery, u::updateaction) in 
         let (vars, deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([],[],[]) in 
         ((String.concat "\n" vars)^"",
@@ -619,32 +638,34 @@ let unfold_delta_sql_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:boo
 
 
 (** SQL code for triggers of detecting updates on the source relations, which call the action of executing shell script on the view. *)
-let source_update_detection_trigger_stt (dbschema:string) (debug:bool) (dejima_user:string) prog =
+let source_update_detection_trigger_stt (dbschema:string) (log:bool) (dejima_user:string) prog =
     let view_rt = get_schema_rterm (get_view prog) in
     let view_name = get_rterm_predname view_rt in
     let all_source = get_source_stts prog in 
-    let sql_lst = List.map (fun x  -> 
+    let effect_sources, sql_lst = List.fold_left (fun (source_lst, code_lst) x  -> 
         let source_rt = get_schema_rterm x in
         let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (source_rt)) )) ^")" in
         let source_name = get_rterm_predname source_rt in 
-        let inc_view_definition_raw = incrementalize_view_definition debug source_rt prog in
+        let inc_view_definition_raw = incrementalize_view_definition log source_rt prog in
         (* let new_source_rt = rename_rterm "new_" source_rt in *)
         (* let subst_prog = subst_pred (get_rterm_predname source_rt) (get_rterm_predname new_source_rt) inc_view_definition_raw in *)
         let subst_prog = delete_rule_of_predname (get_rterm_predname source_rt) inc_view_definition_raw in
         let inc_view_definition = {subst_prog with sources = [
-            get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name, get_schema_col_typs x;
-            get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name, get_schema_col_typs x
+            get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name^"_ar", get_schema_col_typs x;
+            get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name^"_ar", get_schema_col_typs x
         ]@subst_prog.sources; rules = [
             (get_inc_original source_rt,[Rel (source_rt); Not(get_inc_ins source_rt)]);
             (get_inc_original source_rt,[Rel (get_inc_del source_rt)]);
-            (get_inc_ins source_rt,[Rel (rename2_rterm ("_for_"^view_name) (get_temp_delta_insertion_rterm source_rt))]);
-            (get_inc_del source_rt,[Rel (rename2_rterm ("_for_"^view_name) (get_temp_delta_deletion_rterm source_rt))])
+            (get_inc_ins source_rt,[Rel (rename2_rterm ("_for_"^view_name^"_ar") (get_temp_delta_insertion_rterm source_rt))]);
+            (get_inc_del source_rt,[Rel (rename2_rterm ("_for_"^view_name^"_ar") (get_temp_delta_deletion_rterm source_rt))])
         ]@subst_prog.rules} in
-        let ins_view_optimized_datalog = (Ast2fol.optimize_query_datalog debug {inc_view_definition with query = Some (get_inc_ins view_rt)}) in 
-        let del_view_optimized_datalog = (Ast2fol.optimize_query_datalog debug {inc_view_definition with query = Some (get_inc_del view_rt)}) in
-        (* print_endline (non_rec_unfold_sql_of_symtkey dbschema idb cnt (symtkey_of_rterm (get_inc_del view_rt))); *)
-
-"
+        if not (is_defined_pred (get_rterm_predname (get_inc_ins view_rt)) inc_view_definition) || not (is_defined_pred (get_rterm_predname (get_inc_del view_rt)) inc_view_definition) then (source_lst, code_lst)
+        else
+            let ins_view_optimized_datalog = (Ast2fol.optimize_query_datalog log {inc_view_definition with query = Some (get_inc_ins view_rt)}) in 
+            let del_view_optimized_datalog = (Ast2fol.optimize_query_datalog log {inc_view_definition with query = Some (get_inc_del view_rt)}) in
+            (* print_endline (non_rec_unfold_sql_of_symtkey dbschema idb cnt (symtkey_of_rterm (get_inc_del view_rt))); *)
+            (x::source_lst,
+("
 CREATE OR REPLACE FUNCTION "^dbschema^"."^source_name^"_materialization_for_"^view_name^"()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -658,8 +679,8 @@ BEGIN
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^ "_for_"^view_name^ "' OR table_name = '"^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^"_for_"^view_name^"')
     THEN
         -- RAISE LOG 'execute procedure "^source_name^"_materialization_for_"^view_name^"';
-        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^"_for_"^view_name^" ( LIKE " ^dbschema^"."^(get_rterm_predname (source_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
-        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^"_for_"^view_name^" ( LIKE " ^dbschema^"."^(get_rterm_predname (source_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
+        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt))^"_for_"^view_name^" ( LIKE " ^dbschema^"."^(get_rterm_predname (source_rt)) ^" ) WITH OIDS ON COMMIT DROP;
+        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt))^"_for_"^view_name^" ( LIKE " ^dbschema^"."^(get_rterm_predname (source_rt)) ^" ) WITH OIDS ON COMMIT DROP;
         
     END IF;
     RETURN NULL;
@@ -691,25 +712,27 @@ text_var2 text;
 text_var3 text;
 BEGIN
     -- RAISE LOG 'execute procedure "^source_name^"_update_for_"^view_name^"';
-    IF TG_OP = 'INSERT' THEN
-    -- RAISE LOG 'NEW: %', NEW;
-    IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN 
-        RAISE check_violation USING MESSAGE = 'Invalid update: null value is not accepted';
-    END IF;
-    DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
-    INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" SELECT (NEW).*; 
-    ELSIF TG_OP = 'UPDATE' THEN
-    IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN 
-        RAISE check_violation USING MESSAGE = 'Invalid update: null value is not accepted';
-    END IF;
-    DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
-    INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" SELECT (OLD).*;
-    DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
-    INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" SELECT (NEW).*; 
-    ELSIF TG_OP = 'DELETE' THEN
-    -- RAISE LOG 'OLD: %', OLD;
-    DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
-    INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" SELECT (OLD).*;
+    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
+        IF TG_OP = 'INSERT' THEN
+        -- RAISE LOG 'NEW: %', NEW;
+        IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN 
+            RAISE check_violation USING MESSAGE = 'Invalid update: null value is not accepted';
+        END IF;
+        DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
+        INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" SELECT (NEW).*; 
+        ELSIF TG_OP = 'UPDATE' THEN
+        IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN 
+            RAISE check_violation USING MESSAGE = 'Invalid update: null value is not accepted';
+        END IF;
+        DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+        INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" SELECT (OLD).*;
+        DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
+        INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" SELECT (NEW).*; 
+        ELSIF TG_OP = 'DELETE' THEN
+        -- RAISE LOG 'OLD: %', OLD;
+        DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+        INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" SELECT (OLD).*;
+        END IF;
     END IF;
     RETURN NULL;
 EXCEPTION
@@ -745,21 +768,41 @@ insertion_data text;
 json_data text;
 result text;
 user_name text;
-xid text;
+xid int;
+array_delta_del "^dbschema^"."^source_name^"[];
+array_delta_ins "^dbschema^"."^source_name^"[];
+detected_deletions "^dbschema^"."^view_name^"[];
+detected_insertions "^dbschema^"."^view_name^"[];
+delta_ins_size int;
+delta_del_size int;
 BEGIN
 IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^source_name^"_detect_update_on_"^view_name^"_flag') THEN
     CREATE TEMPORARY TABLE "^source_name^"_detect_update_on_"^view_name^"_flag ON COMMIT DROP AS (SELECT true as finish);
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
-        insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM ("^(
-            unfold_program_query dbschema debug ins_view_optimized_datalog
-            )
-            ^") as t);
+        SELECT array_agg(tbl) INTO array_delta_ins FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" AS tbl;
+        select count(*) INTO delta_ins_size FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^";
+        SELECT array_agg(tbl) INTO array_delta_del FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" tbl;
+        select count(*) INTO delta_del_size FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^";
+
+        WITH " ^get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name^"_ar as (SELECT * FROM unnest(array_delta_ins) as array_delta_ins_alias limit delta_ins_size), 
+        " ^get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name^"_ar as (SELECT * FROM unnest(array_delta_del) as array_delta_del_alias limit delta_del_size)
+        SELECT array_agg(tbl) INTO detected_insertions FROM ("^(
+            unfold_program_query dbschema log ins_view_optimized_datalog
+            ) ^") AS tbl;
+
+        insertion_data := (SELECT (array_to_json(detected_insertions))::text);
         IF insertion_data IS NOT DISTINCT FROM NULL THEN 
             insertion_data := '[]';
         END IF; 
-        deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM ("^(
-            unfold_program_query dbschema debug del_view_optimized_datalog
-        )^") as t);
+
+        WITH " ^get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name^"_ar as (SELECT * FROM unnest(array_delta_ins) as array_delta_ins_alias limit delta_ins_size), 
+        " ^get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name^"_ar as (SELECT * FROM unnest(array_delta_del) as array_delta_del_alias limit delta_del_size)
+        SELECT array_agg(tbl) INTO detected_deletions FROM ("^(
+            unfold_program_query dbschema log del_view_optimized_datalog
+            ) ^") AS tbl;
+
+        deletion_data := (  
+        SELECT (array_to_json(detected_deletions))::text);
         IF deletion_data IS NOT DISTINCT FROM NULL THEN 
             deletion_data := '[]';
         END IF; 
@@ -780,20 +823,16 @@ IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^sou
                 END IF;
             ELSE 
                 RAISE LOG 'function of detecting dejima update is called by % , no request sent to dejima proxy', user_name;
+                xid := (SELECT txid_current());
 
                 -- update the table that stores the insertions and deletions we calculated
-                DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
+                -- DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
                 INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_deletions
-                    "^(
-                        unfold_program_query dbschema debug del_view_optimized_datalog
-                    )^";
+                    ( SELECT xid, * FROM unnest(detected_deletions) as detected_deletions_alias );
 
-                DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
+                -- DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
                 INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_insertions
-                    "^(
-                    unfold_program_query dbschema debug ins_view_optimized_datalog
-                    )
-                    ^";
+                    ( SELECT xid, * FROM unnest(detected_insertions) as detected_insertions_alias );
             END IF;
         END IF;
     END IF;
@@ -829,23 +868,22 @@ AS $$
   END;
 $$;
 
-")
-        all_source in 
-    String.concat "\n \n" sql_lst
+") :: code_lst) )
+    ([], [])    all_source in 
+    (effect_sources, String.concat "\n \n" sql_lst)
 
 
 (** Generate trigger for delta predicates on the view. *)
-let unfold_delta_trigger_stt (dbschema:string) (debug:bool) (dejima_update_detect) (sh_script:string) (dejima_user:string) (inc:bool) (optimize:bool) prog =
+let unfold_delta_trigger_stt (dbschema:string) (log:bool) (dejima_update_detect) (sh_script:string) (dejima_user:string) (inc:bool) (optimize:bool) prog =
     let view_rt = get_schema_rterm (get_view prog) in
     let view_name = get_rterm_predname view_rt in
     (* let temporary_view_name = get_rterm_predname (get_temp_rterm view_rt) in *)
     (* get all the columns of base predicate *)
     (* convert these cols to string of tuple of these cols *)
     let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (get_temp_rterm view_rt)) )) ^")" in
-    let (vardec, delta_sql_stt) = unfold_delta_sql_stt dbschema debug inc optimize prog in
+    let (vardec, delta_sql_stt) = unfold_delta_sql_stt dbschema log inc optimize prog in
+    let effect_sources, update_detection_trigger_sql = if dejima_update_detect then source_update_detection_trigger_stt dbschema log dejima_user prog else ([], "") in
     let trigger_pgsql = 
-( 
-if dejima_update_detect then 
 (* "
 DROP MATERIALIZED VIEW IF EXISTS "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^";
 
@@ -857,10 +895,10 @@ SELECT * FROM "^dbschema^"."^view_name^";
 "
 CREATE EXTENSION IF NOT EXISTS plsh;
 
-CREATE TABLE IF NOT EXISTS "^dbschema^".__dummy__"^view_name^"_detected_deletions ( LIKE "^dbschema^"."^view_name^" INCLUDING ALL );
-CREATE TABLE IF NOT EXISTS "^dbschema^".__dummy__"^view_name^"_detected_insertions ( LIKE "^dbschema^"."^view_name^" INCLUDING ALL );
+CREATE TABLE IF NOT EXISTS "^dbschema^".__dummy__"^view_name^"_detected_deletions (txid int, LIKE "^dbschema^"."^view_name^" );
+CREATE TABLE IF NOT EXISTS "^dbschema^".__dummy__"^view_name^"_detected_insertions (txid int, LIKE "^dbschema^"."^view_name^" );
 
-CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_get_detected_update_data()
+CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_get_detected_update_data(txid int)
 RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -870,11 +908,11 @@ AS $$
   insertion_data text;
   json_data text;
   BEGIN
-    insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions as t);
+    insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions as t where t.txid = $1);
     IF insertion_data IS NOT DISTINCT FROM NULL THEN 
         insertion_data := '[]';
     END IF; 
-    deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions as t);
+    deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions as t where t.txid = $1);
     IF deletion_data IS NOT DISTINCT FROM NULL THEN 
         deletion_data := '[]';
     END IF; 
@@ -882,8 +920,8 @@ AS $$
         -- calcuate the update data
         json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertions\": ' , insertion_data , ', ' , '\"deletions\": ' , deletion_data , '}');
         -- clear the update data
-        DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
-        DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
+        --DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
+        --DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
     END IF;
     RETURN json_data;
   END;
@@ -893,80 +931,7 @@ CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_run_shell(text) RETURNS te
 "^sh_script^"
 $$ LANGUAGE plsh;
 "^
-    (* (let func_body = 
-"LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-  DECLARE
-  text_var1 text;
-  text_var2 text;
-  text_var3 text;
-  func text;
-  tv text;
-  deletion_data text;
-  insertion_data text;
-  json_data text;
-  result text;
-  user_name text;
-  BEGIN
-  IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
-    insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^dbschema^"."^view_name^" EXCEPT SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^") as t);
-    IF insertion_data IS NOT DISTINCT FROM NULL THEN 
-        insertion_data := '[]';
-    END IF; 
-    deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^" EXCEPT SELECT * FROM "^dbschema^"."^view_name^") as t);
-    IF deletion_data IS NOT DISTINCT FROM NULL THEN 
-        deletion_data := '[]';
-    END IF; 
-    IF (insertion_data IS DISTINCT FROM '[]') OR (deletion_data IS DISTINCT FROM '[]') THEN 
-        user_name := (SELECT session_user);
-        IF NOT (user_name = '"^dejima_user^"') THEN 
-            json_data := concat('{\"view\": ' , '\""^dbschema^"."^view_name^"\"', ', ' , '\"insertions\": ' , insertion_data , ', ' , '\"deletions\": ' , deletion_data , '}');
-            result := "^dbschema^"."^view_name^"_run_shell(json_data);
-            IF result = 'true' THEN 
-                REFRESH MATERIALIZED VIEW "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^";
-                FOR func IN (select distinct trigger_schema||'.non_trigger_'||substring(action_statement, 19) as function 
-                from information_schema.triggers where trigger_schema = '"^dbschema^"' and event_object_table='"^view_name^"'
-                and action_timing='AFTER' and (event_manipulation='INSERT' or event_manipulation='DELETE' or event_manipulation='UPDATE')
-                and action_statement like 'EXECUTE PROCEDURE %') 
-                LOOP
-                    EXECUTE 'SELECT ' || func into tv;
-                END LOOP;
-            ELSE
-                -- RAISE LOG 'result from running the sh script: %', result;
-                RAISE check_violation USING MESSAGE = 'update on view is rejected by the external tool, result from running the sh script: ' 
-                || result;
-            END IF;
-        ELSE 
-            RAISE LOG 'function of detecting dejima update is called by % , no request sent to dejima proxy', user_name;
-        END IF;
-    END IF;
-  END IF;
-  RETURN NULL;
-  EXCEPTION
-    WHEN object_not_in_prerequisite_state THEN
-        RAISE object_not_in_prerequisite_state USING MESSAGE = 'no permission to insert or delete or update to source relations of "^dbschema^"."^view_name^"';
-    WHEN OTHERS THEN
-        GET STACKED DIAGNOSTICS text_var1 = RETURNED_SQLSTATE,
-                                text_var2 = PG_EXCEPTION_DETAIL,
-                                text_var3 = MESSAGE_TEXT;
-        RAISE SQLSTATE 'DA000' USING MESSAGE = 'error on the function (non_trigger_)"^dbschema^"."^view_name^"_detect_update() ; error code: ' || text_var1 || ' ; ' || text_var2 ||' ; ' || text_var3;
-        RETURN NULL;
-  END;
-$$;" in
-"CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_detect_update()
-RETURNS trigger
-"^
-func_body^"
-
-CREATE OR REPLACE FUNCTION "^dbschema^".non_trigger_"^view_name^"_detect_update()
-RETURNS text 
-"^
-func_body
-)^"
-
-"^ *)
-source_update_detection_trigger_stt dbschema debug dejima_user prog else "")
+update_detection_trigger_sql
 ^"
 
 CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_delta_action()
@@ -983,28 +948,36 @@ AS $$
   json_data text;
   result text;
   user_name text;
-  xid text;
+  xid int;
+  delta_ins_size int;
+  delta_del_size int;
+  array_delta_del "^dbschema^"."^view_name^"[];
+  array_delta_ins "^dbschema^"."^view_name^"[];
   "^vardec^"
   BEGIN
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
         -- RAISE LOG 'execute procedure "^view_name^"_delta_action';
         CREATE TEMPORARY TABLE "^view_name^"_delta_action_flag ON COMMIT DROP AS (SELECT true as finish);
-        IF EXISTS (" ^ view_constraint_sql_of_stt dbschema debug inc optimize prog^" )
+        IF EXISTS (" ^ view_constraint_sql_of_stt dbschema log inc optimize prog^" )
         THEN 
           RAISE check_violation USING MESSAGE = 'Invalid view update: constraints on the view are violated';
         END IF;
-        IF EXISTS (" ^ non_view_constraint_sql_of_stt dbschema debug false optimize prog^" )
+        IF EXISTS (" ^ non_view_constraint_sql_of_stt dbschema log false optimize prog^" )
         THEN 
           RAISE check_violation USING MESSAGE = 'Invalid view update: constraints on the source relations are violated';
         END IF;
+        SELECT array_agg(tbl) INTO array_delta_ins FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" AS tbl;
+        SELECT array_agg(tbl) INTO array_delta_del FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" as tbl;
+        select count(*) INTO delta_ins_size FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^";
+        select count(*) INTO delta_del_size FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^";
         "^delta_sql_stt^
         (if dejima_update_detect then "
         
-        insertion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^") as t);
+        insertion_data := (SELECT (array_to_json(array_delta_ins))::text);
         IF insertion_data IS NOT DISTINCT FROM NULL THEN 
             insertion_data := '[]';
         END IF; 
-        deletion_data := (SELECT (array_to_json(array_agg(t)))::text FROM (SELECT * FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^") as t);
+        deletion_data := (SELECT (array_to_json(array_delta_del))::text);
         IF deletion_data IS NOT DISTINCT FROM NULL THEN 
             deletion_data := '[]';
         END IF; 
@@ -1022,15 +995,16 @@ AS $$
                 END IF;
             ELSE 
                 RAISE LOG 'function of detecting dejima update is called by % , no request sent to dejima proxy', user_name;
+                xid := (SELECT txid_current());
 
                 -- update the table that stores the insertions and deletions we calculated
-                DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
+                --DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_deletions;
                 INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_deletions
-                    SELECT * FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^";
+                    SELECT xid, * FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^";
 
-                DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
+                --DELETE FROM "^dbschema^".__dummy__"^view_name^"_detected_insertions;
                 INSERT INTO "^dbschema^".__dummy__"^view_name^"_detected_insertions
-                    SELECT * FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^";
+                    SELECT xid, * FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^";
             END IF;
         END IF;" else "") ^"
     END IF;
@@ -1060,14 +1034,14 @@ AS $$
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^"' OR table_name = '"^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^"')
     THEN
         -- RAISE LOG 'execute procedure "^view_name^"_materialization';
-        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (view_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
-        CREATE CONSTRAINT TRIGGER __temp__"^view_name^"_trigger_delta_action_ins
+        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (view_rt)) ^" ) WITH OIDS ON COMMIT DROP;
+        CREATE CONSTRAINT TRIGGER __tmp_"^view_name^"_trigger_delta_action_ins
         AFTER INSERT OR UPDATE OR DELETE ON 
             "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" DEFERRABLE INITIALLY DEFERRED 
             FOR EACH ROW EXECUTE PROCEDURE "^dbschema^"."^view_name^"_delta_action();
 
-        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (view_rt)) ^" INCLUDING ALL ) WITH OIDS ON COMMIT DROP;
-        CREATE CONSTRAINT TRIGGER __temp__"^view_name^"_trigger_delta_action_del
+        CREATE TEMPORARY TABLE "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" ( LIKE " ^dbschema^"."^(get_rterm_predname (view_rt)) ^" ) WITH OIDS ON COMMIT DROP;
+        CREATE CONSTRAINT TRIGGER __tmp_"^view_name^"_trigger_delta_action_del
         AFTER INSERT OR UPDATE OR DELETE ON 
             "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" DEFERRABLE INITIALLY DEFERRED 
             FOR EACH ROW EXECUTE PROCEDURE "^dbschema^"."^view_name^"_delta_action();
@@ -1145,24 +1119,24 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
   BEGIN
-    SET CONSTRAINTS __temp__"^view_name^"_trigger_delta_action_ins, __temp__"^view_name^"_trigger_delta_action_del"
-    ^
-    (let all_source = get_source_stts prog in 
+    SET CONSTRAINTS __tmp_"^view_name^"_trigger_delta_action_ins, __tmp_"^view_name^"_trigger_delta_action_del"
+    (* ^
+    (
     let trigger_names = List.map (fun x  -> 
         let source_rt = get_schema_rterm x in
         let source_name = get_rterm_predname source_rt in 
-        dbschema^"."^source_name^"_detect_update_on_"^view_name) all_source in 
-        if dejima_update_detect then  ", " ^ String.concat "," trigger_names else "")
+        ", "^dbschema^"."^source_name^"_detect_update_on_"^view_name) effect_sources in 
+        String.concat "" trigger_names) *)
     ^ 
     " IMMEDIATE;
-    SET CONSTRAINTS __temp__"^view_name^"_trigger_delta_action_ins, __temp__"^view_name^"_trigger_delta_action_del"
-    ^
-    (let all_source = get_source_stts prog in 
+    SET CONSTRAINTS __tmp_"^view_name^"_trigger_delta_action_ins, __tmp_"^view_name^"_trigger_delta_action_del"
+    (* ^
+    (
     let trigger_names = List.map (fun x  -> 
         let source_rt = get_schema_rterm x in
         let source_name = get_rterm_predname source_rt in 
-        dbschema^"."^source_name^"_detect_update_on_"^view_name) all_source in 
-        if dejima_update_detect then  ", " ^ String.concat "," trigger_names else "")
+        ", "^dbschema^"."^source_name^"_detect_update_on_"^view_name) effect_sources in 
+        String.concat "" trigger_names) *)
     ^ 
     " DEFERRED;
     DROP TABLE IF EXISTS "^view_name^"_delta_action_flag;

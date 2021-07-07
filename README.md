@@ -4,6 +4,8 @@ More information about BIRDS is available at [https://dangtv.github.io/BIRDS/](h
 
 ## Installation
 
+* To install the `birds` command line tool, download a `birds` binary file at [https://github.com/dangtv/BIRDS/releases](https://github.com/dangtv/BIRDS/releases) or build a `birds` binary file from the source code.
+
 * To build the `birds` command line tool, the following softwares must be installed:
   * GNU Make >= 4.1
   * ocaml >= 4.07.0: see OCaml's [installation guidance](https://ocaml.org/docs/install.html)
@@ -24,10 +26,10 @@ More information about BIRDS is available at [https://dangtv.github.io/BIRDS/](h
     ```bash
     make release
     ```
-* Installing: by using the generated binary file `release/birds` or typing
-  ```bash 
-  make install
-  ```
+  * Install:
+    ```bash 
+    make install
+    ```
 
 See the usage of the `birds` command by typing:
   ```bash 
@@ -36,10 +38,10 @@ See the usage of the `birds` command by typing:
 
 ## Integrated systems
 
-BIRDS is integrated with other systems to enable some features of the `birds` command. These systems can be installed as follows:
+BIRDS is integrated with other systems to enable some features (verification, counterexample generation, ...) of the `birds` command. These systems can be installed as follows:
 
 * PostgreSQL database >= 9.6: [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
-  * PL/sh extension for PostgreSQL: available at [https://github.com/petere/plsh](https://github.com/petere/plsh)
+  * PL/sh extension for PostgreSQL (for only option `--dejima`): available at [https://github.com/petere/plsh](https://github.com/petere/plsh)
 
 * Z3 >= 4.8.7: The binary files can be downloaded at [https://github.com/Z3Prover/z3/releases](https://github.com/Z3Prover/z3/releases). To install the `z3` command, create a symbolic link in `/usr/bin` to the `z3` binary file:
   ```bash 
@@ -69,7 +71,9 @@ BIRDS is integrated with other systems to enable some features of the `birds` co
     leanpkg configure
     leanpkg build
     ```
-* Rosette: After installing [Racket](https://racket-lang.org) (Minimal Racket can work well), [Rosette](https://github.com/emina/rosette) can be installed by `raco pkg install rosette`.
+* Rosette: After installing [Racket](https://racket-lang.org) (Minimal Racket can work well, for macos, `brew install minimal-racket`), [Rosette](https://github.com/emina/rosette) can be installed by `raco pkg install rosette`.
+
+To check whether the required external tools and configurations (except PostgreSQL) are installed properly, run `birds --environment`.
 
 ## Docker 
 

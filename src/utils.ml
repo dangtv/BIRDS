@@ -8,8 +8,11 @@ open Printf
 (** Semantic error  *)
 exception SemErr of string 
 
-(** Verification fail  *)
+(** Verification error  *)
 exception ChkErr of string 
+
+(** Environment error  *)
+exception EnvErr of string 
 
 (** Grammar error  *)
 exception ParseErr of string
@@ -390,22 +393,22 @@ let variablize_rterm(rt:rterm) = match rt with
   | Deltadelete (x, vl) -> Deltadelete (x, (gen_vars 0 (List.length vl)))
 
 (** Given a predicate name, return a new temporary name*)
-let get_temp_name (name:string) = "__temp__"^name
+let get_temp_name (name:string) = "__tmp_"^name
 
 (** Given a rterm, return a new temporary rterm*)
 let get_temp_rterm (rt:rterm) = match rt with
-  | Pred (x, vl) -> Pred ("__temp__"^x, vl)
-  | Deltainsert (x, vl) -> Deltainsert ("__temp__"^x, vl)
-  | Deltadelete (x, vl) -> Deltadelete ("__temp__"^x, vl)
+  | Pred (x, vl) -> Pred ("__tmp_"^x, vl)
+  | Deltainsert (x, vl) -> Deltainsert ("__tmp_"^x, vl)
+  | Deltadelete (x, vl) -> Deltadelete ("__tmp_"^x, vl)
 
 (** Given a rterm, return a new temporary delta of insertion of rterm*)
 let get_temp_delta_insertion_rterm (rt:rterm) = match rt with
-  | Pred (x, vl) -> Pred ("__temp__delta_ins_"^x, vl)
+  | Pred (x, vl) -> Pred ("__tmp_delta_ins_"^x, vl)
   | _ -> invalid_arg "function get_temp_delta_insertion_rterm called with not a Pred"
 
 (** Given a rterm, returns a new temporary delta of deletion of rterm*)
 let get_temp_delta_deletion_rterm (rt:rterm) = match rt with
-  | Pred (x, vl) -> Pred ("__temp__delta_del_"^x, vl)
+  | Pred (x, vl) -> Pred ("__tmp_delta_del_"^x, vl)
   | _ -> invalid_arg "function get_temp_delta_deletion_rterm called with not a Pred"
 
 (** Given a rterm, returns a materialized of rterm*)
@@ -413,13 +416,13 @@ let get_materializied_rterm (rt:rterm) = match rt with
   | Pred (x, vl) -> Pred ("__dummy__materialized_"^x, vl)
   | _ -> invalid_arg "function get_materializied_rterm called with not a Pred"
 
-(** Given a rterm, rename it by adding its name a prefix*)
+(** Given a rterm, rename it by adding to its name a prefix*)
 let rename_rterm (prefix:string) (rt:rterm) = match rt with
   | Pred (x, vl) -> Pred (prefix^x, vl)
   | Deltainsert (x, vl) -> Deltainsert (prefix^x, vl)
   | Deltadelete (x, vl) -> Deltadelete (prefix^x, vl)
 
-(** Given a rterm, rename it by adding its name a prefix*)
+(** Given a rterm, rename it by adding to its name a postfix*)
 let rename2_rterm (postfix:string) (rt:rterm) = match rt with
   | Pred (x, vl) -> Pred (x^postfix, vl)
   | Deltainsert (x, vl) -> Deltainsert (x^postfix, vl)
@@ -519,6 +522,11 @@ let exe_command command =
   let message = String.concat "\n" @@ read_file tmp_file in 
   status, message
 
+let check_command_version command = 
+  let status, message = exe_command @@ command ^ " --version" in
+  if not (status = 0) then raise (EnvErr (command ^ " is required but not installed yet! Be sure "^command ^ " can be called in the terminal."))
+  else message
+
 let verify_fo_lean debug timeout sentence = 
   if  debug then (
     print_endline @@"==> verifying by Lean";
@@ -532,6 +540,17 @@ let verify_fo_lean debug timeout sentence =
   let ol =  open_out tmp_file in  
   fprintf ol "%s\n" sentence;
   close_out ol;
+  ignore (check_command_version "lean");
+  (* check_lean_path *)
+  let tmp_chklib_file = Filename.temp_file "" ".lean" in
+  let chklib =  open_out tmp_chklib_file in  
+  fprintf chklib "%s\n" "import bx";
+  close_out chklib;
+  let leanstatus, leanmessage = exe_command @@ "lean "^tmp_chklib_file in
+  if not (leanstatus = 0) then 
+    raise (EnvErr ("Lean paths to BIRDS's verification folder are not configured correctly! Please change the Lean path configuration in ~/.lean/leanpkg.path and check by 'lean --path'. More details at https://github.com/dangtv/BIRDS"))
+  else ();
+  ignore (check_command_version "z3");
   let status, message = exe_command @@ "timeout "^ (string_of_int timeout) ^" lean "^tmp_file in 
   if (debug && (status = 0)) then print_endline @@">>> verified by lean: correct";
   status, message
@@ -549,6 +568,16 @@ let check_ros_prog debug timeout sentence =
   let ol =  open_out tmp_file in  
   fprintf ol "%s\n" sentence;
   close_out ol;
+  ignore (check_command_version "racket");
+  (* check racket lib *)
+  let tmp_chklib_file = Filename.temp_file "" ".rkt" in
+  let chklib =  open_out tmp_chklib_file in  
+  fprintf chklib "%s\n" "#lang rosette";
+  close_out chklib;
+  let racketstatus, racketmessage = exe_command @@ "racket "^tmp_chklib_file in
+  if not (racketstatus = 0) then 
+    raise (EnvErr ("Package rosette is requried but not installed correctly. Please install by 'raco pkg install rosette'. More details at https://github.com/dangtv/BIRDS"))
+  else ();
   let status, message = exe_command @@ "timeout "^ (string_of_int timeout) ^" racket "^tmp_file in
   if (debug && (status = 0)) then print_endline @@">>> Checked by Rosette";
   status, message

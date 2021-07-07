@@ -1,5 +1,12 @@
 # Changelog
 
+### 0.0.6 (2021-07-07)
+* A new option `--environment` for checking external tools and configurations that are required
+* Clarify errors caused by external tools/configurations that are not installed properly
+* Better error messages
+* Improve incrementalization algorithms
+* Support transactions at the Serializable isolation level
+
 ### 0.0.5 (2021-06-04)
 * Send transaction IDs when detecting updates on Dejima views
 * No Greek alphabet characters in generated SQL code
@@ -18,7 +25,7 @@
 * New features for WebUI
 
 ### 2019-12-11
-* Incrementally calculate Dejima view updates.
+* Incrementally calculate Dejima view updates
 
 ### 0.0.3 (2019-11-15)
 * Fix bugs
