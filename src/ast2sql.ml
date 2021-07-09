@@ -896,7 +896,9 @@ SELECT * FROM "^dbschema^"."^view_name^";
 CREATE EXTENSION IF NOT EXISTS plsh;
 
 CREATE TABLE IF NOT EXISTS "^dbschema^".__dummy__"^view_name^"_detected_deletions (txid int, LIKE "^dbschema^"."^view_name^" );
+CREATE INDEX IF NOT EXISTS idx__dummy__"^view_name^"_detected_deletions ON "^dbschema^".__dummy__"^view_name^"_detected_deletions (txid);
 CREATE TABLE IF NOT EXISTS "^dbschema^".__dummy__"^view_name^"_detected_insertions (txid int, LIKE "^dbschema^"."^view_name^" );
+CREATE INDEX IF NOT EXISTS idx__dummy__"^view_name^"_detected_insertions ON "^dbschema^".__dummy__"^view_name^"_detected_insertions (txid);
 
 CREATE OR REPLACE FUNCTION "^dbschema^"."^view_name^"_get_detected_update_data(txid int)
 RETURNS text

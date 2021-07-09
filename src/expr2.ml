@@ -140,6 +140,7 @@ let get_empty_pred = Pred ("⊥", [])
 
 (** Get the predicate name of an rterm using delta__ins_/delta__del_ for delta predicates. *)
 let get_rterm_predname rterm = match rterm with
+    | Pred ("⊥", []) -> "bot"
     | Pred (x, vl) -> x
     | Deltainsert (x, vl) -> "delta_ins_"^ x
     | Deltadelete (x, vl) -> "delta_del_"^ x
