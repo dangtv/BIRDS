@@ -336,7 +336,7 @@ let build_eqtab eqs =
   hs
 
 (** Given a var name, returns the value and removes it from the eqtab. *)
-let eqt_extract eqt e1 =
+let eqt_extract (eqt : eqtab) (e1 : vterm) : vterm =
   let lst = Hashtbl.find_all eqt e1 in
   if ((List.length lst) <> 1) then raise (SemErr ("Ambiguity of the assigments of variable "^(string_of_vterm e1)));
   let c = List.hd lst in

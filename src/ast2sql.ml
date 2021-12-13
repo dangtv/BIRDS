@@ -13,6 +13,24 @@ open Rule_preprocess
 open Stratification
 open Derivation
 
+type sql_column_name = string
+
+type sql_binary_operator =
+  | SqlPlus    (* + *)
+  | SqlMinus   (* - *)
+  | SqlTimes   (* * *)
+  | SqlDivides (* / *)
+  | SqlLor     (* || *)
+
+type sql_unary_operator =
+  | SqlNegate (* - *)
+
+type sql_vterm =
+  | SqlConst    of Expr.const
+  | SqlColumn   of sql_column_name
+  | SqlUnaryOp  of sql_unary_operator * sql_vterm
+  | SqlBinaryOp of sql_binary_operator * sql_vterm * sql_vterm
+
 (** Given an aggregate function name, checks if it is supported and returns it. *)
 let check_agg_function fn =
     let allowed = ["MAX";"MIN";"SUM";"AVG";"COUNT"] in
@@ -32,59 +50,61 @@ let sql_of_operator op = match op with
     | _ -> " "^op^" "
 
 (** Given an arithmetic expression, return in SQL, this function is similar to string_of_vterm. *)
-let sql_of_vterm (vt:vartab) (eqt:eqtab) (expr:vterm)  =
-        let open_paren prec op_prec =
-            if prec > op_prec then  "(" else "" in
-        let close_paren prec op_prec =
-            if prec > op_prec then  ")" else "" in
-        let rec sql_of prec a_expr = match a_expr with
-            | Const c -> string_of_const c
-            | Var variable ->
-                (*If the variable appears in a positive rterm, the value
-                * is the name of the respective rterm's table column*)
-                if Hashtbl.mem vt (string_of_var variable)
-                    then List.hd (Hashtbl.find vt (string_of_var variable))
-                (*If the variable does not appear in a positive rterm, but
-                * it does in an equality value, then the value is the eq's evaluation*)
-                else if Hashtbl.mem eqt (Var variable)
-                    then
-                    let ve = (Hashtbl.find eqt (Var variable)) in sql_of prec ve
-                (*Else, the query is unsafe or inclomplete*)
-                else raise (SemErr (
-                        "Can not evaluate variable "^(string_of_var variable)^" because it is not in a positive "^
-                        "goal or strict equality relation."
-                    )
-                )
-            | BinaryOp("+",f,g) -> (open_paren prec 0)^ (sql_of 0 f) ^ "+" ^ (sql_of 0 g) ^ (close_paren prec 0)
-            | BinaryOp("-",f,g) -> (open_paren prec 0) ^ (sql_of 0 f) ^  "-" ^ (sql_of 1 g) ^ (close_paren prec 0)
-            | BinaryOp("*",f,g) -> (open_paren prec 2) ^ (sql_of 2 f) ^  "*" ^ (sql_of 2 g) ^ (close_paren prec 2)
-            | BinaryOp("/",f,g) -> (open_paren prec 2)^ (sql_of 2 f) ^ "/" ^ (sql_of 3 g) ^ (close_paren prec 2)
-            | UnaryOp ("-", e) ->  (open_paren prec 4)^ "-" ^ (sql_of 5 e)^(close_paren prec 4)
-            | BinaryOp("^",f,g) -> (open_paren prec 0)^ (sql_of 0 f) ^ "||" ^ (sql_of 0 g) ^ (close_paren prec 0)
-            | BinaryOp(op,_,_) | UnaryOp (op, _) -> failwith "Function sql_of_vterm is called with an unknown operator" ^ op
-            (* | BoolAnd (f,g) -> (open_paren prec 2) ^ (sql_of 2 f) ^  "*" ^ (sql_of 2 g) ^ (close_paren prec 2)
-            | BoolOr (f,g) -> (open_paren prec 0)^ (sql_of 0 f) ^ "+" ^ (sql_of 0 g) ^ (close_paren prec 0)
-            | BoolNot e ->  (open_paren prec 4)^ "-" ^ (sql_of 5 e)^(close_paren prec 4) *)
-        in sql_of 0 expr
+let sql_of_vterm (vt : vartab) (eqt : eqtab) (expr : vterm) : sql_vterm =
+  let rec aux a_expr =
+    match a_expr with
+    | Const c ->
+        SqlConst c
+
+    | Var variable ->
+        (*If the variable appears in a positive rterm, the value
+        * is the name of the respective rterm's table column*)
+        if Hashtbl.mem vt (string_of_var variable) then
+          let column = List.hd (Hashtbl.find vt (string_of_var variable)) in
+          SqlColumn column
+        (*If the variable does not appear in a positive rterm, but
+        * it does in an equality value, then the value is the eq's evaluation*)
+        else if Hashtbl.mem eqt (Var variable) then
+          let ve = Hashtbl.find eqt (Var variable) in
+          aux ve
+        (*Else, the query is unsafe or inclomplete*)
+        else
+          raise (SemErr (
+            "Can not evaluate variable "^(string_of_var variable)^" because it is not in a positive "^
+              "goal or strict equality relation."))
+
+    | BinaryOp ("+", vt1, vt2) -> SqlBinaryOp (SqlPlus, aux vt1, aux vt2)
+    | BinaryOp ("-", vt1, vt2) -> SqlBinaryOp (SqlMinus, aux vt1, aux vt2)
+    | BinaryOp ("*", vt1, vt2) -> SqlBinaryOp (SqlTimes, aux vt1, aux vt2)
+    | BinaryOp ("/", vt1, vt2) -> SqlBinaryOp (SqlDivides, aux vt1, aux vt2)
+    | BinaryOp ("^", vt1, vt2) -> SqlBinaryOp (SqlLor, aux vt1, aux vt2)
+    | UnaryOp ("-", vt0)       -> SqlUnaryOp (SqlNegate, aux vt0)
+
+    | BinaryOp (op, _, _) | UnaryOp (op, _) ->
+        failwith ("Function sql_of_vterm is called with an unknown operator" ^ op)
+    (* | BoolAnd (f,g) -> (open_paren prec 2) ^ (sql_of 2 f) ^  "*" ^ (sql_of 2 g) ^ (close_paren prec 2)
+    | BoolOr (f,g) -> (open_paren prec 0)^ (sql_of 0 f) ^ "+" ^ (sql_of 0 g) ^ (close_paren prec 0)
+    | BoolNot e ->  (open_paren prec 4)^ "-" ^ (sql_of 5 e)^(close_paren prec 4) *)
+  in
+  aux expr
 
 (** Given a variable, returns the name of an EDB/IDB column that defines it, or if it is equal to a constant, the value of the constant. *)
-let var_to_col (vt:vartab) (eqt:eqtab) key (variable:var) =
-    (*If the variable appears in a positive rterm, the value
-     * is the name of the respective rterm's table column*)
-    if Hashtbl.mem vt (string_of_var variable)
-        then List.hd (Hashtbl.find vt (string_of_var variable))
-    (*If the variable does not appear in a positive rterm, but
-     * it does in an equality value, then the value is the eq's
-     * constant, the var has to be removed from the eqtab*)
-    else if Hashtbl.mem eqt (Var variable)
-        then sql_of_vterm vt eqt (eqt_extract eqt (Var variable))
-    (*Else, the query is unsafe or inclomplete*)
-    else raise (SemErr (
-            "Predicate "^(string_of_symtkey key)^
-            " is unsafe, variable "^(string_of_var variable)^" is not in a positive "^
-            "goal or strict equality relation."
-        )
-    )
+let var_to_col (vt : vartab) (eqt : eqtab) (key : symtkey) (variable : var) : sql_column_name =
+  (*If the variable appears in a positive rterm, the value
+   * is the name of the respective rterm's table column*)
+  if Hashtbl.mem vt (string_of_var variable) then
+    List.hd (Hashtbl.find vt (string_of_var variable))
+  (*If the variable does not appear in a positive rterm, but
+   * it does in an equality value, then the value is the eq's
+   * constant, the var has to be removed from the eqtab*)
+  else if Hashtbl.mem eqt (Var variable) then
+    sql_of_vterm vt eqt (eqt_extract eqt (Var variable))
+  (*Else, the query is unsafe or inclomplete*)
+  else
+    raise (SemErr (
+      "Predicate "^(string_of_symtkey key)^
+        " is unsafe, variable "^(string_of_var variable)^" is not in a positive "^
+        "goal or strict equality relation."))
 
 (** Given the head of the rule, vartab, and eqtab, return the code that
   must be in the select clause. All columns are aliased as col0, col1, ... *)
