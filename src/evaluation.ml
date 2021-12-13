@@ -1,4 +1,4 @@
-(* 
+(*
 @author: Vandang Tran
 *)
 
@@ -9,7 +9,7 @@ exception Eof
 open Printf
 
 (* Evaluate the fixpoint of a Datalog program, also caculate the explanation *)
-let eval (log:bool) explain_lst prog = 
+let eval (log:bool) explain_lst prog =
   let quiet = ref (not log) in
   let progress = ref false in
   let print_input = ref false in
@@ -24,7 +24,7 @@ let eval (log:bool) explain_lst prog =
   let files = ref [] in
   let queries = ref [] in
   let returned_explanation = ref [] in
-  let returned_facts = (ref [] : Bottom_up.literal list ref) in 
+  let returned_facts = (ref [] : Bottom_up.literal list ref) in
 
   let pp_progress i total =
     Format.printf "\r%% clause %-5d / %-5d  " i total;
@@ -35,18 +35,18 @@ let eval (log:bool) explain_lst prog =
     (* log: Format.printf "%% goal %a@." Bottom_up.pp_literal lit; *)
     if Bottom_up.is_negative lit then (
       (* Format.printf "========= %% goal %a@." Bottom_up.pp_literal lit;  *)
-      let pos_lit = Bottom_up.negate lit in 
+      let pos_lit = Bottom_up.negate lit in
       let lit_holds = ref true in
         (* Bottom_up.db_fold (fun () clause ->
         if Bottom_up.is_fact clause then
-          (Format.printf "  @[<h>%a@]@." Bottom_up.pp_clause clause; 
+          (Format.printf "  @[<h>%a@]@." Bottom_up.pp_clause clause;
           (match clause.(0).(0) with Const s -> Format.printf "*** 1) fact of=== %s  vs  " s | _ -> ());
           (match pos_lit.(0) with Const s -> Format.printf "*** 2) fact of=== %s  \n" s | _ -> ());
           let fun_name = (fun term -> match term with Bottom_up.Const s -> Bottom_up.Symbol.to_string s | _ -> "") in
           if (Bottom_up.eq_term clause.(0).(0)  pos_lit.(0)) then (Format.printf "===found===\n"; lit_holds := false))) () db; *)
 
       Bottom_up.db_match db pos_lit (fun lit' -> lit_holds := false);
-      if !lit_holds then ( 
+      if !lit_holds then (
         (* Format.printf "========= no fact %a@." Bottom_up.pp_literal pos_lit;   *)
         Bottom_up.db_add_fact db lit)
       (* if not (Bottom_up.db_mem db [|pos_lit|]) then ( Format.printf "========= no fact %a@." Bottom_up.pp_literal pos_lit;  Bottom_up.db_add_fact db lit) *)
@@ -84,9 +84,9 @@ let eval (log:bool) explain_lst prog =
         Bottom_up.db_add_fact db lit (* literal is true *)
       | "=", [Bottom_up.Const a; Bottom_up.Const b] when compare a b = 0 ->
         Bottom_up.db_add_fact db lit (* literal is true *)
-      | "equal", [Bottom_up.Const a; _] 
-      | "=", [Bottom_up.Const a; _] 
-      | "equal", [_; Bottom_up.Const a] 
+      | "equal", [Bottom_up.Const a; _]
+      | "=", [Bottom_up.Const a; _]
+      | "equal", [_; Bottom_up.Const a]
       | "=", [_; Bottom_up.Const a] ->
         Bottom_up.db_add_fact db (Bottom_up.mk_literal "=" [Bottom_up.Const a; Bottom_up.Const a]) (* literal is true *)
       | _ -> () in
@@ -107,7 +107,7 @@ let eval (log:bool) explain_lst prog =
     (* let rterm = Conversion.rterm_of_rterm2 rterm in *)
     let rterm = Bottom_up.literal_of_rterm false rterm in
     goals := rterm :: !goals in
- 
+
   (** Add the pattern to the list of patterns to explain *)
   let add_explain p =
     let lexbuf = Lexing.from_string p in
@@ -187,26 +187,26 @@ let eval (log:bool) explain_lst prog =
       Format.printf "@]@.")
     !queries;
     (* get explaination trees *)
-    let rec complete_explanation fact = 
+    let rec complete_explanation fact =
       (* premises *)
       let clause, premises = Bottom_up.db_premises db fact in
-      if (List.length premises = 0) then [] else 
-        let fist_premise = (fact, clause, premises) in 
-        let inductive_premises = List.map complete_explanation premises in 
+      if (List.length premises = 0) then [] else
+        let fist_premise = (fact, clause, premises) in
+        let inductive_premises = List.map complete_explanation premises in
         fist_premise :: (List.concat inductive_premises)
         (*  *)
       in
-    let explanation_summary fact = 
+    let explanation_summary fact =
     (* explanation *)
         let edb_facts = Bottom_up.db_explain db fact in
-        let all_clauses = List.map (fun (fact, clause, premises) -> clause ) (List.rev (complete_explanation fact)) in 
+        let all_clauses = List.map (fun (fact, clause, premises) -> clause ) (List.rev (complete_explanation fact)) in
         (edb_facts, all_clauses) in
     (* print explanations *)
     List.iter (fun pattern ->
-      Bottom_up.db_match db pattern 
+      Bottom_up.db_match db pattern
         (fun fact ->
-          let edb_facts, all_clauses = explanation_summary fact in 
-          if (not !quiet) then 
+          let edb_facts, all_clauses = explanation_summary fact in
+          if (not !quiet) then
           (Format.printf "  (Summary) explain @[<h>%a@] by: \n    @[<h>" Bottom_up.pp_literal fact;
           List.iter (fun fact' -> Format.printf "%a " Bottom_up.pp_literal fact') edb_facts;
           Format.printf "\n    ~~~~~~~~~~~~~~~~~~~~~\n";
@@ -224,7 +224,7 @@ let eval (log:bool) explain_lst prog =
           Format.printf "@]@."; *)
           if (not !quiet) then Format.printf "\n  (Details) explain @[<h>%a@] by: @[<h>\n" Bottom_up.pp_literal fact;
           let detail = List.rev(complete_explanation fact) in
-          if (not !quiet) then List.iter (fun (fact, clause, premises) -> 
+          if (not !quiet) then List.iter (fun (fact, clause, premises) ->
             (* Format.printf "    premises of @[<h>%a@]: @[<h>" Bottom_up.pp_literal fact; *)
             Format.printf "    @[<h>";
             List.iter (fun fact' -> Format.printf "%a " Bottom_up.pp_literal fact') premises;
@@ -245,24 +245,24 @@ let eval (log:bool) explain_lst prog =
     () in
 
   let stratified_rules = Stratification.get_stratified_rules prog in
-  (* let clauses = List.filter (fun x -> match x with Expr2.Rule _ -> List.length (Expr2.rule_body x) > 0 | _ -> true) clauses in *)
+  (* let clauses = List.filter (fun x -> match x with Expr.Rule _ -> List.length (Expr.rule_body x) > 0 | _ -> true) clauses in *)
   if log then (
     print_endline "_____stratified rules for evalation____";
-    print_endline (Expr2.string_of_prog {Expr2.get_empty_expr with rules = stratified_rules});
+    print_endline (Expr.string_of_prog {Expr.get_empty_expr with rules = stratified_rules});
     print_endline "_________________________"
   );
   let rterm_list = List.map (Bottom_up.literal_of_rterm false) explain_lst in
   (* patterns := rterm_list @ !patterns; *)
   (* print_result := true; *)
-  (* explains := (Bottom_up.literal_of_rterm false (Expr2.Pred ("+s1", [Expr2.ConstVar (Expr2.Int 0); Expr2.ConstVar (Expr2.Int (-2)) ]))) :: !explains;
-  explains := (Bottom_up.literal_of_rterm false (Expr2.Pred ("s1", [Expr2.ConstVar (Expr2.Int 0); Expr2.ConstVar (Expr2.Int (-2)) ]))) :: !explains; *)
+  (* explains := (Bottom_up.literal_of_rterm false (Expr.Pred ("+s1", [Expr.ConstVar (Expr.Int 0); Expr.ConstVar (Expr.Int (-2)) ]))) :: !explains;
+  explains := (Bottom_up.literal_of_rterm false (Expr.Pred ("s1", [Expr.ConstVar (Expr.Int 0); Expr.ConstVar (Expr.Int (-2)) ]))) :: !explains; *)
   explains := rterm_list @ !explains;
   let clauses = (List.map Bottom_up.clause_of_fact prog.facts) @ (List.map Bottom_up.clause_of_rule stratified_rules) in
-  process_clauses clauses; 
-  let get_original_rule clause= 
-  let all_rules = prog.rules in 
-  let matched_rules = List.filter (fun x -> clause = Bottom_up.clause_of_rule x ) all_rules in 
-  if (List.length matched_rules > 0) then List.hd matched_rules else Bottom_up.rule_of_clause clause in 
+  process_clauses clauses;
+  let get_original_rule clause=
+  let all_rules = prog.rules in
+  let matched_rules = List.filter (fun x -> clause = Bottom_up.clause_of_rule x ) all_rules in
+  if (List.length matched_rules > 0) then List.hd matched_rules else Bottom_up.rule_of_clause clause in
   (List.map (fun x -> (Bottom_up.rterm_of_literal x)) (!returned_facts),
   List.map (fun (fact, edb_facts, all_clauses, detail) -> (
     (Bottom_up.rterm_of_literal fact ),
