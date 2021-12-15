@@ -13,8 +13,6 @@ open Rule_preprocess
 open Stratification
 open Derivation
 
-type sql_column_name = string
-
 type sql_binary_operator =
   | SqlPlus    (* + *)
   | SqlMinus   (* - *)
@@ -25,29 +23,69 @@ type sql_binary_operator =
 type sql_unary_operator =
   | SqlNegate (* - *)
 
+type sql_agg_function =
+  | SqlAggMax
+  | SqlAggMin
+  | SqlAggSum
+  | SqlAggAvg
+  | SqlAggCount
+
+type sql_operator =
+  | SqlRelEqual
+  | SqlRelNotEqual
+  | SqlRelGeneral of string
+
+type sql_column_name = string
+
 type sql_vterm =
   | SqlConst    of Expr.const
   | SqlColumn   of sql_column_name
   | SqlUnaryOp  of sql_unary_operator * sql_vterm
   | SqlBinaryOp of sql_binary_operator * sql_vterm * sql_vterm
+  | SqlAggVar   of sql_agg_function * sql_vterm
+
+type sql_select_clause =
+  | SqlSelect of sql_vterm list
+
+type sql_comp_const =
+  | SqlCompConst of sql_vterm * sql_operator * Expr.const
+
+type sql_group_by =
+  | SqlGroupBy of string list
+
+type sql_having =
+  | SqlHaving of sql_comp_const list
+
 
 (** Given an aggregate function name, checks if it is supported and returns it. *)
-let check_agg_function fn =
-    let allowed = ["MAX";"MIN";"SUM";"AVG";"COUNT"] in
-    if List.mem fn allowed then fn
-    else raise (SemErr (
+let check_agg_function (fn : string) : sql_agg_function =
+  match fn with
+  | "MAX"   -> SqlAggMax
+  | "MIN"   -> SqlAggMin
+  | "SUM"   -> SqlAggSum
+  | "AVG"   -> SqlAggAvg
+  | "COUNT" -> SqlAggCount
+
+  | _ ->
+      raise (SemErr (
         "Aggregate function '"^fn^"' is not supported, "^
-        "allowed functions are: "^(String.concat ", " allowed)
-    ))
+        "allowed functions are: MAX MIN SUM AVG COUNT"
+      ))
 
 (** Get sql code for comparison operators.  *)
-let sql_of_operator op = match op with
+let sql_of_operator (op : string) : sql_operator =
+  match op with
     (* == accept null, return true if both are null. This is because in postgres the operator = return null if one of its operand is null. "==" is useful in the case of negation or delete from. For example, if a tuple (a,null) in both table 1 and table 2 and there is a rule that table1(X,Y), not table2(X,Y) then (a,null) does not sastify *)
     (* | "==" -> " IS NOT DISTINCT FROM "
     | "<>" -> " IS DISTINCT FROM " *)
-    | "==" -> " = "
-    | "<>" -> " <> "
-    | _ -> " "^op^" "
+(*
+  | "==" -> " = "
+  | "<>" -> " <> "
+  | _ -> " "^op^" "
+*)
+  | "==" -> SqlRelEqual
+  | "<>" -> SqlRelNotEqual
+  | _    -> SqlRelGeneral op
 
 (** Given an arithmetic expression, return in SQL, this function is similar to string_of_vterm. *)
 let sql_of_vterm (vt : vartab) (eqt : eqtab) (expr : vterm) : sql_vterm =
@@ -89,11 +127,12 @@ let sql_of_vterm (vt : vartab) (eqt : eqtab) (expr : vterm) : sql_vterm =
   aux expr
 
 (** Given a variable, returns the name of an EDB/IDB column that defines it, or if it is equal to a constant, the value of the constant. *)
-let var_to_col (vt : vartab) (eqt : eqtab) (key : symtkey) (variable : var) : sql_column_name =
+let var_to_col (vt : vartab) (eqt : eqtab) (key : symtkey) (variable : var) : sql_vterm =
   (*If the variable appears in a positive rterm, the value
    * is the name of the respective rterm's table column*)
   if Hashtbl.mem vt (string_of_var variable) then
-    List.hd (Hashtbl.find vt (string_of_var variable))
+    let column = List.hd (Hashtbl.find vt (string_of_var variable)) in
+    SqlColumn column
   (*If the variable does not appear in a positive rterm, but
    * it does in an equality value, then the value is the eq's
    * constant, the var has to be removed from the eqtab*)
@@ -108,27 +147,36 @@ let var_to_col (vt : vartab) (eqt : eqtab) (key : symtkey) (variable : var) : sq
 
 (** Given the head of the rule, vartab, and eqtab, return the code that
   must be in the select clause. All columns are aliased as col0, col1, ... *)
-let get_select_clause (vt:vartab) (eqt:eqtab) rterm =
-    let vlst = get_rterm_varlist rterm in
-    let key = symtkey_of_rterm rterm in
-    if vlst = [] then
+let get_select_clause (vt : vartab) (eqt : eqtab) (rterm : rterm) : sql_select_clause =
+  let vlst = get_rterm_varlist rterm in
+  let key = symtkey_of_rterm rterm in
+  if vlst = [] then
         (* select no colum, two choices: raise error or continue with select no column clause*)
         (* raise (SemErr
             ("Predicate "^(get_rterm_predname rterm)^
             " has arity 0, which is not allowed")) *)
-        "SELECT "
-    else
-    (*Transform variables to column names. Treat namedVars and
-     * aggregates differently*)
-    let var_value v = match v with
-        NamedVar _ | NumberedVar _ ->
-            var_to_col vt eqt key v
-        | AggVar (fn,vn) ->
-            (check_agg_function fn)^"("^(var_to_col vt eqt key (NamedVar vn))^")"
-        | _ -> invalid_arg ("not-expected vartype in head of predicate"^
+(*
+      "SELECT "
+*)
+      SqlSelect([])
+  else
+  (*Transform variables to column names. Treat namedVars and
+   * aggregates differently*)
+    let var_value (v : var) : sql_vterm =
+      match v with
+      | NamedVar _ | NumberedVar _ ->
+          var_to_col vt eqt key v
+      | AggVar (fn, vn) ->
+(*
+          (check_agg_function fn)^"("^(var_to_col vt eqt key (NamedVar vn))^")"
+*)
+          SqlAggVar (check_agg_function fn, var_to_col vt eqt key (NamedVar vn))
+      | _ ->
+          invalid_arg ("not-expected vartype in head of predicate"^
             (string_of_symtkey key))
     in
     let cols = List.map var_value vlst in
+(*
     (*Create aliases*)
     let rec alias ind = function
         | [] -> ""
@@ -136,200 +184,260 @@ let get_select_clause (vt:vartab) (eqt:eqtab) rterm =
         | col::col2::tl ->
             (col^" AS COL"^(string_of_int ind))^", "^(alias (ind+1) (col2::tl))
     in
-    "SELECT "^(alias 0 cols)
+*)
+    SqlSelect(cols)
 
-let get_aggregation_sql (vt:vartab) (cnt:colnamtab) head agg_eqs agg_ineqs =
-    let vars = get_rterm_varlist head in
-    let key = symtkey_of_rterm head in
-    (*Merge the equalities and inequalities in a simple list*)
-    let eq_t = List.map extract_eq_tuple agg_eqs in
-    let aug_eq_t = List.map (fun (x,y) -> ("=",x,y)) eq_t in
-    let ieq_t = List.map extract_ineq_tuple agg_ineqs in
-    let comparisons = aug_eq_t@ieq_t in
-    (*Check if the rule has aggregation*)
-    let is_agg = List.exists is_aggvar vars in
-    if not is_agg then
-        if comparisons = [] then ""
-        else raise (SemErr (
-            "Predicate "^(string_of_symtkey key)^
-            " contains comparisons of aggregates but defines no "^
-            "aggregations in its head"))
+let get_aggregation_sql (vt : vartab) (cnt : colnamtab) (head : rterm) (agg_eqs : term list) (agg_ineqs : term list) : sql_group_by * sql_having =
+  let vars = get_rterm_varlist head in
+  let key = symtkey_of_rterm head in
+  (*Merge the equalities and inequalities in a simple list*)
+  let eq_t : (vterm * vterm) list = List.map extract_eq_tuple agg_eqs in
+  let aug_eq_t = List.map (fun (x, y) -> ("=", x, y)) eq_t in
+  let ieq_t = List.map extract_ineq_tuple agg_ineqs in
+  let comparisons = aug_eq_t@ieq_t in
+  (*Check if the rule has aggregation*)
+  let is_agg = List.exists is_aggvar vars in
+  if not is_agg then
+    if comparisons = [] then
+(*
+      ""
+*)
+      (SqlGroupBy [], SqlHaving [])
     else
-    let cols = Hashtbl.find cnt key in
-    (*Calculate the GROUP BY clause*)
-    let group_var acc col = function
-        | NamedVar _ -> col::acc
-        | _ -> acc in
-    let grp_cols = List.fold_left2 group_var [] cols vars in
+      raise (SemErr (
+        "Predicate "^(string_of_symtkey key)^
+        " contains comparisons of aggregates but defines no "^
+        "aggregations in its head"
+      ))
+  else
     let group_by_sql =
-        if grp_cols = [] then ""
-        else ("GROUP BY "^(String.concat ", " grp_cols)) in
+      let cols = Hashtbl.find cnt key in
+      (*Calculate the GROUP BY clause*)
+      let group_var acc col = function
+        | NamedVar _ -> col :: acc
+        | _          -> acc
+      in
+      let grp_cols = List.fold_left2 group_var [] cols vars in
+(*
+      if grp_cols = [] then
+        ""
+      else
+        "GROUP BY "^(String.concat ", " grp_cols)
+*)
+      SqlGroupBy grp_cols
+    in
     (*Calculate the HAVING clause*)
     (*Extract the available aggregations in the head, and place them
      * in a list, which values will be the function applied to a column-name*)
     let av_aggs = Hashtbl.create 100 in
-    let fake_eqt:eqtab = Hashtbl.create 100 in
+    let fake_eqt : eqtab = Hashtbl.create 100 in
     let insert_agg = function
-        | AggVar (fn,vn) ->
-            let col = var_to_col vt fake_eqt key (NamedVar vn) in
-            Hashtbl.add av_aggs (fn,vn) (fn^"("^col^")")
-        | _ -> () in
+      | AggVar (fn, vn) ->
+          let column = var_to_col vt fake_eqt key (NamedVar vn) in
+          Hashtbl.add av_aggs (fn, vn) (SqlAggVar (check_agg_function fn, column))
+      | _ ->
+          ()
+    in
     List.iter insert_agg vars;
     (*Build the contraints and check for unavailable aggregates*)
-    let agg_var_col agv =
-        let tuple = extract_aggvar_tuple agv in
-        if Hashtbl.mem av_aggs tuple then Hashtbl.find av_aggs tuple
-        else raise (SemErr (
-            "Predicate "^(string_of_symtkey key)^" contains comparisons of "^
-            "aggregates that are not defined in its head"
-        )) in
-    let comp_const (op,e1,e2) = match (op,e1,e2) with
-        (* currently only support constraint for aggreation in the form  agg_fun(X) comparason_op const*)
-        | (_, Var (AggVar (fn,vlst)), Const c) ->
-        (agg_var_col (AggVar (fn,vlst)))^" "^(sql_of_operator op)^" "^(string_of_const c)
-        | _ -> raise (SemErr (
+    let agg_var_col (agv : var) : sql_vterm =
+      let tuple = extract_aggvar_tuple agv in
+      if Hashtbl.mem av_aggs tuple then
+        Hashtbl.find av_aggs tuple
+      else
+        raise (SemErr (
+          "Predicate "^(string_of_symtkey key)^" contains comparisons of "^
+          "aggregates that are not defined in its head"
+        ))
+    in
+    let comp_const ((op, e1, e2) : string * vterm * vterm) =
+      match (op, e1, e2) with
+      (* currently only support constraint for aggreation in the form  agg_fun(X) comparason_op const*)
+      | (_, Var (AggVar (fn, vn)), Const c) ->
+(*
+          (agg_var_col (AggVar (fn, vn)))^" "^(sql_of_operator op)^" "^(string_of_const c)
+*)
+          SqlCompConst (agg_var_col (AggVar (fn, vn)), sql_of_operator op, c)
+      | _ ->
+          raise (SemErr (
             "Predicate "^(string_of_symtkey key)^" contains comparisons of "^
             "aggregates that are not in the form of agg_fun(X) op const"
-        )) in
+          ))
+    in
     let comp_sql = List.map comp_const comparisons in
-    let having_sql = if comp_sql = [] then "" else
-        "HAVING "^(String.concat " AND " comp_sql) in
+    let having_sql =
+(*
+      if comp_sql = [] then
+        ""
+      else
+        "HAVING "^(String.concat " AND " comp_sql)
+*)
+      SqlHaving comp_sql
+    in
+(*
     group_by_sql^" "^having_sql
+*)
+    (group_by_sql, having_sql)
 
-let rec non_rec_unfold_sql_of_symtkey (dbschema:string) (idb:symtable) (cnt:colnamtab) (goal:symtkey)  =
-    (* get all the rule having this query in head *)
-    (* print_endline ("Reach " ^ (string_of_symtkey goal)); *)
-    if not (Hashtbl.mem idb goal) then raise (SemErr ("No rule for the idb predicate "^string_of_symtkey goal))
-    else
-    let rule_lst = Hashtbl.find idb  goal in
+let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt : colnamtab) (goal : symtkey) =
+  (* get all the rule having this query in head *)
+  (* print_endline ("Reach " ^ (string_of_symtkey goal)); *)
+  if not (Hashtbl.mem idb goal) then
+    raise (SemErr ("No rule for the idb predicate "^string_of_symtkey goal))
+  else
+    let rule_lst = Hashtbl.find idb goal in
     (* union the SQL of all rules then we have sql of union*)
-    let unfold_sql_of_rule_lst (idb:symtable) (cnt:colnamtab) rules =
-        let unfold_sql_of_rule (idb:symtable) (cnt:colnamtab) rule =
-            let head = rule_head rule in
-            let body = rule_body rule in
-            (*Split terms in the rule's body. Separate equalities
-            * and inequalities in variable and aggregates relations.*)
-            let (p_rt,n_rt,all_eqs,all_ineqs) = split_terms body in
-            let (agg_eqs,eqs) = List.partition is_agg_equality all_eqs in
-            let (agg_ineqs,ineqs) = List.partition is_agg_inequality all_ineqs in
-            (*Build vartab, and eqtab for select and where clauses, build vartabl by p_rt which is list of positive predicates*)
-            let vt = build_vartab cnt p_rt in
-            let eqtb = build_eqtab eqs in
-            let select_sql = get_select_clause vt eqtb head in
-            let unfold_get_from_clause (idb:symtable) rterms =
-                if rterms == [] then "" else
-                let idb_alias pname arity n =
-                    (* generate sql query for idb predicate *)
-                    let idb_sql = non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity)  in
-                    let pn_a = pname^"_a"^(string_of_int arity) in
-                    "("^idb_sql^")"^" AS "^pn_a^"_"^(string_of_int n)
-                in
-                let edb_alias pname arity n =
-                    if str_contains pname "__tmp_" then pname^" AS "^pname^"_a"^(string_of_int arity)^"_"^(string_of_int n)
-                    else dbschema^"."^pname^" AS "^pname^"_a"^(string_of_int arity)^"_"^(string_of_int n)
-                in
-                let set_alias rterm (a_lst,n) =
-                    let pname = get_rterm_predname rterm in
-                    let arity = get_arity rterm in
-                    let key = symtkey_of_rterm rterm in
-                    let alias_f = if Hashtbl.mem idb key then idb_alias else edb_alias in
-                    let alias = alias_f pname arity n in
-                    (alias::a_lst,n-1)
-                in
-                let len = List.length rterms in
-                let (aliases,_) = List.fold_right set_alias rterms ([],len-1) in
-                "\nFROM "^(String.concat ", " aliases) in
-            let from_sql = unfold_get_from_clause idb p_rt in
+    let unfold_sql_of_rule_lst (idb : symtable) (cnt : colnamtab) (rules : (rterm * term list) list) =
+      let unfold_sql_of_rule (idb : symtable) (cnt : colnamtab) (rule : rterm * term list) =
+        let head = rule_head rule in
+        let body = rule_body rule in
+        (*Split terms in the rule's body. Separate equalities
+        * and inequalities in variable and aggregates relations.*)
+        let (p_rt, n_rt, all_eqs, all_ineqs) = split_terms body in
+        let (agg_eqs, eqs) = List.partition is_agg_equality all_eqs in
+        let (agg_ineqs, ineqs) = List.partition is_agg_inequality all_ineqs in
+        (*Build vartab, and eqtab for select and where clauses, build vartabl by p_rt which is list of positive predicates*)
+        let vt = build_vartab cnt p_rt in
+        let eqtb = build_eqtab eqs in
+        let select_sql = get_select_clause vt eqtb head in
+          let unfold_get_from_clause (idb : symtable) (rterms : rterm list) =
+            if rterms == [] then
+              ""
+            else
+              let idb_alias pname arity n =
+                (* generate sql query for idb predicate *)
+                let idb_sql = non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname, arity)  in
+                let pn_a = pname^"_a"^(string_of_int arity) in
+                "("^idb_sql^")"^" AS "^pn_a^"_"^(string_of_int n)
+              in
+              let edb_alias pname arity n =
+                if str_contains pname "__tmp_" then
+                  pname^" AS "^pname^"_a"^(string_of_int arity)^"_"^(string_of_int n)
+                else
+                  dbschema^"."^pname^" AS "^pname^"_a"^(string_of_int arity)^"_"^(string_of_int n)
+              in
+              let set_alias (rterm : rterm) (a_lst, n) =
+                let pname = get_rterm_predname rterm in
+                let arity = get_arity rterm in
+                let key = symtkey_of_rterm rterm in
+                let alias_f = if Hashtbl.mem idb key then idb_alias else edb_alias in
+                let alias = alias_f pname arity n in
+                (alias :: a_lst, n - 1)
+              in
+              let len = List.length rterms in
+              let (aliases, _) = List.fold_right set_alias rterms ([], len - 1) in
+              "\nFROM "^(String.concat ", " aliases)
+          in
+          let from_sql = unfold_get_from_clause idb p_rt in
 
-            let unfold_get_where_clause (idb:symtable) (vt:vartab) (cnt:colnamtab) (eqt:eqtab) ineq neg_rt =
-                (*Transform a list of column names in eq relations [a,b,c] -> ['a=b';'a=c']*)
-                let var_const _ cols acc = match cols with
-                    | [] -> acc
-                    | hd::tl ->
-                        let eq_rels el = hd^(sql_of_operator "=")^el in
-                        (List.map eq_rels tl)::acc
-                in
-                let fvt = List.flatten (Hashtbl.fold var_const vt []) in
-                (*Transform the equalities in the eqtab to strings of the form
-                * "CName = value" *)
-                let eq_comp e1 e2 acc = if (is_free_var vt e1) then acc else ((sql_of_vterm vt eqt e1)^(sql_of_operator "=")^(sql_of_vterm vt eqt e2))::acc in
-                let feqt = Hashtbl.fold eq_comp eqt [] in
-                (*Transform the inequalities in the list for strings of the form
-                * "CName op value" *)
-                let ineq_tuples = List.map extract_ineq_tuple ineq in
-                let ineq_comp (op,e1,e2) acc =
-                    ((sql_of_vterm vt eqt e1)^" "^(sql_of_operator op)^" "^(sql_of_vterm vt eqt e2))::acc in
-                let fineq = List.fold_right ineq_comp ineq_tuples [] in
-                (*Transform the negated rterms into SQL*)
-                let unfold_sql_of_negated_rterms (idb:symtable) (vt:vartab) (cnt:colnamtab) (eqt:eqtab) neg_rt =
-                    let gen_neg_sql rt =
-                        (*get basic info of the rterm*)
-                        let key = symtkey_of_rterm rt in
-                        let pname = get_rterm_predname rt in
-                        let arity = get_arity rt in
-                        let alias = pname^"_a"^(string_of_int arity) in
-                        let vlst = get_rterm_varlist rt in
-                        if not (Hashtbl.mem cnt key) then raise (SemErr ("not found edb or idb predicate "^string_of_symtkey key)) else
-                        let cnames = Hashtbl.find cnt key in
+          let unfold_get_where_clause (idb : symtable) (vt : vartab) (cnt : colnamtab) (eqt : eqtab) ineq neg_rt =
+            (*Transform a list of column names in eq relations [a,b,c] -> ['a=b';'a=c']*)
+            let var_const _ cols acc =
+              match cols with
+              | [] ->
+                  acc
+              | hd :: tl ->
+                  let eq_rels el = hd ^ (sql_of_operator "=") ^ el in
+                  (List.map eq_rels tl) :: acc
+            in
+            let fvt = List.flatten (Hashtbl.fold var_const vt []) in
+            (*Transform the equalities in the eqtab to strings of the form
+             * "CName = value" *)
+            let eq_comp e1 e2 acc =
+              if (is_free_var vt e1) then
+                acc
+              else
+                ((sql_of_vterm vt eqt e1)^(sql_of_operator "=")^(sql_of_vterm vt eqt e2)) :: acc
+            in
+            let feqt = Hashtbl.fold eq_comp eqt [] in
+            (*Transform the inequalities in the list for strings of the form
+             * "CName op value" *)
+            let ineq_tuples = List.map extract_ineq_tuple ineq in
+            let ineq_comp (op,e1,e2) acc =
+              ((sql_of_vterm vt eqt e1)^" "^(sql_of_operator op)^" "^(sql_of_vterm vt eqt e2)) :: acc
+            in
+            let fineq = List.fold_right ineq_comp ineq_tuples [] in
+            (*Transform the negated rterms into SQL*)
+            let unfold_sql_of_negated_rterms (idb : symtable) (vt : vartab) (cnt : colnamtab) (eqt : eqtab) neg_rt =
+              let gen_neg_sql rt =
+                (*get basic info of the rterm*)
+                let key = symtkey_of_rterm rt in
+                let pname = get_rterm_predname rt in
+                let arity = get_arity rt in
+                let alias = pname^"_a"^(string_of_int arity) in
+                let vlst = get_rterm_varlist rt in
+                if not (Hashtbl.mem cnt key) then
+                  raise (SemErr ("not found edb or idb predicate "^string_of_symtkey key))
+                else
+                  let cnames = Hashtbl.find cnt key in
                         (*Get the from sql of the rterm*)
-                        let from_sql =
-                            if Hashtbl.mem idb key then
-                                "\nFROM "^ "("^non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity) ^")"^" AS " ^ alias
-                            else
-                                if str_contains pname "__tmp_" then "\nFROM "^pname^" AS "^alias
-                                else "\nFROM "^dbschema^"."^pname^" AS "^alias
-                        in
-                        (* print_endline "___neg sql___"; print_string from_sql; print_endline "___neg sql___"; *)
-                        (*Get the where sql of the rterm*)
-                        let build_const acc col var =
-                            let eq_to = alias^"."^col^(sql_of_operator "==") in
-                            match var with
-                            | NamedVar vn ->
-                                if Hashtbl.mem vt vn then
-                                    (eq_to^(List.hd (Hashtbl.find vt vn)))::acc
-                                else if Hashtbl.mem eqt (Var var) then
-                                    (eq_to^(sql_of_vterm vt eqt (Hashtbl.find eqt (Var var))))::acc
-                                else raise (SemErr (
-                                    "Program is unsafe, variable "^vn^
-                                    " in negated call to predicate "^
-                                    (string_of_symtkey key)^" does not appear in a positive "^
-                                    "goal or strict equation. Try anonimous variables."
-                                ))
-                            | NumberedVar _ -> let vn = string_of_var var in
-                            if Hashtbl.mem vt vn then
-                                (eq_to^(List.hd (Hashtbl.find vt vn)))::acc
-                            else if Hashtbl.mem eqt (Var var) then
-                                (eq_to^(sql_of_vterm vt eqt (Hashtbl.find eqt (Var var))))::acc
-                            else raise (SemErr (
-                                "Program is unsafe, variable "^vn^
-                                " in negated call to predicate "^
-                                (string_of_symtkey key)^" does not appear in a positive "^
-                                "goal or strict equation. Try anonimous variables."
-                            ))
-                            | ConstVar c -> (eq_to^(string_of_const c))::acc
-                            | AnonVar -> acc
-                            | _ -> invalid_arg "There is a non-expected type of var in a negated rterm"
-                        in
-                        let const_lst = List.fold_left2 build_const [] cnames vlst in
-                        let where_sql =
-                            if const_lst = [] then ""
-                            else "\nWHERE "^(String.concat " AND " const_lst)
-                        in
-                        (**Return the final string*)
-                        "NOT EXISTS ( SELECT * "^from_sql^" "^where_sql^" )"
-                    in
-                    List.map gen_neg_sql neg_rt in
-                let fnrt = unfold_sql_of_negated_rterms idb vt cnt eqt neg_rt in
-                (*merge all constraints*)
-                let constraints = fvt@feqt@fineq@fnrt in
-                match constraints with
-                    | [] -> ""
-                    | _ -> "\nWHERE "^(String.concat " AND " constraints) in
-            let where_sql = unfold_get_where_clause idb vt cnt eqtb ineqs n_rt in
-            let agg_sql = get_aggregation_sql vt cnt head agg_eqs agg_ineqs in
-            String.concat " " [select_sql;from_sql;where_sql;agg_sql] in
-        let sql_list = List.map (unfold_sql_of_rule idb cnt) rules in
-        String.concat (if (get_symtkey_arity goal) = 0 then " UNION ALL " else " UNION ") sql_list in
+                  let from_sql =
+                    if Hashtbl.mem idb key then
+                      "\nFROM "^ "("^non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity) ^")"^" AS " ^ alias
+                    else
+                      if str_contains pname "__tmp_" then "\nFROM "^pname^" AS "^alias
+                      else "\nFROM "^dbschema^"."^pname^" AS "^alias
+                  in
+                  (* print_endline "___neg sql___"; print_string from_sql; print_endline "___neg sql___"; *)
+                  (*Get the where sql of the rterm*)
+                  let build_const acc col var =
+                    let eq_to = alias^"."^col^(sql_of_operator "==") in
+                    match var with
+                    | NamedVar vn ->
+                        if Hashtbl.mem vt vn then
+                          (eq_to^(List.hd (Hashtbl.find vt vn)))::acc
+                        else if Hashtbl.mem eqt (Var var) then
+                          (eq_to^(sql_of_vterm vt eqt (Hashtbl.find eqt (Var var)))) :: acc
+                        else raise (SemErr (
+                          "Program is unsafe, variable "^vn^
+                            " in negated call to predicate "^
+                            (string_of_symtkey key)^" does not appear in a positive "^
+                            "goal or strict equation. Try anonimous variables."
+                        ))
+                    | NumberedVar _ ->
+                        let vn = string_of_var var in
+                        if Hashtbl.mem vt vn then
+                          (eq_to^(List.hd (Hashtbl.find vt vn))) :: acc
+                        else if Hashtbl.mem eqt (Var var) then
+                          (eq_to^(sql_of_vterm vt eqt (Hashtbl.find eqt (Var var)))) :: acc
+                        else
+                          raise (SemErr (
+                            "Program is unsafe, variable "^vn^
+                            " in negated call to predicate "^
+                            (string_of_symtkey key)^" does not appear in a positive "^
+                            "goal or strict equation. Try anonimous variables."
+                          ))
+                    | ConstVar c ->
+                        (eq_to^(string_of_const c)) :: acc
+                    | AnonVar ->
+                        acc
+                    | _ ->
+                        invalid_arg "There is a non-expected type of var in a negated rterm"
+                  in
+                  let const_lst = List.fold_left2 build_const [] cnames vlst in
+                  let where_sql =
+                    if const_lst = [] then
+                      ""
+                    else
+                      "\nWHERE "^(String.concat " AND " const_lst)
+                  in
+                  (**Return the final string*)
+                  "NOT EXISTS ( SELECT * "^from_sql^" "^where_sql^" )"
+              in
+              List.map gen_neg_sql neg_rt in
+            let fnrt = unfold_sql_of_negated_rterms idb vt cnt eqt neg_rt in
+            (*merge all constraints*)
+            let constraints = fvt@feqt@fineq@fnrt in
+            match constraints with
+            | [] -> ""
+            | _ -> "\nWHERE "^(String.concat " AND " constraints)
+          in
+          let where_sql = unfold_get_where_clause idb vt cnt eqtb ineqs n_rt in
+          let agg_sql = get_aggregation_sql vt cnt head agg_eqs agg_ineqs in
+          String.concat " " [select_sql; from_sql; where_sql; agg_sql]
+      in
+      let sql_list = List.map (unfold_sql_of_rule idb cnt) rules in
+      String.concat (if (get_symtkey_arity goal) = 0 then " UNION ALL " else " UNION ") sql_list in
     let sql = unfold_sql_of_rule_lst idb cnt rule_lst in
     sql
 

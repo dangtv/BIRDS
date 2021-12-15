@@ -42,7 +42,7 @@ let spec_lex_error lexbuf =
     are rule-name & rule-arity tuples and the values are lists of
     rules' AST specifications.
 *)
-type symtkey = (string*int) (* string is predicate name, int is the arity of literal*)
+type symtkey = string * int (* string is predicate name, int is the arity of literal*)
 type symtable = (symtkey, (rterm * term list) list) Hashtbl.t (* each row of a symtable is all the rules which has the same literal in head*)
 
 (* let hash_max_size = ref 500 *)
