@@ -1,13 +1,13 @@
 (*******************************************************)
-(**  
+(**
 AST-to-Racket functions
  *)
 (********************************************************)
-(* 
+(*
 @author: Vandang Tran
 *)
 
-open Expr2 
+open Expr
 open Utils
 open Rule_preprocess
 open Stratification
@@ -23,14 +23,14 @@ let check_agg_function fn =
     ))
 
 (** Given an arithmetic expression, return it in racket, this function is similar to string_of_vterm. *)
-let racket_of_vterm (vt:vartab) (eqt:eqtab) (expr:vterm)  = 
-        let open_paren prec op_prec = 
-            if prec > op_prec then  "(" else "" in 
-        let close_paren prec op_prec = 
+let racket_of_vterm (vt:vartab) (eqt:eqtab) (expr:vterm)  =
+        let open_paren prec op_prec =
+            if prec > op_prec then  "(" else "" in
+        let close_paren prec op_prec =
             if prec > op_prec then  ")" else "" in
-        let rec racket_of prec a_expr = match a_expr with 
+        let rec racket_of prec a_expr = match a_expr with
             | Const c -> string_of_const c
-            | Var variable -> 
+            | Var variable ->
                 (*If the variable appears in a positive rterm, the value
                 * is the name of the respective rterm's table column*)
                 if Hashtbl.mem vt (string_of_var variable)
@@ -38,7 +38,7 @@ let racket_of_vterm (vt:vartab) (eqt:eqtab) (expr:vterm)  =
                 (*If the variable does not appear in a positive rterm, but
                 * it does in an equality value, then the value is the eq's evaluation*)
                 else if Hashtbl.mem eqt (Var variable)
-                    then 
+                    then
                     let ve = (Hashtbl.find eqt (Var variable)) in racket_of prec ve
                 (*Else, the query is unsafe or inclomplete*)
                 else raise (SemErr (
@@ -79,14 +79,14 @@ let var_to_col (vt:vartab) (eqt:eqtab) key (variable:var) =
 
 (** Given the head of the rule, the vartab, and te eqtab, returns the code that must be in the select clause. All columns are aliased as col0, col1, ... *)
 let get_select_clause (vt:vartab) (eqt:eqtab) rterm =
-    let vlst = get_rterm_varlist rterm in 
+    let vlst = get_rterm_varlist rterm in
     let key = symtkey_of_rterm rterm in
     if vlst = [] then
         (* select no colum, two choices: raise error or continue with select no column clause*)
         (* raise (SemErr
             ("Predicate "^(get_rterm_predname rterm)^
             " has arity 0, which is not allowed")) *)
-        "map (lambda (tuplelst) '())" 
+        "map (lambda (tuplelst) '())"
     else
         (*Transform variables to column names. Treat namedVars and
         * aggregates differently*)
@@ -153,14 +153,14 @@ let get_aggregation_racket (vt:vartab) (cnt:colnamtab) head agg_eqs agg_ineqs =
             "Predicate "^(string_of_symtkey key)^" contains comparisons of "^
             "aggregates that are not defined in its head"
         )) in
-    let comp_const (op,e1,e2) = match (op,e1,e2) with 
+    let comp_const (op,e1,e2) = match (op,e1,e2) with
         (* currently only support constraint for aggreation in the form  agg_fun(X) comparason_op const*)
         | (_, Var (AggVar (fn,vlst)), Const c) ->
         (agg_var_col (AggVar (fn,vlst)))^" "^op^" "^(string_of_const c)
         | _ -> raise (SemErr (
             "Predicate "^(string_of_symtkey key)^" contains comparisons of "^
             "aggregates that are not in the form of agg_fun(X) op const"
-        )) in 
+        )) in
     let comp_racket = List.map comp_const comparisons in
     let having_racket = if comp_racket = [] then "" else
         "HAVING "^(String.concat " AND " comp_racket) in
@@ -207,8 +207,8 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
                 let (aliases,_) = List.fold_right set_alias rterms ([],len-1) in
                 "(cartesian-map list "^(String.concat " " aliases)^")" in
             let from_racket = unfold_get_from_clause idb p_rt in
-            
-            let unfold_get_where_clause (idb:symtable) (vt:vartab) (cnt:colnamtab) (eqt:eqtab) ineq neg_rt = 
+
+            let unfold_get_where_clause (idb:symtable) (vt:vartab) (cnt:colnamtab) (eqt:eqtab) ineq neg_rt =
                 (*Transform a list of column names in eq relations [a,b,c] -> ['a=b';'a=c']*)
                 let var_const _ cols acc = match cols with
                     | [] -> acc
@@ -236,13 +236,13 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
                         (*get basic info of the rterm*)
                         let key = symtkey_of_rterm rt in
                         let pname = get_rterm_predname rt in
-                        let arity = get_arity rt in 
+                        let arity = get_arity rt in
                         let alias = pname^"_a"^(string_of_int arity) in
                         let vlst = get_rterm_varlist rt in
                         if not (Hashtbl.mem cnt key) then raise (SemErr ("not found edb or idb predicate "^string_of_symtkey key)) else
                         (*Get the from racket of the rterm*)
                         let from_racket =
-                            if Hashtbl.mem idb key then 
+                            if Hashtbl.mem idb key then
                                     "("^ non_rec_unfold_racket_of_symtkey idb cnt (pname,arity) ^")"
                             else
                                 pname
@@ -252,7 +252,7 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
                         let build_const acc col var =
                             let eq_to = "(equal? (list-ref negtuple "^col^") " in
                             match var with
-                            | NamedVar vn -> 
+                            | NamedVar vn ->
                                 if Hashtbl.mem vt vn then
                                     (eq_to^(List.hd (Hashtbl.find vt vn))^")")::acc
                                 else if Hashtbl.mem eqt (Var var) then
@@ -262,7 +262,7 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
                                     " in negated call to predicate "^
                                     (string_of_symtkey key)^" does not appear in a positive "^
                                     "goal or strict equation. Try anonimous variables."
-                                ))  
+                                ))
                             | NumberedVar _ -> let vn = string_of_var var in
                             if Hashtbl.mem vt vn then
                                 (eq_to^(List.hd (Hashtbl.find vt vn))^")")::acc
@@ -279,7 +279,7 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
                             | _ -> invalid_arg "There is a non-expected type of var in a negated rterm"
                         in
                         let rec gen_nums ind n =
-                            if ind<n then ((string_of_int ind))::(gen_nums (ind+1) n) 
+                            if ind<n then ((string_of_int ind))::(gen_nums (ind+1) n)
                             else [] in
                         let cols = gen_nums 0 arity in
                         let const_lst = List.fold_left2 build_const [] cols vlst in
@@ -288,7 +288,7 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
                             | [] -> ""
                             | _ -> "filter (lambda (negtuple) "^(
                                 if (List.length const_lst = 1) then String.concat "" const_lst
-                                else 
+                                else
                                 List.fold_right (fun a b -> "(and " ^ a ^" "^b^")") const_lst "true"
                                 )^")" in
                         (**Return the final string*)
@@ -305,7 +305,7 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
                     | [] -> ""
                     | _ -> "filter (lambda (tuplelst) "^(
                         if (List.length constraints = 1) then String.concat "" constraints
-                        else 
+                        else
                         List.fold_right (fun a b -> "(and " ^ a ^" "^b^")") constraints "true"
                         )^")" in
             let where_racket = unfold_get_where_clause idb vt cnt eqtb ineqs n_rt in
@@ -324,17 +324,17 @@ let rec non_rec_unfold_racket_of_symtkey (idb:symtable) (cnt:colnamtab) (goal:sy
 let non_rec_unfold_racket_of_query (idb:symtable) (cnt:colnamtab) (query:rterm) =
     let qrule = rule_of_query query idb in
     (* qrule is in the form of _dummy_(x,y) :- query_predicate(x,y), x=1 *)
-    let local_idb = Hashtbl.copy idb in 
+    let local_idb = Hashtbl.copy idb in
     (* because insert a temporary dummy qrule, we should work with a local variable of idb *)
     symt_insert local_idb qrule;
     (* get column names (cols_by_var) for the view by using the dummy predicate which is head of qrule *)
     let rec gen_nums ind n =
-        if ind<n then ((string_of_int ind))::(gen_nums (ind+1) n) 
+        if ind<n then ((string_of_int ind))::(gen_nums (ind+1) n)
         else [] in
     let cols = gen_nums 0 (get_arity (rule_head qrule)) in
-    if not (Hashtbl.mem cnt (symtkey_of_rterm query)) then raise (SemErr "The query does not match any idb relation") 
+    if not (Hashtbl.mem cnt (symtkey_of_rterm query)) then raise (SemErr "The query does not match any idb relation")
     else
-    let sel_lst = List.map (fun x -> "(list-ref tuplelst "^x^")") cols in 
+    let sel_lst = List.map (fun x -> "(list-ref tuplelst "^x^")") cols in
     "map (lambda (tuplelst) (list "^(String.concat " " sel_lst)^")) " ^
     (* by inserting the dummy rule to idb, we now find racket for this dummy predicate *)
     "("^non_rec_unfold_racket_of_symtkey local_idb cnt (symtkey_of_rterm (rule_head qrule))^")"
@@ -344,7 +344,7 @@ let unfold_query_racket_stt (debug:bool) (edb:symtable) prog =
     let query_rt = get_query prog in
     (*Extract and pre-process the IDB from the program*)
     let idb = extract_idb prog in
-    preprocess_rules idb; 
+    preprocess_rules idb;
     (* print_symtable idb; *)
     (*Build the colnamtab for referencing the table's columns*)
     let cnt = build_colnamtab edb idb in
@@ -362,7 +362,7 @@ let unfold_program_query (debug:bool) prog =
 (** Take a view update datalog program (containing both get and put directions) and generate racket query of constraints involving view. *)
 let view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) (optimize:bool) prog =
     let clean_prog = keep_only_constraint_of_view debug prog in
-    if inc then     
+    if inc then
         let inc_prog = incrementalize_by_view debug clean_prog in
         let view_sch = get_view inc_prog in
         let view_rt = get_schema_rterm view_sch in
@@ -497,31 +497,31 @@ let non_view_constraint_racket_of_stt (dbschema:string) (debug:bool) (inc:bool) 
         else "SELECT WHERE false"
 
 
-let stype_to_racket_type st = match st with 
+let stype_to_racket_type st = match st with
     | Sint -> "integer?"
     | Sreal -> "real?"
     | Sbool -> "boolean?"
     | Sstring -> "integer?"
 
 (* transform source relations in program into symbolic tables in rosette *)
-let gen_symbolic_source size vocsize prog = 
+let gen_symbolic_source size vocsize prog =
     (* currently just set all the types are int (ℤ) *)
-    let p_el sym_table_lst (name, lst) = 
-        let tup num = 
+    let p_el sym_table_lst (name, lst) =
+        let tup num =
         (( String.concat "\n" ( List.map (fun (col,typ) -> "(define-symbolic "^name^"$"^col^"$"^ string_of_int num ^" " ^ stype_to_racket_type typ^")" ^(if (typ = Sstring) then "\n (assert (and (< -1  "^name^"$"^col^"$"^ string_of_int num ^") (< " ^name^"$"^col^"$"^ string_of_int num ^ " "^ string_of_int vocsize^")))" else "") ) lst) )
-        ^ "\n\n(define "^name^"_tuple_"^ string_of_int num ^ " (list "^ String.concat " " ( List.map (fun (col,typ) -> name^"$"^col^"$"^ string_of_int num) lst)^")" ^")") in 
+        ^ "\n\n(define "^name^"_tuple_"^ string_of_int num ^ " (list "^ String.concat " " ( List.map (fun (col,typ) -> name^"$"^col^"$"^ string_of_int num) lst)^")" ^")") in
         let rec sym_tuples sz = if sz <= 0 then "" else sym_tuples (sz-1) ^ "\n\n" ^ (tup sz) in
         let rec sym_table sz = if sz <= 0 then "" else sym_table (sz-1) ^ " " ^name^"_tuple_" ^string_of_int sz in
         ((sym_tuples size) ^ "\n\n(define "^name^ " (list " ^ sym_table size ^ "))") ::sym_table_lst in
     List.fold_left p_el [] prog.sources
 
 (* transform source relations in program into symbolic tables in rosette *)
-let gen_symbolic_source_view size vocsize prog = 
+let gen_symbolic_source_view size vocsize prog =
     (* currently just set all the types are int (ℤ) *)
     let p_el sym_table_lst (name, lst) =
-        let tup num = 
+        let tup num =
         (( String.concat "\n" ( List.map (fun (col,typ) -> "(define-symbolic "^name^"$"^col^"$"^ string_of_int num ^" " ^ stype_to_racket_type typ^")" ^(if (typ = Sstring) then "\n (assert (and (< -1  "^name^"$"^col^"$"^ string_of_int num ^") (< " ^name^"$"^col^"$"^ string_of_int num ^ " "^ string_of_int vocsize^")))" else "") ) lst) )
-        ^ "\n\n(define "^name^"_tuple_"^ string_of_int num ^ " (list "^ String.concat " " ( List.map (fun (col,typ) -> name^"$"^col^"$"^ string_of_int num) lst)^")" ^")") in 
+        ^ "\n\n(define "^name^"_tuple_"^ string_of_int num ^ " (list "^ String.concat " " ( List.map (fun (col,typ) -> name^"$"^col^"$"^ string_of_int num) lst)^")" ^")") in
         let rec sym_tuples sz = if sz <= 0 then "" else sym_tuples (sz-1) ^ "\n\n" ^ (tup sz) in
         let rec sym_table sz = if sz <= 0 then "" else sym_table (sz-1) ^ " " ^name^"_tuple_" ^string_of_int sz in
         ((sym_tuples size) ^ "\n\n(define "^name^ " (list " ^ sym_table size ^ "))") ::sym_table_lst in
@@ -529,32 +529,32 @@ let gen_symbolic_source_view size vocsize prog =
 
 (* take a view update datalog program (containing both get and put directions) and generate a rosette constraint of getput property for its view update strategy *)
 let ros_getput_of_stt (debug:bool) prog =
-    
+
     let delta_rt_lst = get_delta_rterms prog in
     (* remove overlap of delta and the source *)
     let dummy_delta_rules = List.map (fun delta -> let dummy = rename_rterm "__dummy__" delta in
-                match delta with 
-                    Deltadelete (p,vars) -> (dummy, [Rel (Deltadelete (p,vars)); Rel(Pred(p,vars))]) 
-                    | Deltainsert (p,vars) -> (dummy, [Rel (Deltainsert (p,vars)); Not(Pred(p,vars))])  
+                match delta with
+                    Deltadelete (p,vars) -> (dummy, [Rel (Deltadelete (p,vars)); Rel(Pred(p,vars))])
+                    | Deltainsert (p,vars) -> (dummy, [Rel (Deltainsert (p,vars)); Not(Pred(p,vars))])
                     | _ -> invalid_arg "Function ros_getput_of_stt called with not a delta predicate")  delta_rt_lst in
     let dummy_delta_rt_lst =  List.map (rename_rterm "__dummy__")  delta_rt_lst in
     (* get the emptiness FO sentence of a relation *)
-    let getput_prog = Expr2.add_rules dummy_delta_rules prog in
+    let getput_prog = Expr.add_rules dummy_delta_rules prog in
     let edb = extract_edb getput_prog in
     let idb = extract_idb getput_prog in
     preprocess_rules idb;
     if debug then (
-        print_endline "_____preprocessed datalog rules_______"; 
-        print_symtable idb; 
+        print_endline "_____preprocessed datalog rules_______";
+        print_symtable idb;
         print_endline "______________\n";
     ) else ();
     let cnt = build_colnamtab edb idb in
-    let delta_definition rel = 
+    let delta_definition rel =
          let delta_ros_code = non_rec_unfold_racket_of_query idb cnt rel in
          "(define "^ get_rterm_predname rel ^ " (" ^delta_ros_code^ "))" in
-    let delta_definition_lst = List.map delta_definition dummy_delta_rt_lst in 
+    let delta_definition_lst = List.map delta_definition dummy_delta_rt_lst in
     let emptiness = "(define emptiness (append "^String.concat " " (List.map get_rterm_predname dummy_delta_rt_lst) ^"))" in
-    let ros_constraint = "(solve (assert (< 0 (length emptiness))))" in 
+    let ros_constraint = "(solve (assert (< 0 (length emptiness))))" in
      (String.concat "\n\n" delta_definition_lst) ^ "\n\n"^ emptiness ^ "\n\n" ^ ros_constraint
 
 
@@ -570,22 +570,22 @@ let ros_disdelta_of_stt (debug:bool) prog =
     let emptiness = Pred ("__emptiness",[]) in
     let delta_rt_lst = get_delta_rterms prog in
     (* get each pair of delta relations from the delta relation lst delta_rt_lst *)
-    let delta_pair_lst = 
-        let pair_of_delta_insert lst ins_rel = 
-            let del_rels = List.filter (is_delta_pair ins_rel) delta_rt_lst in 
-            if (List.length del_rels = 0) then lst else (ins_rel, (List.hd del_rels))::lst in 
-        List.fold_left pair_of_delta_insert [] delta_rt_lst in 
+    let delta_pair_lst =
+        let pair_of_delta_insert lst ins_rel =
+            let del_rels = List.filter (is_delta_pair ins_rel) delta_rt_lst in
+            if (List.length del_rels = 0) then lst else (ins_rel, (List.hd del_rels))::lst in
+        List.fold_left pair_of_delta_insert [] delta_rt_lst in
     List.iter (fun (r1,r2) -> symt_insert idb (emptiness,[ Rel r1; Rel r2])) delta_pair_lst;
     preprocess_rules idb;
     if debug then (
-        print_endline "_____preprocessed datalog rules_______"; 
-        print_symtable idb; 
+        print_endline "_____preprocessed datalog rules_______";
+        print_symtable idb;
         print_endline "______________\n";
     ) else ();
     let cnt = build_colnamtab edb idb in
     let disdelta_ros = non_rec_unfold_racket_of_query idb cnt emptiness in
     let disdelta_emptiness = "(define disdelta_emptiness ("^disdelta_ros^"))" in
-    let ros_constraint = "(solve (assert (< 0 (length disdelta_emptiness))))" in 
+    let ros_constraint = "(solve (assert (< 0 (length disdelta_emptiness))))" in
     disdelta_emptiness ^ "\n\n" ^ ros_constraint
 
 
@@ -605,14 +605,14 @@ let ros_putget_of_stt (debug:bool) prog =
     symt_insert idb (emptiness,[ Rel view_rt; Not new_view_rt]);
     preprocess_rules idb;
     if debug then (
-        print_endline "_____preprocessed datalog rules_______"; 
-        print_symtable idb; 
+        print_endline "_____preprocessed datalog rules_______";
+        print_symtable idb;
         print_endline "______________\n";
     ) else ();
     let cnt = build_colnamtab edb idb in
     let putget_ros = non_rec_unfold_racket_of_query idb cnt emptiness in
     let putget_emptiness = "(define putget_emptiness ("^putget_ros^"))" in
-    let ros_constraint = "(solve (assert (< 0 (length putget_emptiness))))" in 
+    let ros_constraint = "(solve (assert (< 0 (length putget_emptiness))))" in
     putget_emptiness ^ "\n\n" ^ ros_constraint
 
 
@@ -620,7 +620,7 @@ let ros_putget_of_stt (debug:bool) prog =
 let ros_constraint_sentence_of_stt (debug:bool) prog =
     if debug then (print_endline "==> generating racket code for all constraints";) else ();
     let edb = extract_edb prog in
-    let idb = extract_idb prog in 
+    let idb = extract_idb prog in
     if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
         (* need to change the view (in query predicate) to a edb relation *)
         let view_rt = get_schema_rterm (get_view prog) in
@@ -631,14 +631,14 @@ let ros_constraint_sentence_of_stt (debug:bool) prog =
             symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
         if debug then (
-        print_endline "_____preprocessed datalog rules_______"; 
-        print_symtable idb; 
+        print_endline "_____preprocessed datalog rules_______";
+        print_symtable idb;
         print_endline "______________\n";
     ) else ();
         let cnt = build_colnamtab edb idb in
-        let constr_ros = non_rec_unfold_racket_of_query idb cnt get_empty_pred in 
+        let constr_ros = non_rec_unfold_racket_of_query idb cnt get_empty_pred in
         let constr_emptiness = "(define constr_emptiness ("^constr_ros^"))" in
-        let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in 
+        let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in
         constr_emptiness ^ "\n\n" ^ ros_constraint
     else ""
 
@@ -658,14 +658,14 @@ let ros_non_view_constraint_sentence_of_stt (debug:bool) prog =
         symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
         if debug then (
-        print_endline "_____preprocessed datalog rules_______"; 
-        print_symtable idb; 
+        print_endline "_____preprocessed datalog rules_______";
+        print_symtable idb;
         print_endline "______________\n";
     ) else ();
         let cnt = build_colnamtab edb idb in
-        let constr_ros = non_rec_unfold_racket_of_query idb cnt get_empty_pred in 
+        let constr_ros = non_rec_unfold_racket_of_query idb cnt get_empty_pred in
         let constr_emptiness = "(define constr_emptiness ("^constr_ros^"))" in
-        let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in 
+        let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in
         constr_emptiness ^ "\n\n" ^ ros_constraint
     else ""
 
@@ -685,19 +685,19 @@ let ros_view_constraint_sentence_of_stt (debug:bool) prog =
         symt_remove idb (symtkey_of_rterm view_rt);
         preprocess_rules idb;
         if debug then (
-        print_endline "_____preprocessed datalog rules_______"; 
-        print_symtable idb; 
+        print_endline "_____preprocessed datalog rules_______";
+        print_symtable idb;
         print_endline "______________\n";
     ) else ();
         let cnt = build_colnamtab edb idb in
-        let constr_ros = non_rec_unfold_racket_of_query idb cnt get_empty_pred in 
+        let constr_ros = non_rec_unfold_racket_of_query idb cnt get_empty_pred in
         let constr_emptiness = "(define constr_emptiness ("^constr_ros^"))" in
-        let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in 
+        let ros_constraint = "(assert (= 0 (length constr_emptiness)))" in
         constr_emptiness ^ "\n\n" ^ ros_constraint
     else ""
 
 
-let predefined_ros = 
+let predefined_ros =
 "#lang rosette/safe
 
 (define curry
@@ -742,18 +742,18 @@ type celltable = (cellkey, string) Hashtbl.t (* value of cells*)
 let parse_ros_models log str =
     if log then print_endline ">>> parsing model from rosette";
     let stream = (Scanf.Scanning.from_string (String.sub str 6 ((String.length str) - 6))) in
-    let rec do_parse acc =  
-        match (Scanf.bscanf stream " [%s@$%s@$%d %s@] " (fun rel col id value -> (rel,col,id,value) :: acc)) 
-        with 
-            | xs -> do_parse xs 
-            | exception Scanf.Scan_failure _ -> acc 
+    let rec do_parse acc =
+        match (Scanf.bscanf stream " [%s@$%s@$%d %s@] " (fun rel col id value -> (rel,col,id,value) :: acc))
+        with
+            | xs -> do_parse xs
+            | exception Scanf.Scan_failure _ -> acc
             | exception End_of_file -> acc in
-        let raw_data = List.rev (do_parse []) in 
+        let raw_data = List.rev (do_parse []) in
         let data:celltable = Hashtbl.create (List.length raw_data) in
         List.iter (fun (rel,col,id,value) -> if log then print_endline ("("^rel^", "^col^", "^string_of_int id^") = "^ value); Hashtbl.add data (rel,col,id) value) raw_data;
         data
 
-let get_default_val_of_type t = match t with 
+let get_default_val_of_type t = match t with
         (* | Sint -> "ℤ" *)
     | Sint -> "0"
     (* | Sreal -> "ℝ" *)
@@ -763,30 +763,30 @@ let get_default_val_of_type t = match t with
     | Sstring -> "'none'"
 
 
-let const_of_string str = 
+let const_of_string str =
     try  (Int (int_of_string str)) with
     (* try test () with *)
-    | Failure e -> 
+    | Failure e ->
         try  (Real (float_of_string str)) with
         (* try test () with *)
-        | Failure e -> 
+        | Failure e ->
             try  (Bool (bool_of_string str)) with
             (* try test () with *)
-            | Failure e | Invalid_argument e -> match str with 
-                "null" -> Null 
+            | Failure e | Invalid_argument e -> match str with
+                "null" -> Null
                 | "#t" -> (Bool true)
                 | "#f" -> (Bool false)
                 | _ -> String str
 
 
-let instantiate_relation size string_adom (data:celltable) rel_chema = 
+let instantiate_relation size string_adom (data:celltable) rel_chema =
     let col_types = get_schema_col_typs rel_chema in
     let rel_name = get_schema_name rel_chema in
     let rec tuple_lst id = if (id<=0) then []
         else try
         ( (Pred (rel_name, List.map (fun (col,typ) -> ConstVar (const_of_string (
             if Hashtbl.mem data (rel_name, col, id) then
-                let value = Hashtbl.find data (rel_name, col, id) in 
+                let value = Hashtbl.find data (rel_name, col, id) in
                 if typ = Sstring then (
                     let int_to_string i = List.nth string_adom i in
                     try  (int_to_string (int_of_string value)) with
@@ -796,7 +796,7 @@ let instantiate_relation size string_adom (data:celltable) rel_chema =
                 else value
             else (get_default_val_of_type typ) (* given a default value for it *)
             ))) col_types)) )::(tuple_lst (id-1))
-        with Not_found -> 
-            invalid_arg ("Function instantiate_relation called with invalid data, tuple "^string_of_int id ^" of relation " ^ rel_name^" not found") in 
+        with Not_found ->
+            invalid_arg ("Function instantiate_relation called with invalid data, tuple "^string_of_int id ^" of relation " ^ rel_name^" not found") in
     (* from bag to set *)
     Lib.setify (List.rev (tuple_lst size))

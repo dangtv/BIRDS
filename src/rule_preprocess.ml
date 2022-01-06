@@ -1,9 +1,9 @@
-(** 
+(**
 Functions for preprocesing of IDB rules before
 SQL generation.
  *)
 
-open Expr2
+open Expr
 open Lib
 open Utils
 
@@ -49,7 +49,7 @@ let is_rec_rule rule =
   - A single rule cannot make more than one recursive call.
   - There is at most one recursive rule.
   - The predicate has a base-case.
- 
+
   If the conditions are satisfied and there is a recursive rule,
   then this recursive rule is placed at the end of the list.
  *)
@@ -89,31 +89,31 @@ let check_rec_rule rule_lst =
  *)
 let extract_rterm_constants ?(pos = 0) rt = match rt with
     | Pred (x, vl) ->
-        let extract var (v_lst,e_lst,i) = match var with 
-            | ConstVar const -> 
+        let extract var (v_lst,e_lst,i) = match var with
+            | ConstVar const ->
                 let nvar = NumberedVar i in
                 let neq = Equat (Equation("=", Var nvar,Const const)) in
-                (nvar::v_lst, neq::e_lst,i+1) 
+                (nvar::v_lst, neq::e_lst,i+1)
             | _ -> (var::v_lst, e_lst, i) in
-        let (vars,eqs,_) = List.fold_right extract vl ([],[],pos) in 
+        let (vars,eqs,_) = List.fold_right extract vl ([],[],pos) in
         ( Pred (x,vars), eqs )
     | Deltainsert (x, vl) ->
-        let extract var (v_lst,e_lst,i) = match var with 
-            | ConstVar const -> 
+        let extract var (v_lst,e_lst,i) = match var with
+            | ConstVar const ->
                 let nvar = NumberedVar i in
                 let neq = Equat (Equation("=", Var nvar,Const const)) in
-                (nvar::v_lst, neq::e_lst,i+1) 
+                (nvar::v_lst, neq::e_lst,i+1)
             | _ -> (var::v_lst, e_lst, i) in
-        let (vars,eqs,_) = List.fold_right extract vl ([],[],pos) in 
+        let (vars,eqs,_) = List.fold_right extract vl ([],[],pos) in
         ( Deltainsert (x,vars), eqs )
     | Deltadelete (x, vl) ->
-        let extract var (v_lst,e_lst,i) = match var with 
-            | ConstVar const -> 
+        let extract var (v_lst,e_lst,i) = match var with
+            | ConstVar const ->
                 let nvar = NumberedVar i in
                 let neq = Equat (Equation("=", Var nvar,Const const)) in
-                (nvar::v_lst, neq::e_lst,i+1) 
+                (nvar::v_lst, neq::e_lst,i+1)
             | _ -> (var::v_lst, e_lst, i) in
-        let (vars,eqs,_) = List.fold_right extract vl ([],[],pos) in 
+        let (vars,eqs,_) = List.fold_right extract vl ([],[],pos) in
         ( Deltadelete (x,vars), eqs )
 
 (** Given a rule, extracts all constants in its head and body rterms
@@ -121,73 +121,73 @@ let extract_rterm_constants ?(pos = 0) rt = match rt with
   E.g. "Q(a,b,1) :- P(1,a,c) and R(b,3)." will be transformed to
   "Q(a,b,_0) :- P(_1,a,c) and R(b,_2) and _0 = 1 and _1 = 1 and _2 = 3."
  *)
-let extract_rule_constants(h, b) = 
+let extract_rule_constants(h, b) =
         let (h2, h2_e) = extract_rterm_constants h in
         let extract t (t_lst,e_lst,i) = match t with
-            | Rel rt -> 
+            | Rel rt ->
                 let (rt2,rt2_e) = extract_rterm_constants ~pos:i rt in
                 ((Rel rt2)::t_lst, rt2_e@e_lst, i+(List.length rt2_e) )
-            | Not rt -> 
+            | Not rt ->
                 let (rt2,rt2_e) = extract_rterm_constants ~pos:i rt in
                 ((Not rt2)::t_lst, rt2_e@e_lst, i+(List.length rt2_e) )
             | _ -> (t::t_lst, e_lst, i) in
         let (b2,b2_e,_) = List.fold_right extract b ([],[],(List.length h2_e)) in
         (h2,b2@h2_e@b2_e)
 
-(* let seperate_rules exp = match exp with 
+(* let seperate_rules exp = match exp with
     Expr.Prog lst -> List.partition (fun stt -> (match stt with Expr.Rule _ -> true | _ -> false) ) lst *)
 
 (** Given a rule, replace AnonVar to a NamedVar*)
 let anonvar2namedvar (h, b) =
-        let a2n_varlist lst ind = 
+        let a2n_varlist lst ind =
             List.fold_right (fun v (l,i)  -> if (is_anon v) then ((NamedVar ("DUMMY__ANON_"^string_of_int i))::l, i+1) else (v::l), i ) lst ([], ind) in
-        let a2n_term t (lst, ind)  = match t with 
-            | Rel rt -> (match rt with 
-                        | Pred (name, varlst) -> 
-                            let nvars, newind = a2n_varlist varlst ind in 
+        let a2n_term t (lst, ind)  = match t with
+            | Rel rt -> (match rt with
+                        | Pred (name, varlst) ->
+                            let nvars, newind = a2n_varlist varlst ind in
                             (Rel (Pred (name, nvars))::lst, newind)
-                        | Deltainsert (name, varlst) -> 
-                            let nvars, newind = a2n_varlist varlst ind in 
+                        | Deltainsert (name, varlst) ->
+                            let nvars, newind = a2n_varlist varlst ind in
                             (Rel (Deltainsert (name, nvars))::lst, newind)
-                        | Deltadelete (name, varlst) -> 
-                            let nvars, newind = a2n_varlist varlst ind in 
+                        | Deltadelete (name, varlst) ->
+                            let nvars, newind = a2n_varlist varlst ind in
                             (Rel (Deltadelete (name, nvars))::lst, newind)
                         )
             | Not rt -> (t::lst, ind)
             (* AnonVar in a negated predicate can not be converted to NamedVar because it make program unsafe *)
             | Equat _ -> (t::lst, ind)
             | Noneq _ -> (t::lst, ind) in
-        let newb,_ = List.fold_right a2n_term b ([], 0) in 
+        let newb,_ = List.fold_right a2n_term b ([], 0) in
         (* print_endline (string_of_stt (Rule(h,newb)));  *)
         (h,newb)
 
 (** Given a rule, replace string to a int defined by a mapping*)
 let string2int mapping (h, b) =
-        let s2i_rterm rt = match rt with 
-            | Pred (name, varlst) -> 
-                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+        let s2i_rterm rt = match rt with
+            | Pred (name, varlst) ->
+                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in
                 (Pred (name, new_varlst))
-            | Deltainsert (name, varlst) -> 
-                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+            | Deltainsert (name, varlst) ->
+                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in
                 (Deltainsert (name, new_varlst))
-            | Deltadelete (name, varlst) -> 
-                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in 
+            | Deltadelete (name, varlst) ->
+                let new_varlst = List.map (function | ConstVar (String s) -> ConstVar (Int (mapping s)) | x -> x ) varlst in
                 (Deltadelete (name, new_varlst)) in
-        
-        let s2i_eterm t = match t with 
+
+        let s2i_eterm t = match t with
             | Equation (op, Const (String s1), Const (String s2)) -> Equation (op, Const (Int (mapping s1)), Const (Int (mapping s2)))
             | Equation (op, Const (String s1), x) -> Equation (op, Const (Int (mapping s1)), x)
             | Equation (op, x, Const (String s2)) -> Equation (op, x, Const (Int (mapping s2)))
             | _ -> t in
 
-        let s2i_term t = match t with 
-            | Rel rt -> Rel (s2i_rterm rt) 
+        let s2i_term t = match t with
+            | Rel rt -> Rel (s2i_rterm rt)
             | Not rt -> Not (s2i_rterm rt)
             | Equat e -> Equat (s2i_eterm e)
             | Noneq e -> Noneq (s2i_eterm e) in
 
-        let newb  = List.map s2i_term b in 
-        let newh  = s2i_rterm h in 
+        let newb  = List.map s2i_term b in
+        let newh  = s2i_rterm h in
         (* print_endline (string_of_stt (Rule(h,newb)));  *)
         (newh,newb)
 
@@ -203,7 +203,7 @@ let string2int mapping (h, b) =
                            only one recursive call in rules,
                            no negated recursions,
                            and base case existance)
-                           
+
  *)
 let preprocess_rules (st:symtable) =
     let rep_rule key rules =
@@ -212,9 +212,9 @@ let preprocess_rules (st:symtable) =
         Hashtbl.replace st key sorted_lst in
     Hashtbl.iter rep_rule st
 
-let extract_rterm_adom rt = 
+let extract_rterm_adom rt =
     let vl = get_rterm_varlist rt in
-    let extract var c_lst = match var with 
+    let extract var c_lst = match var with
         | ConstVar const -> const::c_lst
         | _ -> c_lst in
     List.fold_right extract vl []
@@ -224,7 +224,7 @@ let extract_rule_adom (h, b) =
         let extract t c_lst = match t with
             | Rel rt -> (extract_rterm_adom rt) @ c_lst
             | Not rt -> (extract_rterm_adom rt) @ c_lst
-            | Equat (Equation (_, Const c1, Const c2)) 
+            | Equat (Equation (_, Const c1, Const c2))
             | Noneq (Equation(_, Const c1, Const c2)) -> c1::c2::c_lst
             | Equat (Equation (_, _, Const c)) | Equat (Equation (_, Const c, _))
             | Noneq (Equation (_, _, Const c)) | Noneq (Equation (_, Const c, _)) -> c::c_lst
@@ -236,7 +236,7 @@ let extract_rules_adom rules =
     List.concat (List.map extract_rule_adom rules)
 
 let extract_rules_string_adom rules =
-    let lst = List.filter (function | String s -> true | _-> false) (extract_rules_adom rules) in 
+    let lst = List.filter (function | String s -> true | _-> false) (extract_rules_adom rules) in
     Lib.setify (List.map string_of_const lst)
 
 
@@ -259,8 +259,8 @@ let rule_of_query query (idb:symtable) =
     let dummy = Pred ("__dummy__", get_rterm_varlist q2) in
     (dummy, (Rel q2)::eqs)
 
-(** Given a delta, it returns a 'dummy' idb rule that calculates the desired output, 
-note that we take the difference of a deltainsert and its source 
+(** Given a delta, it returns a 'dummy' idb rule that calculates the desired output,
+note that we take the difference of a deltainsert and its source
 and take the intersection of a deltadelete and its source.
 *)
 let rule_of_delta delta (idb:symtable) =
