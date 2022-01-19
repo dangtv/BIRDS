@@ -51,7 +51,7 @@ type sql_comp_const =
   | SqlCompConst of sql_vterm * sql_operator * const
 
 type sql_group_by =
-  | SqlGroupBy of string list
+  | SqlGroupBy of sql_column_name list
 
 type sql_having =
   | SqlHaving of sql_comp_const list
@@ -73,12 +73,15 @@ and sql_constraint =
 and sql_where_clause =
   | SqlWhere of sql_constraint list
 
+and sql_aggregation_clause =
+  sql_group_by * sql_having
+
 and sql_query =
   | SqlQuery of {
       select : sql_select_clause;
       from   : sql_from_clause;
       where  : sql_where_clause;
-      agg    : sql_group_by * sql_having;
+      agg    : sql_aggregation_clause;
     }
   | SqlQuerySelectWhereFalse
 
@@ -90,8 +93,155 @@ and sql_union =
   | SqlUnion of sql_union_operation * sql_query list
 
 
-let stringify_sql_query (sql : sql_query) : string =
-  failwith "TODO: stringify_sql_query"
+let rec stringify_sql_vterm (vt : sql_vterm) : string =
+  match vt with
+  | SqlConst c ->
+      string_of_const c
+
+  | SqlColumn column_name ->
+      column_name
+
+  | SqlUnaryOp (un_op, vt1) ->
+      let s_op =
+        match un_op with
+        | SqlNegate -> "-"
+      in
+      Printf.sprintf "(%s %s)" s_op (stringify_sql_vterm vt1)
+
+  | SqlBinaryOp (bin_op, vt1, vt2) ->
+      let s_op =
+        match bin_op with
+        | SqlPlus    -> "+"
+        | SqlMinus   -> "-"
+        | SqlTimes   -> "*"
+        | SqlDivides -> "/"
+        | SqlLor     -> "||"
+      in
+      Printf.sprintf "(%s %s %s)" (stringify_sql_vterm vt1) s_op (stringify_sql_vterm vt2)
+
+  | SqlAggVar (agg_fun, vt1) ->
+      let s_agg_fun =
+        match agg_fun with
+        | SqlAggMax   -> "MAX"
+        | SqlAggMin   -> "MIN"
+        | SqlAggSum   -> "SUM"
+        | SqlAggAvg   -> "AVG"
+        | SqlAggCount -> "COUNT"
+      in
+      Printf.sprintf "%s(%s)" s_agg_fun (stringify_sql_vterm vt1)
+
+
+let stringify_sql_operator (op : sql_operator) : string =
+  match op with
+  | SqlRelEqual     -> "="
+  | SqlRelNotEqual  -> "<>"
+  | SqlRelGeneral s -> s
+
+
+let stringify_sql_select_clause (SqlSelect cols : sql_select_clause) : string =
+  let s =
+    cols |> List.map (fun (sql_vterm, name) ->
+      Printf.sprintf "%s AS %s" (stringify_sql_vterm sql_vterm) name
+    ) |> String.concat ", "
+  in
+  Printf.sprintf "SELECT %s" s
+
+
+let stringify_sql_comp_const (SqlCompConst (vt, op, c) : sql_comp_const) : string =
+  let s_vt = stringify_sql_vterm vt in
+  let s_op = stringify_sql_operator op in
+  let s_c = string_of_const c in
+  Printf.sprintf "%s %s %s" s_vt s_op s_c
+
+
+let rec stringify_sql_from_target (target : sql_from_target) : string =
+  match target with
+  | SqlFromColumn column_name ->
+      column_name
+
+  | SqlFromOther sql_union ->
+      Printf.sprintf "(%s)" (stringify_sql_union sql_union)
+
+
+and stringify_sql_from_clause (SqlFrom froms : sql_from_clause) : string =
+  match froms with
+  | [] ->
+      ""
+
+  | _ :: _ ->
+      let s =
+        froms |> List.map (fun (target, name) ->
+          Printf.sprintf "%s AS %s" (stringify_sql_from_target target) name
+        ) |> String.concat ", "
+      in
+      Printf.sprintf "FROM %s" s
+
+
+and stringify_sql_constraint (sql_constraint : sql_constraint) : string =
+  match sql_constraint with
+  | SqlConstraint (vt1, op, vt2) ->
+      let s_vt1 = stringify_sql_vterm vt1 in
+      let s_op = stringify_sql_operator op in
+      let s_vt2 = stringify_sql_vterm vt2 in
+      Printf.sprintf "%s %s %s" s_vt1 s_op s_vt2
+
+  | SqlNotExist (from, where) ->
+      let s_from = stringify_sql_from_clause from in
+      let s_where = stringify_sql_where_clause where in
+      Printf.sprintf "NOT EXISTS ( SELECT * %s %s )" s_from s_where
+
+
+and stringify_sql_where_clause (SqlWhere constraints : sql_where_clause) : string =
+  match constraints with
+  | [] ->
+      ""
+
+  | _ :: _ ->
+      let s =
+        constraints |> List.map stringify_sql_constraint |> String.concat " AND "
+      in
+      Printf.sprintf "WHERE %s" s
+
+
+and stringify_sql_aggregation_clause (agg : sql_aggregation_clause) : string =
+  let (SqlGroupBy column_names, SqlHaving comp_consts) = agg in
+  let s_group_by =
+    match column_names with
+    | []     -> ""
+    | _ :: _ -> Printf.sprintf "GROUP BY %s" (String.concat ", " column_names)
+  in
+  let s_having =
+    match comp_consts with
+    | [] ->
+        ""
+
+    | _ :: _ ->
+        let s = comp_consts |> List.map stringify_sql_comp_const |> String.concat " AND " in
+        Printf.sprintf "HAVING %s" s
+  in
+  Printf.sprintf "%s %s" s_group_by s_having
+
+
+and stringify_sql_query (sql : sql_query) : string =
+  match sql with
+  | SqlQuerySelectWhereFalse ->
+      "SELECT WHERE false"
+
+  | SqlQuery { select; from; where; agg } ->
+      let s_select = stringify_sql_select_clause select in
+      let s_from = stringify_sql_from_clause from in
+      let s_where = stringify_sql_where_clause where in
+      let s_agg = stringify_sql_aggregation_clause agg in
+      Printf.sprintf "%s %s %s %s" s_select s_from s_where s_agg
+
+
+and stringify_sql_union (SqlUnion (union_op, queries) : sql_union) : string =
+  let sep =
+    match union_op with
+    | SqlUnionOp    -> " UNION "
+    | SqlUnionAllOp -> " UNION ALL "
+  in
+  queries |> List.map stringify_sql_query |> String.concat sep
 
 
 (** Given an aggregate function name, checks if it is supported and returns it. *)
@@ -203,14 +353,15 @@ let get_select_clause (vt : vartab) (eqt : eqtab) (rterm : rterm) : sql_select_c
       match v with
       | NamedVar _ | NumberedVar _ ->
           var_to_col vt eqt key v
+
       | AggVar (fn, vn) ->
 (* ORIGINAL:
           (check_agg_function fn)^"("^(var_to_col vt eqt key (NamedVar vn))^")"
 *)
           SqlAggVar (check_agg_function fn, var_to_col vt eqt key (NamedVar vn))
+
       | _ ->
-          invalid_arg ("not-expected vartype in head of predicate"^
-            (string_of_symtkey key))
+          invalid_arg ("not-expected vartype in head of predicate" ^ (string_of_symtkey key))
     in
     let cols = List.mapi (fun index v -> (var_value v, Printf.sprintf "COL%d" index)) vlst in
 (* ORIGINAL:
@@ -224,6 +375,7 @@ let get_select_clause (vt : vartab) (eqt : eqtab) (rterm : rterm) : sql_select_c
 *)
     SqlSelect cols
 
+
 let get_aggregation_sql (vt : vartab) (cnt : colnamtab) (head : rterm) (agg_eqs : term list) (agg_ineqs : term list) : sql_group_by * sql_having =
   let vars = get_rterm_varlist head in
   let key = symtkey_of_rterm head in
@@ -231,7 +383,7 @@ let get_aggregation_sql (vt : vartab) (cnt : colnamtab) (head : rterm) (agg_eqs 
   let eq_t : (vterm * vterm) list = List.map extract_eq_tuple agg_eqs in
   let aug_eq_t = List.map (fun (x, y) -> ("=", x, y)) eq_t in
   let ieq_t = List.map extract_ineq_tuple agg_ineqs in
-  let comparisons = aug_eq_t@ieq_t in
+  let comparisons = aug_eq_t @ ieq_t in
   (*Check if the rule has aggregation*)
   let is_agg = List.exists is_aggvar vars in
   if not is_agg then
@@ -894,7 +1046,7 @@ let non_rec_unfold_sql_of_update (dbschema : string) (log : bool) (optimize : bo
             SELECT array_agg(tbl) INTO array_"^ (get_rterm_predname delta)^" FROM ("^
             "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").*
             FROM ("^
-            (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))) ^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl"
+            (stringify_sql_union (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))) ^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl"
             (* ^"
             EXCEPT
             SELECT * FROM  "^dbschema^"."^ pname  *)
@@ -930,13 +1082,13 @@ let non_rec_unfold_sql_of_update (dbschema : string) (log : bool) (optimize : bo
             SELECT array_agg(tbl) INTO array_"^ (get_rterm_predname delta)^" FROM (" ^
             "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").*
             FROM ("^
-            (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl;",
+            (stringify_sql_union (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))))^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl;",
             (* delete each tuple *)
             "
             IF array_"^ (get_rterm_predname delta)^" IS DISTINCT FROM NULL THEN
                 FOREACH temprec_"^ (get_rterm_predname delta) ^" IN array array_"^ (get_rterm_predname delta)^"  LOOP
             " ^
-            "       DELETE FROM " ^dbschema^"."^ pname ^" WHERE "^(String.concat " AND " (List.map (fun x -> x^ (sql_of_operator "==") ^" temprec_"^ (get_rterm_predname delta)^"."^x) cols)) ^ ";
+            "       DELETE FROM " ^dbschema^"."^ pname ^" WHERE "^(String.concat " AND " (List.map (fun x -> x ^ " = temprec_"^ (get_rterm_predname delta)^"."^x) cols)) ^ ";
                 END LOOP;
             END IF;")
 
@@ -1109,19 +1261,19 @@ BEGIN
         IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN
             RAISE check_violation USING MESSAGE = 'Invalid update: null value is not accepted';
         END IF;
-        DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
+        DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str ^ "= NEW;
         INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" SELECT (NEW).*;
         ELSIF TG_OP = 'UPDATE' THEN
         IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN
             RAISE check_violation USING MESSAGE = 'Invalid update: null value is not accepted';
         END IF;
-        DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+        DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str ^ " = OLD;
         INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" SELECT (OLD).*;
-        DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
+        DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str ^ " = NEW;
         INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" SELECT (NEW).*;
         ELSIF TG_OP = 'DELETE' THEN
         -- RAISE LOG 'OLD: %', OLD;
-        DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+        DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name)^" WHERE ROW"^cols_tuple_str ^ " = OLD;
         INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name)^" SELECT (OLD).*;
         END IF;
     END IF;
@@ -1178,7 +1330,7 @@ IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^sou
         WITH " ^get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name^"_ar as (SELECT * FROM unnest(array_delta_ins) as array_delta_ins_alias limit delta_ins_size),
         " ^get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name^"_ar as (SELECT * FROM unnest(array_delta_del) as array_delta_del_alias limit delta_del_size)
         SELECT array_agg(tbl) INTO detected_insertions FROM ("^(
-            unfold_program_query dbschema log ins_view_optimized_datalog
+            stringify_sql_query (unfold_program_query dbschema log ins_view_optimized_datalog)
             ) ^") AS tbl;
 
         insertion_data := (SELECT (array_to_json(detected_insertions))::text);
@@ -1189,7 +1341,7 @@ IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^sou
         WITH " ^get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name^"_ar as (SELECT * FROM unnest(array_delta_ins) as array_delta_ins_alias limit delta_ins_size),
         " ^get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name^"_ar as (SELECT * FROM unnest(array_delta_del) as array_delta_del_alias limit delta_del_size)
         SELECT array_agg(tbl) INTO detected_deletions FROM ("^(
-            unfold_program_query dbschema log del_view_optimized_datalog
+            stringify_sql_query (unfold_program_query dbschema log del_view_optimized_datalog)
             ) ^") AS tbl;
 
         deletion_data := (
@@ -1356,11 +1508,11 @@ AS $$
     IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = '"^view_name^"_delta_action_flag') THEN
         -- RAISE LOG 'execute procedure "^view_name^"_delta_action';
         CREATE TEMPORARY TABLE "^view_name^"_delta_action_flag ON COMMIT DROP AS (SELECT true as finish);
-        IF EXISTS (" ^ view_constraint_sql_of_stt dbschema log inc optimize prog^" )
+        IF EXISTS (" ^ (stringify_sql_query (view_constraint_sql_of_stt dbschema log inc optimize prog)) ^" )
         THEN
           RAISE check_violation USING MESSAGE = 'Invalid view update: constraints on the view are violated';
         END IF;
-        IF EXISTS (" ^ non_view_constraint_sql_of_stt dbschema log false optimize prog^" )
+        IF EXISTS (" ^ (stringify_sql_query (non_view_constraint_sql_of_stt dbschema log false optimize prog)) ^" )
         THEN
           RAISE check_violation USING MESSAGE = 'Invalid view update: constraints on the source relations are violated';
         END IF;
@@ -1478,19 +1630,19 @@ AS $$
       IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN
         RAISE check_violation USING MESSAGE = 'Invalid update on view: view does not accept null value';
       END IF;
-      DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
+      DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" WHERE ROW"^cols_tuple_str ^ " = NEW;
       INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" SELECT (NEW).*;
     ELSIF TG_OP = 'UPDATE' THEN
       IF (SELECT count(*) FILTER (WHERE j.value = jsonb 'null') FROM  jsonb_each(to_jsonb(NEW)) j) > 0 THEN
         RAISE check_violation USING MESSAGE = 'Invalid update on view: view does not accept null value';
       END IF;
-      DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+      DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" WHERE ROW"^cols_tuple_str ^ " = OLD;
       INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" SELECT (OLD).*;
-      DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"NEW;
+      DELETE FROM "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" WHERE ROW"^cols_tuple_str ^ " = NEW;
       INSERT INTO "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" SELECT (NEW).*;
     ELSIF TG_OP = 'DELETE' THEN
       -- RAISE LOG 'OLD: %', OLD;
-      DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" WHERE ROW"^cols_tuple_str^(sql_of_operator "==")^"OLD;
+      DELETE FROM "^(get_rterm_predname (get_temp_delta_insertion_rterm view_rt))^" WHERE ROW"^cols_tuple_str ^ " = OLD;
       INSERT INTO "^(get_rterm_predname (get_temp_delta_deletion_rterm view_rt))^" SELECT (OLD).*;
     END IF;
     RETURN NULL;
