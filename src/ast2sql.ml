@@ -45,7 +45,7 @@ type sql_vterm =
   | SqlAggVar   of sql_agg_function * sql_vterm
 
 type sql_select_clause =
-  | SqlSelect of sql_vterm list
+  | SqlSelect of (sql_vterm * string) list
 
 type sql_comp_const =
   | SqlCompConst of sql_vterm * sql_operator * const
@@ -80,6 +80,7 @@ and sql_query =
       where  : sql_where_clause;
       agg    : sql_group_by * sql_having;
     }
+  | SqlQuerySelectWhereFalse
 
 and sql_union_operation =
   | SqlUnionOp
@@ -87,6 +88,10 @@ and sql_union_operation =
 
 and sql_union =
   | SqlUnion of sql_union_operation * sql_query list
+
+
+let stringify_sql_query (sql : sql_query) : string =
+  failwith "TODO: stringify_sql_query"
 
 
 (** Given an aggregate function name, checks if it is supported and returns it. *)
@@ -190,7 +195,7 @@ let get_select_clause (vt : vartab) (eqt : eqtab) (rterm : rterm) : sql_select_c
 (* ORIGINAL:
       "SELECT "
 *)
-      SqlSelect([])
+      SqlSelect []
   else
   (*Transform variables to column names. Treat namedVars and
    * aggregates differently*)
@@ -207,7 +212,7 @@ let get_select_clause (vt : vartab) (eqt : eqtab) (rterm : rterm) : sql_select_c
           invalid_arg ("not-expected vartype in head of predicate"^
             (string_of_symtkey key))
     in
-    let cols = List.map var_value vlst in
+    let cols = List.mapi (fun index v -> (var_value v, Printf.sprintf "COL%d" index)) vlst in
 (* ORIGINAL:
     (*Create aliases*)
     let rec alias ind = function
@@ -217,7 +222,7 @@ let get_select_clause (vt : vartab) (eqt : eqtab) (rterm : rterm) : sql_select_c
             (col^" AS COL"^(string_of_int ind))^", "^(alias (ind+1) (col2::tl))
     in
 *)
-    SqlSelect(cols)
+    SqlSelect cols
 
 let get_aggregation_sql (vt : vartab) (cnt : colnamtab) (head : rterm) (agg_eqs : term list) (agg_ineqs : term list) : sql_group_by * sql_having =
   let vars = get_rterm_varlist head in
@@ -415,7 +420,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
           let fineq = List.fold_right ineq_comp ineq_tuples [] in
             (*Transform the negated rterms into SQL*)
           let unfold_sql_of_negated_rterms (idb : symtable) (vt : vartab) (cnt : colnamtab) (eqt : eqtab) neg_rt =
-            let gen_neg_sql (rt : rterm) =
+            let gen_neg_sql (rt : rterm) : sql_constraint =
                 (*get basic info of the rterm*)
               let key = symtkey_of_rterm rt in
               let pname = get_rterm_predname rt in
@@ -566,209 +571,305 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
     let sql = unfold_sql_of_rule_lst idb cnt rule_lst in
     sql
 
+
 (** Take a query term and generate unfolded SQL for it. *)
-let non_rec_unfold_sql_of_query (dbschema:string) (idb:symtable) (cnt:colnamtab) (query:rterm) =
-    let qrule = rule_of_query query idb in
-    (* qrule is in the form of _dummy_(x,y) :- query_predicate(x,y), x=1 *)
-        let local_idb = Hashtbl.copy idb in
-        (* because insert a temporary dummy qrule, we should work with a local variable of idb *)
-        symt_insert local_idb qrule;
-        (* get column names (cols_by_var) for the view by using the dummy predicate which is head of qrule *)
-        let cols_by_var = List.map string_of_var (get_rterm_varlist (rule_head qrule)) in
-        let qrule_alias = get_rule_predname qrule in
-        if not (Hashtbl.mem cnt (symtkey_of_rterm query)) then raise (SemErr "The query does not match any idb relation")
-        else
-        let cols = Hashtbl.find cnt (symtkey_of_rterm query) in
-        let sel_lst = List.map (fun (a,b) -> qrule_alias^"."^a^" AS "^b)
-                            (List.combine cols cols_by_var) in
-        "SELECT "^(String.concat "," sel_lst) ^ " \nFROM (" ^
-        (* by insert the dummy rule to idb, we now find sql for this dummy predicate *)
-        non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)) ^") AS "^qrule_alias
+let non_rec_unfold_sql_of_query (dbschema : string) (idb : symtable) (cnt : colnamtab) (query : rterm) : sql_query =
+  let qrule = rule_of_query query idb in
+  (* qrule is in the form of _dummy_(x,y) :- query_predicate(x,y), x=1 *)
+  let local_idb = Hashtbl.copy idb in
+  (* because insert a temporary dummy qrule, we should work with a local variable of idb *)
+  symt_insert local_idb qrule;
+  (* get column names (cols_by_var) for the view by using the dummy predicate which is head of qrule *)
+  let cols_by_var = List.map string_of_var (get_rterm_varlist (rule_head qrule)) in
+  let qrule_alias = get_rule_predname qrule in
+  if not (Hashtbl.mem cnt (symtkey_of_rterm query)) then
+    raise (SemErr "The query does not match any idb relation")
+  else
+    let cols = Hashtbl.find cnt (symtkey_of_rterm query) in
+    let sel_lst =
+      List.map (fun (a, b) -> (SqlColumn (qrule_alias ^ "." ^ a), b)) (List.combine cols cols_by_var)
+    in
+    let sql_from =
+      (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))), qrule_alias)
+    in
+    SqlQuery {
+      select = SqlSelect sel_lst;
+      from   = SqlFrom [ sql_from ];
+      where  = SqlWhere [];
+      agg    = (SqlGroupBy [], SqlHaving []);
+    }
+(* ORIGINAL:
+    let sel_lst = List.map (fun (a,b) -> qrule_alias^"."^a^" AS "^b) (List.combine cols cols_by_var) in
+    "SELECT "^(String.concat "," sel_lst) ^ " \nFROM (" ^
+      (* by insert the dummy rule to idb, we now find sql for this dummy predicate *)
+      non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)) ^") AS "^qrule_alias
+*)
 
 (** Generate unfolded SQL statement from ast, the goal is the query predicate of datalog program, the query is a query over source relations.
 The result of this function is SQL query, whose returned table has column names of col0, col1,.... *)
-let unfold_query_sql_stt (dbschema:string) (log:bool) (edb:symtable) prog =
-    let query_rt = get_query prog in
-    (*Extract and pre-process the IDB from the program*)
-    let idb = extract_idb prog in
-    preprocess_rules idb;
-    (* print_symtable idb; *)
-    (*Build the colnamtab for referencing the table's columns*)
-    let cnt = build_colnamtab edb idb in
-    (*Return the desired SQL*)
-    let sql = non_rec_unfold_sql_of_query dbschema idb cnt query_rt  in
-    sql
+let unfold_query_sql_stt (dbschema : string) (log : bool) (edb : symtable) (prog : expr) =
+  let query_rt = get_query prog in
+  (*Extract and pre-process the IDB from the program*)
+  let idb = extract_idb prog in
+  preprocess_rules idb;
+  (* print_symtable idb; *)
+  (*Build the colnamtab for referencing the table's columns*)
+  let cnt = build_colnamtab edb idb in
+  (*Return the desired SQL*)
+  let sql = non_rec_unfold_sql_of_query dbschema idb cnt query_rt  in
+  sql
 
 
-let unfold_view_sql (dbschema:string) (log:bool) prog =
-    let edb = extract_edb prog in
-    let view_rt = get_schema_rterm (get_view prog) in
-    if (get_arity view_rt = 0) then raise (SemErr
-            ("The view "^(string_of_rterm view_rt)^
-            " has arity 0, which is not allowed to create a view"))
-    else
-    "CREATE OR REPLACE VIEW "^ dbschema ^"."^(get_rterm_predname view_rt) ^ " AS \n" ^(unfold_query_sql_stt dbschema log edb {prog with query = Some view_rt}) ^";"
+let unfold_view_sql (dbschema : string) (log : bool) (prog : expr) : string =
+  let edb = extract_edb prog in
+  let view_rt = get_schema_rterm (get_view prog) in
+  if get_arity view_rt = 0 then
+    raise (SemErr(
+      "The view " ^ (string_of_rterm view_rt) ^
+        " has arity 0, which is not allowed to create a view"))
+  else
+    let sql = unfold_query_sql_stt dbschema log edb { prog with query = Some view_rt } in
+    let sql_stringified = stringify_sql_query sql in
+    "CREATE OR REPLACE VIEW "^ dbschema ^"."^(get_rterm_predname view_rt) ^ " AS \n" ^ sql_stringified ^";"
 
 
-let unfold_program_query (dbschema:string) (log:bool) prog =
-    if (log) then print_endline ("==> generating SQL query of datalog program of query "^ string_of_query (get_query prog)) else ();
-    let edb = extract_edb prog in
-    unfold_query_sql_stt dbschema log edb prog
+let unfold_program_query (dbschema : string) (log : bool) (prog : expr) : sql_query =
+  if log then
+    print_endline ("==> generating SQL query of datalog program of query "^ string_of_query (get_query prog))
+  else
+    ();
+  let edb = extract_edb prog in
+  unfold_query_sql_stt dbschema log edb prog
+
+
+let sql_query_select_where_false : sql_query =
+  SqlQuerySelectWhereFalse
+(* ORIGINAL:
+  "SELECT WHERE false"
+*)
 
 
 (** Take a view update datalog program (containing both get and put directions) and generate SQL queries of constraints involving view. *)
-let view_constraint_sql_of_stt (dbschema:string) (log:bool) (inc:bool) (optimize:bool) prog =
-    let clean_prog = keep_only_constraint_of_view log prog in
-    if inc then
-        let inc_prog = incrementalize_by_view log clean_prog in
-        let view_sch = get_view inc_prog in
-        let view_rt = get_schema_rterm view_sch in
-        let new_view_rt = rename_rterm "new_" view_rt in
-        let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
-        let prog2 = {subst_prog with
-            sources = [(get_rterm_predname (view_rt), get_schema_col_typs view_sch );
-                (get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch );
-                (get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch )]@subst_prog.sources;
-            rules = [(get_inc_original view_rt,[Rel (view_rt)]);
-                (get_inc_ins view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]);
-                (get_inc_del view_rt,[Rel (get_temp_delta_deletion_rterm view_rt)])] @ subst_prog.rules} in
-        (* let edb = extract_edb prog2 in *)
-        let idb = extract_idb prog2 in
+let view_constraint_sql_of_stt (dbschema : string) (log : bool) (inc : bool) (optimize : bool) (prog : expr) : sql_query =
+  let clean_prog = keep_only_constraint_of_view log prog in
+  if inc then
+    let inc_prog = incrementalize_by_view log clean_prog in
+    let view_sch = get_view inc_prog in
+    let view_rt = get_schema_rterm view_sch in
+    let new_view_rt = rename_rterm "new_" view_rt in
+    let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
+    let prog2 =
+      { subst_prog with
+        sources = [
+          (get_rterm_predname (view_rt), get_schema_col_typs view_sch );
+          (get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch);
+          (get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch);
+        ] @ subst_prog.sources;
+        rules = [
+          (get_inc_original view_rt, [ Rel (view_rt) ]);
+          (get_inc_ins view_rt, [ Rel (get_temp_delta_insertion_rterm view_rt) ]);
+          (get_inc_del view_rt, [ Rel (get_temp_delta_deletion_rterm view_rt) ]);
+        ] @ subst_prog.rules;
+      }
+    in
+    (* let edb = extract_edb prog2 in *)
+    let idb = extract_idb prog2 in
+    if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
+      begin
+        (* keep_only_constraint_of_view log view_rt edb idb ; *)
+        preprocess_rules idb;
+        (* let cnt = build_colnamtab edb idb in *)
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
-            (
-            (* keep_only_constraint_of_view log view_rt edb idb ; *)
-            preprocess_rules idb;
-            (* let cnt = build_colnamtab edb idb in *)
-            if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
-                let remain_rules = rules_of_symt idb in
-                let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
-                (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog log {prog3 with query = Some (get_empty_pred)}) else {prog3 with query = Some (get_empty_pred)} in
-                (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
-                if (has_query prog4) then
-                    (unfold_program_query dbschema log prog4)
-                else "SELECT WHERE false"
-            else "SELECT WHERE false")
-        else "SELECT WHERE false"
+          let remain_rules = rules_of_symt idb in
+          let prog3 = { get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules } in
+          (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
+          let prog4 =
+            if optimize then
+              Ast2fol.optimize_query_datalog log { prog3 with query = Some (get_empty_pred) }
+            else
+              { prog3 with query = Some (get_empty_pred) }
+          in
+          (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
+          if has_query prog4 then
+            unfold_program_query dbschema log prog4
+          else
+            sql_query_select_where_false
+        else
+          sql_query_select_where_false
+      end
     else
-        let view_sch = get_view clean_prog in
-        let view_rt = get_schema_rterm view_sch in
-        let new_view_rt = rename_rterm "new_" view_rt in
-        let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) (delete_rule_of_predname (get_rterm_predname view_rt) clean_prog) in
-        let prog2 = {subst_prog with sources = [
-            get_rterm_predname (view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
-        ]@subst_prog.sources; rules = [
-            (new_view_rt,[Rel (view_rt); Not (get_temp_delta_deletion_rterm view_rt)]);
-            (new_view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)])
-        ]@subst_prog.rules} in
-        (* let edb = extract_edb prog2 in *)
-        let idb = extract_idb prog2 in
+      sql_query_select_where_false
+  else
+    let view_sch = get_view clean_prog in
+    let view_rt = get_schema_rterm view_sch in
+    let new_view_rt = rename_rterm "new_" view_rt in
+    let subst_prog =
+      subst_pred
+        (get_rterm_predname view_rt)
+        (get_rterm_predname new_view_rt)
+        (delete_rule_of_predname (get_rterm_predname view_rt) clean_prog)
+    in
+    let prog2 =
+      { subst_prog with
+        sources = [
+          get_rterm_predname view_rt, get_schema_col_typs view_sch;
+          get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
+          get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch;
+        ] @ subst_prog.sources;
+        rules = [
+          (new_view_rt, [ Rel (view_rt); Not (get_temp_delta_deletion_rterm view_rt) ]);
+          (new_view_rt, [ Rel (get_temp_delta_insertion_rterm view_rt) ]);
+        ] @ subst_prog.rules;
+      }
+    in
+    (* let edb = extract_edb prog2 in *)
+    let idb = extract_idb prog2 in
+    if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
+      begin
+        (* keep_only_constraint_of_view log view_rt edb idb ; *)
+        preprocess_rules idb;
+        (* let cnt = build_colnamtab edb idb in *)
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
-            (
-            (* keep_only_constraint_of_view log view_rt edb idb ; *)
-            preprocess_rules idb;
-            (* let cnt = build_colnamtab edb idb in *)
-            if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
-                let remain_rules = Hashtbl.fold (fun k rules lst -> rules@lst) idb [] in
-                let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
-                (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog log {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
-                (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
-                if (has_query prog4) then
-                    (unfold_program_query dbschema log prog4)
-                else "SELECT WHERE false"
-            else "SELECT WHERE false")
-        else "SELECT WHERE false"
+          let remain_rules = Hashtbl.fold (fun k rules lst -> rules @ lst) idb [] in
+          let prog3 = { get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules } in
+          (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
+          let prog4 =
+            if optimize then
+              Ast2fol.optimize_query_datalog log { prog3 with query = Some get_empty_pred }
+            else
+              { prog3 with query = Some get_empty_pred }
+          in
+          (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
+          if has_query prog4 then
+            unfold_program_query dbschema log prog4
+          else
+            sql_query_select_where_false
+        else
+          sql_query_select_where_false
+      end
+    else
+      sql_query_select_where_false
 
 
 (** take a view update datalog program (containing both get and put directions) and generate SQL query of contraints not involving view *)
-let non_view_constraint_sql_of_stt (dbschema:string) (log:bool) (inc:bool) (optimize:bool) prog =
-    let clean_prog = remove_constraint_of_view log prog in
-    if inc then
-        let inc_prog = incrementalize_by_view log clean_prog in
-        let view_sch = get_view inc_prog in
-        let view_rt = get_schema_rterm view_sch in
-        let new_view_rt = rename_rterm "new_" view_rt in
-        let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
-        let prog2 = {subst_prog with sources = [
-            get_rterm_predname (view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
-        ]@subst_prog.sources; rules = [
-            (get_inc_original view_rt,[Rel (view_rt)]);
-            (get_inc_ins view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)]);
-            (get_inc_del view_rt,[Rel (get_temp_delta_deletion_rterm view_rt)])
-        ]@subst_prog.rules} in
-        (* let edb = extract_edb prog2 in *)
-        let idb = extract_idb prog2 in
+let non_view_constraint_sql_of_stt (dbschema : string) (log : bool) (inc : bool) (optimize : bool) (prog : expr) =
+  let clean_prog = remove_constraint_of_view log prog in
+  if inc then
+    let inc_prog = incrementalize_by_view log clean_prog in
+    let view_sch = get_view inc_prog in
+    let view_rt = get_schema_rterm view_sch in
+    let new_view_rt = rename_rterm "new_" view_rt in
+    let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
+    let prog2 =
+      { subst_prog with
+        sources = [
+          get_rterm_predname (view_rt), get_schema_col_typs view_sch;
+          get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
+          get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch;
+        ] @ subst_prog.sources;
+        rules = [
+          (get_inc_original view_rt, [ Rel view_rt ]);
+          (get_inc_ins view_rt, [ Rel (get_temp_delta_insertion_rterm view_rt) ]);
+          (get_inc_del view_rt, [ Rel (get_temp_delta_deletion_rterm view_rt) ]);
+        ] @ subst_prog.rules;
+      }
+    in
+    (* let edb = extract_edb prog2 in *)
+    let idb = extract_idb prog2 in
+    if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
+      begin
+        (* keep_only_constraint_of_view log view_rt edb idb ; *)
+        preprocess_rules idb;
+        (* let cnt = build_colnamtab edb idb in *)
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
-            (
-            (* keep_only_constraint_of_view log view_rt edb idb ; *)
-            preprocess_rules idb;
-            (* let cnt = build_colnamtab edb idb in *)
-            if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
-                let remain_rules = rules_of_symt idb in
-                let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
-                (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog log {prog3 with query = Some get_empty_pred}) else {prog3 with query=Some get_empty_pred} in
-                (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
-                if (has_query prog4) then
-                    (unfold_program_query dbschema log prog4)
-                else "SELECT WHERE false"
-            else "SELECT WHERE false")
-        else "SELECT WHERE false"
+          let remain_rules = rules_of_symt idb in
+          let prog3 = { get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules } in
+          (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
+          let prog4 =
+            if optimize then
+              Ast2fol.optimize_query_datalog log { prog3 with query = Some get_empty_pred }
+            else
+              { prog3 with query=Some get_empty_pred }
+          in
+          (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
+          if has_query prog4 then
+            unfold_program_query dbschema log prog4
+          else
+            sql_query_select_where_false
+        else
+          sql_query_select_where_false
+      end
     else
-        let view_sch = get_view clean_prog in
-        let view_rt = get_schema_rterm view_sch in
-        let new_view_rt = rename_rterm "new_" view_rt in
-        let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) (delete_rule_of_predname (get_rterm_predname view_rt) clean_prog) in
-        let prog2 = {subst_prog with sources = [
-            get_rterm_predname (view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
-            get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch
-        ]@subst_prog.sources; rules = [
-            (new_view_rt,[Rel (view_rt); Not (get_temp_delta_deletion_rterm view_rt)]);
-            (new_view_rt,[Rel (get_temp_delta_insertion_rterm view_rt)])
-        ]@subst_prog.rules} in
-        (* let edb = extract_edb prog2 in *)
-        let idb = extract_idb prog2 in
+      sql_query_select_where_false
+  else
+    let view_sch = get_view clean_prog in
+    let view_rt = get_schema_rterm view_sch in
+    let new_view_rt = rename_rterm "new_" view_rt in
+    let subst_prog =
+      subst_pred
+        (get_rterm_predname view_rt)
+        (get_rterm_predname new_view_rt)
+        (delete_rule_of_predname (get_rterm_predname view_rt) clean_prog)
+    in
+    let prog2 =
+      { subst_prog with
+        sources = [
+          get_rterm_predname view_rt, get_schema_col_typs view_sch;
+          get_rterm_predname (get_temp_delta_deletion_rterm view_rt), get_schema_col_typs view_sch;
+          get_rterm_predname (get_temp_delta_insertion_rterm view_rt), get_schema_col_typs view_sch;
+        ] @ subst_prog.sources;
+        rules = [
+          (new_view_rt, [ Rel view_rt; Not (get_temp_delta_deletion_rterm view_rt) ]);
+          (new_view_rt, [ Rel (get_temp_delta_insertion_rterm view_rt) ]);
+        ] @ subst_prog.rules;
+      }
+    in
+      (* let edb = extract_edb prog2 in *)
+    let idb = extract_idb prog2 in
+    if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
+      begin
+        (* keep_only_constraint_of_view log view_rt edb idb ; *)
+        preprocess_rules idb;
+        (* let cnt = build_colnamtab edb idb in *)
         if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
-            (
-            (* keep_only_constraint_of_view log view_rt edb idb ; *)
-            preprocess_rules idb;
-            (* let cnt = build_colnamtab edb idb in *)
-            if Hashtbl.mem idb (symtkey_of_rterm get_empty_pred) then
-                let remain_rules = Hashtbl.fold (fun k rules lst -> rules@lst) idb [] in
-                let prog3 = {get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules} in
-                (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
-                let prog4 = if (optimize) then (Ast2fol.optimize_query_datalog log {prog3 with query = Some get_empty_pred} ) else {prog3 with query = Some get_empty_pred} in
-                (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
-                if (has_query prog4) then
-                    (unfold_program_query dbschema log prog4)
-                else "SELECT WHERE false"
-            else "SELECT WHERE false")
-        else "SELECT WHERE false"
+          let remain_rules = Hashtbl.fold (fun k rules lst -> rules@lst) idb [] in
+          let prog3 = { get_empty_expr with view = prog2.view; sources = prog2.sources; rules = remain_rules } in
+          (* non_rec_unfold_sql_of_query dbschema idb cnt get_empty_pred *)
+          let prog4 =
+            if optimize then
+              Ast2fol.optimize_query_datalog log { prog3 with query = Some get_empty_pred }
+            else
+              { prog3 with query = Some get_empty_pred }
+          in
+          (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
+          if has_query prog4 then
+            unfold_program_query dbschema log prog4
+          else
+            sql_query_select_where_false
+        else
+          sql_query_select_where_false
+      end
+    else
+      sql_query_select_where_false
 
 
 (** Get SQL code for a delta term, the update SQL code contains two strings: SQL queries for the delta, and SQL updates for the delta. *)
-let non_rec_unfold_sql_of_update (dbschema:string) (log:bool) (optimize:bool) prog (delta:rterm)  =
-    (*
-    *)
-    let view_sch = get_view prog in
-    let view_rt = get_schema_rterm view_sch in
-    let prog2 =
-        if (optimize) then (
-            let opt_prog1 = Ast2fol.optimize_query_datalog log {prog with query = Some delta} in
-            Ast2fol.optimize_query_datalog log {opt_prog1 with query = Some delta}
-        ) else
-        prog in
-        (* print_endline "___ optimized __";
-        print_endline (string_of_prog prog2); *)
-    (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
-    if (optimize && (not (has_query prog2))) then ("","","")
+let non_rec_unfold_sql_of_update (dbschema : string) (log : bool) (optimize : bool) (prog : expr) (delta : rterm) =
+  let view_sch = get_view prog in
+  let view_rt = get_schema_rterm view_sch in
+  let prog2 =
+    if optimize then
+      let opt_prog1 = Ast2fol.optimize_query_datalog log { prog with query = Some delta } in
+      Ast2fol.optimize_query_datalog log { opt_prog1 with query = Some delta }
     else
+      prog
+  in
+  (* print_endline "___ optimized __";
+     print_endline (string_of_prog prog2); *)
+  (* the optimization may drop the empty_predicate of prog4 when the empty_predicate is trival (always empty) *)
+  if optimize && (not (has_query prog2)) then
+    ("", "", "")
+  else
     (*Build the colnamtab for referencing the table's columns*)
     let edb = extract_edb prog2 in
     (* print_endline "___local_edb____"; print_symtable local_edb; *)
@@ -777,11 +878,12 @@ let non_rec_unfold_sql_of_update (dbschema:string) (log:bool) (optimize:bool) pr
     preprocess_rules idb;
     let cnt = build_colnamtab edb idb in
     let qrule = rule_of_query delta idb in
-        let local_idb = Hashtbl.copy idb in
-        symt_insert local_idb qrule;
-        match delta with
-        Deltainsert (pname, varlst) -> if Hashtbl.mem edb (pname, List.length varlst)
-            then  (
+    let local_idb = Hashtbl.copy idb in
+    symt_insert local_idb qrule;
+    match delta with
+    | Deltainsert (pname, varlst) ->
+        if Hashtbl.mem edb (pname, List.length varlst) then
+          begin
             (* variable with rowtype of the source relation *)
             "temprec_"^ (get_rterm_predname delta) ^" " ^dbschema^"."^ pname ^"%ROWTYPE;
             array_"^ (get_rterm_predname delta)^" " ^dbschema^"."^ pname ^"[];",
@@ -808,15 +910,16 @@ let non_rec_unfold_sql_of_update (dbschema:string) (log:bool) (optimize:bool) pr
             "INSERT INTO " ^dbschema^"."^ pname ^" SELECT (temprec"^ (get_rterm_predname delta) ^").*;
             END LOOP; " ^ *)
 
-            )
-            else raise (SemErr "delta predicate is not of any base predicate")
+          end
+        else
+          raise (SemErr "delta predicate is not of any base predicate")
 
-        | Deltadelete (pname, varlst) -> if Hashtbl.mem edb (pname, List.length varlst)
-            then
-            (* get all the columns of base predicate *)
-            let cols = Hashtbl.find cnt (pname, List.length varlst) in
-            (* convert these cols to string of tuple of these cols *)
-            (
+    | Deltadelete (pname, varlst) ->
+        if Hashtbl.mem edb (pname, List.length varlst) then
+          (* get all the columns of base predicate *)
+          let cols = Hashtbl.find cnt (pname, List.length varlst) in
+          (* convert these cols to string of tuple of these cols *)
+          (
             (* variable with rowtype of the source relation *)
             "temprec_"^ (get_rterm_predname delta) ^" " ^dbschema^"."^ pname ^"%ROWTYPE;
             array_"^ (get_rterm_predname delta)^" " ^dbschema^"."^ pname ^"[];",
@@ -837,87 +940,122 @@ let non_rec_unfold_sql_of_update (dbschema:string) (log:bool) (optimize:bool) pr
                 END LOOP;
             END IF;")
 
-            else raise (SemErr "delta predicate is not of any base predicate")
-        | _ -> raise (SemErr "the non_rec_unfold_sql_of_update is called without and delta predicate")
+        else
+          raise (SemErr "delta predicate is not of any base predicate")
 
-let unfold_delta_sql_stt (dbschema:string) (log:bool) (inc:bool) (optimize:bool) prog =
-    if inc then
-        let inc_prog = incrementalize_by_view log prog in
-        let view_sch = get_view inc_prog in
-        let view_rt = get_schema_rterm view_sch in
-        let get_ast = Ast2fol.optimize_query_datalog log {prog with query = Some view_rt} in
-        let new_view_rt = rename_rterm "new_" view_rt in
-        let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
-        (* let subst_prog = inc_prog in *)
-        let prog2 = {subst_prog with sources = [
-            (* get_rterm_predname (view_rt), get_schema_col_typs view_sch; *)
-            get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)), get_schema_col_typs view_sch;
-            get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)), get_schema_col_typs view_sch
-        ]@subst_prog.sources; rules = [
-            (get_inc_original view_rt,[Rel (view_rt)]);
-            (get_inc_ins view_rt,[Rel (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt))]);
-            (get_inc_del view_rt,[Rel (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt))])
-        ]@subst_prog.rules@get_ast.rules} in
-        let delta_rt_lst = get_delta_rterms inc_prog in
-        (*Return the desired SQL*)
-        let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema log optimize prog2 ) delta_rt_lst in
-        let concat_update_sql (v, d, u) (vardec,delquery, updateaction) = (v::vardec,d::delquery, u::updateaction) in
-        let (vars, deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([],[],[]) in
-        ((String.concat "\n" vars)^"",
-        ((String.concat "\n\n" deltas)^"") ^ " \n\n" ^ ((String.concat "\n\n" actions)^""))
-    else
-        let view_sch = get_view prog in
-        let view_rt = get_schema_rterm view_sch in
-        let new_view_rt = rename_rterm "new_" view_rt in
-        let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) (delete_rule_of_predname (get_rterm_predname view_rt) prog) in
-        let prog2 = {subst_prog with sources = [
-            get_rterm_predname view_rt , get_schema_col_typs view_sch;
-            get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)), get_schema_col_typs view_sch;
-            get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)), get_schema_col_typs view_sch
-        ]@subst_prog.sources; rules = [
-            (new_view_rt,[Rel (view_rt); Not (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt))]);
-            (new_view_rt,[Rel (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt))])
-        ]@subst_prog.rules} in
+    | _ ->
+        raise (SemErr "the non_rec_unfold_sql_of_update is called without and delta predicate")
 
-        (* need to insert a temporary predicate of query (view) to edb because for update sql we need to assume a tempoarary view is created. Suppose that query rterm contains only variables *)
 
-        let delta_rt_lst = get_delta_rterms prog in
-        (*Return the desired SQL*)
-        let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema log optimize prog2 ) delta_rt_lst in
-        let concat_update_sql (v, d, u) (vardec,delquery, updateaction) = (v::vardec,d::delquery, u::updateaction) in
-        let (vars, deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([],[],[]) in
-        ((String.concat "\n" vars)^"",
-        ((String.concat "\n\n" deltas)^"") ^ " \n\n" ^ ((String.concat "\n\n" actions)^""))
+let unfold_delta_sql_stt (dbschema : string) (log : bool) (inc : bool) (optimize : bool) (prog : expr) =
+  if inc then
+    let inc_prog = incrementalize_by_view log prog in
+    let view_sch = get_view inc_prog in
+    let view_rt = get_schema_rterm view_sch in
+    let get_ast = Ast2fol.optimize_query_datalog log {prog with query = Some view_rt} in
+    let new_view_rt = rename_rterm "new_" view_rt in
+    let subst_prog = subst_pred (get_rterm_predname view_rt) (get_rterm_predname new_view_rt) inc_prog in
+    (* let subst_prog = inc_prog in *)
+    let prog2 =
+      { subst_prog with
+        sources = [
+          (* get_rterm_predname (view_rt), get_schema_col_typs view_sch; *)
+          get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)), get_schema_col_typs view_sch;
+          get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)), get_schema_col_typs view_sch;
+        ] @ subst_prog.sources;
+        rules = [
+          (get_inc_original view_rt, [ Rel view_rt ]);
+          (get_inc_ins view_rt, [ Rel (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)) ]);
+          (get_inc_del view_rt, [ Rel (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)) ]);
+        ] @ subst_prog.rules @ get_ast.rules;
+      }
+    in
+    let delta_rt_lst = get_delta_rterms inc_prog in
+    (*Return the desired SQL*)
+    let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema log optimize prog2 ) delta_rt_lst in
+    let concat_update_sql (v, d, u) (vardec,delquery, updateaction) =
+      (v :: vardec, d :: delquery, u :: updateaction)
+    in
+    let (vars, deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([], [], []) in
+    ((String.concat "\n" vars) ^"",
+      ((String.concat "\n\n" deltas)^"") ^ " \n\n" ^ ((String.concat "\n\n" actions) ^ ""))
+  else
+    let view_sch = get_view prog in
+    let view_rt = get_schema_rterm view_sch in
+    let new_view_rt = rename_rterm "new_" view_rt in
+    let subst_prog =
+      subst_pred
+        (get_rterm_predname view_rt)
+        (get_rterm_predname new_view_rt)
+        (delete_rule_of_predname (get_rterm_predname view_rt) prog)
+    in
+    let prog2 =
+      { subst_prog with
+        sources = [
+          get_rterm_predname view_rt , get_schema_col_typs view_sch;
+          get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt)), get_schema_col_typs view_sch;
+          get_rterm_predname (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt)), get_schema_col_typs view_sch;
+        ] @ subst_prog.sources;
+        rules = [
+          (new_view_rt,[Rel (view_rt); Not (rename2_rterm "_ar" (get_temp_delta_deletion_rterm view_rt))]);
+          (new_view_rt,[Rel (rename2_rterm "_ar" (get_temp_delta_insertion_rterm view_rt))])
+        ] @ subst_prog.rules;
+      }
+    in
+    (* need to insert a temporary predicate of query (view) to edb because for update sql we need to assume a tempoarary view is created. Suppose that query rterm contains only variables *)
+    let delta_rt_lst = get_delta_rterms prog in
+    (*Return the desired SQL*)
+    let update_sql_lst = List.map (non_rec_unfold_sql_of_update dbschema log optimize prog2 ) delta_rt_lst in
+    let concat_update_sql (v, d, u) (vardec,delquery, updateaction) =
+      (v :: vardec, d :: delquery, u :: updateaction)
+    in
+    let (vars, deltas, actions) = List.fold_right concat_update_sql update_sql_lst ([],[],[]) in
+    ((String.concat "\n" vars) ^ "",
+      ((String.concat "\n\n" deltas) ^ "") ^ " \n\n" ^ ((String.concat "\n\n" actions) ^ ""))
 
 
 (** SQL code for triggers of detecting updates on the source relations, which call the action of executing shell script on the view. *)
-let source_update_detection_trigger_stt (dbschema:string) (log:bool) (dejima_user:string) prog =
-    let view_rt = get_schema_rterm (get_view prog) in
-    let view_name = get_rterm_predname view_rt in
-    let all_source = get_source_stts prog in
-    let effect_sources, sql_lst = List.fold_left (fun (source_lst, code_lst) x  ->
-        let source_rt = get_schema_rterm x in
-        let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (source_rt)) )) ^")" in
-        let source_name = get_rterm_predname source_rt in
-        let inc_view_definition_raw = incrementalize_view_definition log source_rt prog in
-        (* let new_source_rt = rename_rterm "new_" source_rt in *)
-        (* let subst_prog = subst_pred (get_rterm_predname source_rt) (get_rterm_predname new_source_rt) inc_view_definition_raw in *)
-        let subst_prog = delete_rule_of_predname (get_rterm_predname source_rt) inc_view_definition_raw in
-        let inc_view_definition = {subst_prog with sources = [
+let source_update_detection_trigger_stt (dbschema : string) (log :bool) (dejima_user : string) (prog : expr) : source list * string =
+  let view_rt = get_schema_rterm (get_view prog) in
+  let view_name = get_rterm_predname view_rt in
+  let all_source = get_source_stts prog in
+  let (effect_sources, sql_lst) =
+    List.fold_left (fun (source_lst, code_lst) x ->
+      let source_rt = get_schema_rterm x in
+      let cols_tuple_str = "("^ (String.concat "," (List.map string_of_var (get_rterm_varlist (source_rt)) )) ^")" in
+      let source_name = get_rterm_predname source_rt in
+      let inc_view_definition_raw = incrementalize_view_definition log source_rt prog in
+      (* let new_source_rt = rename_rterm "new_" source_rt in *)
+      (* let subst_prog = subst_pred (get_rterm_predname source_rt) (get_rterm_predname new_source_rt) inc_view_definition_raw in *)
+      let subst_prog = delete_rule_of_predname (get_rterm_predname source_rt) inc_view_definition_raw in
+      let inc_view_definition =
+        { subst_prog with
+          sources = [
             get_rterm_predname (get_temp_delta_deletion_rterm source_rt)^"_for_"^view_name^"_ar", get_schema_col_typs x;
             get_rterm_predname (get_temp_delta_insertion_rterm source_rt)^"_for_"^view_name^"_ar", get_schema_col_typs x
-        ]@subst_prog.sources; rules = [
-            (get_inc_original source_rt,[Rel (source_rt); Not(get_inc_ins source_rt)]);
-            (get_inc_original source_rt,[Rel (get_inc_del source_rt)]);
-            (get_inc_ins source_rt,[Rel (rename2_rterm ("_for_"^view_name^"_ar") (get_temp_delta_insertion_rterm source_rt))]);
-            (get_inc_del source_rt,[Rel (rename2_rterm ("_for_"^view_name^"_ar") (get_temp_delta_deletion_rterm source_rt))])
-        ]@subst_prog.rules} in
-        if not (is_defined_pred (get_rterm_predname (get_inc_ins view_rt)) inc_view_definition) || not (is_defined_pred (get_rterm_predname (get_inc_del view_rt)) inc_view_definition) then (source_lst, code_lst)
-        else
-            let ins_view_optimized_datalog = (Ast2fol.optimize_query_datalog log {inc_view_definition with query = Some (get_inc_ins view_rt)}) in
-            let del_view_optimized_datalog = (Ast2fol.optimize_query_datalog log {inc_view_definition with query = Some (get_inc_del view_rt)}) in
-            (* print_endline (non_rec_unfold_sql_of_symtkey dbschema idb cnt (symtkey_of_rterm (get_inc_del view_rt))); *)
-            (x::source_lst,
+          ] @ subst_prog.sources;
+          rules = [
+            (get_inc_original source_rt, [ Rel (source_rt); Not(get_inc_ins source_rt) ]);
+            (get_inc_original source_rt, [ Rel (get_inc_del source_rt) ]);
+            (get_inc_ins source_rt, [ Rel (rename2_rterm ("_for_"^view_name^"_ar") (get_temp_delta_insertion_rterm source_rt)) ]);
+            (get_inc_del source_rt, [ Rel (rename2_rterm ("_for_"^view_name^"_ar") (get_temp_delta_deletion_rterm source_rt)) ]);
+          ] @ subst_prog.rules;
+        }
+      in
+      if
+        not (is_defined_pred (get_rterm_predname (get_inc_ins view_rt)) inc_view_definition)
+          || not (is_defined_pred (get_rterm_predname (get_inc_del view_rt)) inc_view_definition)
+      then
+        (source_lst, code_lst)
+      else
+        let ins_view_optimized_datalog =
+          Ast2fol.optimize_query_datalog log { inc_view_definition with query = Some (get_inc_ins view_rt) }
+        in
+        let del_view_optimized_datalog =
+          Ast2fol.optimize_query_datalog log { inc_view_definition with query = Some (get_inc_del view_rt) }
+        in
+        (* print_endline (non_rec_unfold_sql_of_symtkey dbschema idb cnt (symtkey_of_rterm (get_inc_del view_rt))); *)
+        (x :: source_lst,
 ("
 CREATE OR REPLACE FUNCTION "^dbschema^"."^source_name^"_materialization_for_"^view_name^"()
 RETURNS TRIGGER
@@ -1121,13 +1259,13 @@ AS $$
   END;
 $$;
 
-") :: code_lst) )
-    ([], [])    all_source in
-    (effect_sources, String.concat "\n \n" sql_lst)
+") :: code_lst)) ([], []) all_source
+  in
+  (effect_sources, String.concat "\n \n" sql_lst)
 
 
 (** Generate trigger for delta predicates on the view. *)
-let unfold_delta_trigger_stt (dbschema:string) (log:bool) (dejima_update_detect) (sh_script:string) (dejima_user:string) (inc:bool) (optimize:bool) prog =
+let unfold_delta_trigger_stt (dbschema : string) (log : bool) (dejima_update_detect : bool) (sh_script : string) (dejima_user : string) (inc : bool) (optimize : bool) (prog : expr) =
     let view_rt = get_schema_rterm (get_view prog) in
     let view_name = get_rterm_predname view_rt in
     (* let temporary_view_name = get_rterm_predname (get_temp_rterm view_rt) in *)
@@ -1135,7 +1273,12 @@ let unfold_delta_trigger_stt (dbschema:string) (log:bool) (dejima_update_detect)
     (* convert these cols to string of tuple of these cols *)
     let cols_tuple_str = "("^ (String.concat "," (List.map  string_of_var (get_rterm_varlist (get_temp_rterm view_rt)) )) ^")" in
     let (vardec, delta_sql_stt) = unfold_delta_sql_stt dbschema log inc optimize prog in
-    let effect_sources, update_detection_trigger_sql = if dejima_update_detect then source_update_detection_trigger_stt dbschema log dejima_user prog else ([], "") in
+    let effect_sources, update_detection_trigger_sql =
+      if dejima_update_detect then
+        source_update_detection_trigger_stt dbschema log dejima_user prog
+      else
+        ([], "")
+    in
     let trigger_pgsql =
 (* "
 DROP MATERIALIZED VIEW IF EXISTS "^dbschema^"."^(get_rterm_predname (get_materializied_rterm view_rt))^";
