@@ -1,12 +1,12 @@
-(** Operations for a db-connection, such as fetching columns or printing the results  
+(** Operations for a db-connection, such as fetching columns or printing the results
  *)
 
-open Printf 
-open Postgresql 
+open Printf
+open Postgresql
 open Utils
-open Expr2
+open Expr
 
-(** Extract response column-names and tuples to lists 
+(** Extract response column-names and tuples to lists
  *  Returns: empty_query, tuples_ok or error messages in case of problems *)
 let res_to_lst conn res =
     match res#status with
@@ -71,27 +71,27 @@ let print_sql_res (conn:Postgresql.connection) sql =
 let print_creating_sql (conn:Postgresql.connection) sql =
     let res = (conn#exec sql) in
     print_endline "";
-    match res#status with 
+    match res#status with
     | Command_ok -> print_endline "-- run SQL successfully"
     | _             -> failwith "error of executing SQL: unexpected status"
 
 
-let type_of_postgrestype str = match str with 
+let type_of_postgrestype str = match str with
     | "smallint" -> Sint
     | "integer"	-> Sint
     | "bigint"	-> Sint
     | "decimal variable" -> Sreal
     | "decimal" -> Sreal
-    | "numeric variable" -> Sreal 
-    | "numeric" -> Sreal 
-    | "real" -> Sreal 
-    | "double precision" -> Sreal 
+    | "numeric variable" -> Sreal
+    | "numeric" -> Sreal
+    | "real" -> Sreal
+    | "double precision" -> Sreal
     | "smallserial"	-> Sint
     | "serial" -> Sint
     | "bigserial"	-> Sint
     | "boolean" -> Sbool
     | "text" -> Sstring
-    | "date" -> Sstring 
+    | "date" -> Sstring
     | _ -> Sstring
 
 (** Looks in the db for the description of the provided table-name
@@ -101,11 +101,11 @@ let import_table_schema (conn:Postgresql.connection) tname =
     let sql = "SELECT column_name,data_type,ordinal_position FROM information_schema.columns
                 WHERE table_name ='"^tname^"';" in
     let _,tuples = get_query_result conn sql in
-    let ordpos t = int_of_string (List.nth t 2) in 
+    let ordpos t = int_of_string (List.nth t 2) in
     let stuples = List.sort (fun a b -> (ordpos a) - (ordpos b)) tuples in
-    let tuple_to_var_and_type t = 
+    let tuple_to_var_and_type t =
         let col = (String.uppercase_ascii (List.hd t)) in
-        let type_of_var = type_of_postgrestype (List.nth t 1) in 
+        let type_of_var = type_of_postgrestype (List.nth t 1) in
         col,type_of_var in
     let col_types = List.map tuple_to_var_and_type stuples in
     (tname, col_types)
@@ -124,4 +124,3 @@ let import_dbschema (conn:Postgresql.connection) (dbschema:string) =
     (* List.map (insert_t_pred conn symt) t_names; *)
     (* symt *)
     List.map (import_table_schema conn) t_names;
-

@@ -1,4 +1,4 @@
-PACKAGES=postgresql,str,num 
+PACKAGES=postgresql,str,num
 
 # create directory if not exist
 DIR_GUARD=@mkdir -p $(@D)
@@ -28,7 +28,7 @@ LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
 
 TOP_FILES=\
-	expr2 utils parser lexer\
+	expr utils parser lexer\
 	conn_ops\
 	rule_preprocess stratification derivation \
 	bottom_up evaluation\
@@ -38,12 +38,12 @@ TOP_FILES=\
 	debugger\
 
 TOP_FILES_WITH_MLI=\
-	parser expr2 conversion\
+	parser expr conversion\
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
     $(TOP_FILES) \
-	
+
 .PHONY: all release clean depend #annot
 all: $(BIN_DIR)/$(EX_NAME)
 
@@ -91,7 +91,7 @@ release: $(RELEASE_DIR)/$(EX_NAME)
 $(RELEASE_DIR)/$(EX_NAME): $(FILES:%=$(RELEASE_DIR)/%.cmx) $(RELEASE_DIR)/$(MAIN_FILE).cmx
 	$(DIR_GUARD)
 	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -linkpkg $(FILES:%=$(RELEASE_DIR)/%.cmx) $(RELEASE_DIR)/$(MAIN_FILE).cmx -o $(RELEASE_DIR)/$(EX_NAME)
-	rm -f $(RELEASE_DIR)/*.cmx $(RELEASE_DIR)/*.cmi $(RELEASE_DIR)/*.o $(LOGIC_RELEASE_DIR)/*.cmx $(LOGIC_RELEASE_DIR)/*.cmi $(LOGIC_RELEASE_DIR)/*.o 
+	rm -f $(RELEASE_DIR)/*.cmx $(RELEASE_DIR)/*.cmi $(RELEASE_DIR)/*.o $(LOGIC_RELEASE_DIR)/*.cmx $(LOGIC_RELEASE_DIR)/*.cmi $(LOGIC_RELEASE_DIR)/*.o
 
 #Rule for compiling the main file
 $(RELEASE_DIR)/$(MAIN_FILE).cmx: $(FILES:%=$(RELEASE_DIR)/%.cmx) $(SOURCE_DIR)/$(MAIN_FILE).ml
@@ -124,6 +124,6 @@ $(RELEASE_DIR)/%.cmi $(RELEASE_DIR)/%.cmx: $(SOURCE_DIR)/%.ml
 	$(DIR_GUARD)
 	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(RELEASE_DIR)/$* -c $<
 
-install: 
+install:
 	make release
 	mv release/birds /usr/local/bin/

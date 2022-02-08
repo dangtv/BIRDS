@@ -1,7 +1,7 @@
 %{ (* OCaml preamble *)
 
-  open Expr2 
-  open Utils 
+  open Expr
+  open Utils
   (* let parse_error (s : string) = spec_parse_error s 1 *)
   (* end preamble *)
  %}
@@ -33,13 +33,13 @@
 
 
 %start main               /* entry point */
-%type <Expr2.expr> main
+%type <Expr.expr> main
 
 %start parse_rterm
-%type <Expr2.rterm> parse_rterm
+%type <Expr.rterm> parse_rterm
 
 %start parse_query
-%type <Expr2.conj_query> parse_query
+%type <Expr.conj_query> parse_query
 
 %%
 
@@ -59,8 +59,8 @@
   | conj_query EOF { $1 }
   | error          { spec_parse_error "invalid syntax for a conj_query" 1; }
   ;
-  
-  program: 
+
+  program:
   | exprlist { $1 }
   | error    { spec_parse_error "invalid syntax for a program" 1; }
   ;
@@ -71,7 +71,7 @@
   | error         { spec_parse_error "invalid syntax for a list of rules" 1; }
   ;
 
-  expr: 
+  expr:
   | primary_key          { Stt_Pk (fst $1, snd $1) }
   | integrity_constraint { Stt_Constraint (fst $1, snd $1) }
   | rule                 { Stt_Rule (fst $1, snd $1) }
@@ -89,7 +89,7 @@
   ;
 
   integrity_constraint:
-  | BOT IMPLIEDBY body DOT               { (get_empty_pred, $3) } 
+  | BOT IMPLIEDBY body DOT               { (get_empty_pred, $3) }
   | BOT LPAREN RPAREN IMPLIEDBY body DOT { (Pred ("⊥", []), $5) }
   | BOT IMPLIEDBY body EOF               { spec_parse_error "miss a dot for a constraint" 3; }
   | error                                { spec_parse_error "invalid syntax for a constraint" 1; }
@@ -102,24 +102,24 @@
   ;
 
   source:
-  | SMARK schema DOT { $2 } 
+  | SMARK schema DOT { $2 }
   | SMARK schema EOF { spec_parse_error "miss a dot for a source relation" 3; }
   | error            { spec_parse_error "invalid syntax for a source relation" 1; }
   ;
 
   view:
-  | VMARK schema DOT { $2 } 
+  | VMARK schema DOT { $2 }
   | VMARK schema EOF { spec_parse_error "miss a dot for a view relation" 3; }
   | error            { spec_parse_error "invalid syntax for a view relation" 1; }
   ;
-  
+
   fact:
   | predicate DOT { $1 }
   | error         { spec_parse_error "invalid syntax for a fact" 1; }
   ;
 
   query:
-  | QMARK predicate DOT { $2 } 
+  | QMARK predicate DOT { $2 }
   | QMARK predicate EOF { spec_parse_error "miss a dot for a query" 3; }
   | error               { spec_parse_error "invalid syntax for a query" 1; }
   ;
@@ -137,10 +137,10 @@
   ;
 
   conj_query:
-  | LPAREN varlist RPAREN IMPLIEDBY signed_literals 
+  | LPAREN varlist RPAREN IMPLIEDBY signed_literals
     {
       let pos_literals, neg_literal = $5 in
-      Expr2.Conj_query ($2, pos_literals, neg_literal)
+      Expr.Conj_query ($2, pos_literals, neg_literal)
     }
   | error { spec_parse_error "invalid syntax for a conjunctive query" 1; }
   ;
@@ -200,7 +200,7 @@
   | error                               { spec_parse_error "invalid syntax for a predicate" 1; }
   ;
 
-  equation:	
+  equation:
   | value_expression EQ value_expression { Equation ( "=", $1, $3) }
   | value_expression NE value_expression { Equation ("<>", $1, $3) }
   | value_expression LT value_expression { Equation ( "<", $1, $3) }
