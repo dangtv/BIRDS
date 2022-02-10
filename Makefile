@@ -38,7 +38,7 @@ TOP_FILES=\
 	debugger\
 
 TOP_FILES_WITH_MLI=\
-	parser expr conversion\
+	parser expr conversion ast2sql\
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
