@@ -28,7 +28,7 @@ LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
 
 LOGIC_FILES_WITH_MLI=\
-    fol skolem\
+    fol skolem formulas\
 
 TOP_FILES=\
 	expr utils parser lexer\
