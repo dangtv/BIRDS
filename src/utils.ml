@@ -42,7 +42,7 @@ let spec_lex_error lexbuf =
     are rule-name & rule-arity tuples and the values are lists of
     rules' AST specifications.
 *)
-type symtkey = (string*int) (* string is predicate name, int is the arity of literal*)
+type symtkey = string * int (* string is predicate name, int is the arity of literal*)
 type symtable = (symtkey, (rterm * term list) list) Hashtbl.t (* each row of a symtable is all the rules which has the same literal in head*)
 
 (* let hash_max_size = ref 500 *)
@@ -336,7 +336,7 @@ let build_eqtab eqs =
   hs
 
 (** Given a var name, returns the value and removes it from the eqtab. *)
-let eqt_extract eqt e1 =
+let eqt_extract (eqt : eqtab) (e1 : vterm) : vterm =
   let lst = Hashtbl.find_all eqt e1 in
   if ((List.length lst) <> 1) then raise (SemErr ("Ambiguity of the assigments of variable "^(string_of_vterm e1)));
   let c = List.hd lst in
