@@ -17,6 +17,7 @@ open Conn_ops
 open Utils
 open Derivation
 open Arg
+open Ast2theorem
 open Ast2fol
 open Bx
 open Expr
@@ -242,14 +243,14 @@ let main () =
         if (!verification || !cex_generation) then
           (
           let constr_ast = constraint2rule ast in
-          let disdelta_thm = Ast2theorem.lean_simp_theorem_of_disjoint_delta (!log) constr_ast in
-          let getput_thm = Ast2theorem.lean_simp_theorem_of_getput (!log) constr_ast in
-          let putget_thm = Ast2theorem.lean_simp_theorem_of_putget (!log) constr_ast in
+          let disdelta_thm = lean_simp_theorem_of_disjoint_delta (!log) constr_ast in
+          let getput_thm = lean_simp_theorem_of_getput (!log) constr_ast in
+          let putget_thm = lean_simp_theorem_of_putget (!log) constr_ast in
           if(!speedup) then
             (
             (* verify all properties *)
             if (!log) then print_endline "==> verifying all properties";
-            let lean_code_all_thms = Ast2theorem.gen_lean_code_for_theorems [ disdelta_thm; getput_thm; putget_thm ] in
+            let lean_code_all_thms = gen_lean_code_for_theorems [ disdelta_thm; getput_thm; putget_thm ] in
               let exitcode, message = verify_fo_lean (!log) (!timeout) lean_code_all_thms in
               if not (exitcode=0) then
                 if (exitcode = 124) then (raise (ChkErr ("Stop verifying: Timeout")))
@@ -270,7 +271,7 @@ let main () =
             let verification_mess = ref "" in
             let counterexample_mess = ref "" in
             if (!log) then print_endline "==> Verifying the delta disjointness property";
-            let lean_code_disdelta = Ast2theorem.gen_lean_code_for_theorems [ disdelta_thm ] in
+            let lean_code_disdelta = gen_lean_code_for_theorems [ disdelta_thm ] in
               let exitcode, message = verify_fo_lean (!log) (!timeout) lean_code_disdelta in
               if not (exitcode=0) then
                 if (exitcode = 124) then (
@@ -299,7 +300,7 @@ let main () =
               else satisfying_deltadis := true;
             (* verify getput property *)
             if (!log) then print_endline "==> verifying the getput property";
-            let lean_code_getput = Ast2theorem.gen_lean_code_for_theorems [ getput_thm ] in
+            let lean_code_getput = gen_lean_code_for_theorems [ getput_thm ] in
               let exitcode, message = verify_fo_lean (!log) (!timeout) lean_code_getput in
               if not (exitcode=0) then
                 if (exitcode = 124) then (
@@ -329,7 +330,7 @@ let main () =
               else satisfying_getput := true;
             (* verify putget *)
             if (!log) then print_endline "==> Verifying the putget property";
-            let lean_code_putget = Ast2theorem.gen_lean_code_for_theorems [ putget_thm ] in
+            let lean_code_putget = gen_lean_code_for_theorems [ putget_thm ] in
               let exitcode, message = verify_fo_lean (!log) (!timeout) lean_code_putget in
               if not (exitcode=0) then
                 if (exitcode = 124) then (
@@ -378,8 +379,8 @@ let main () =
         bi_prog, (Expr.string_of_prog {get_empty_expr with rules = get_ast.rules})) in
     let lean_code =
     (
-      if has_get then Ast2theorem.validity_lean_code_of_bidirectional_datalog (!log) (constraint2rule ast2) else
-        Ast2theorem.gen_lean_code_for_theorems [ (Ast2theorem.lean_simp_theorem_of_putget (!log) (constraint2rule ast2)) ]
+      if has_get then validity_lean_code_of_bidirectional_datalog (!log) (constraint2rule ast2) else
+        gen_lean_code_for_theorems [ (lean_simp_theorem_of_putget (!log) (constraint2rule ast2)) ]
     ) in
     if not (!outputlean = "") then
       (let ol =  open_out (!outputlean)  in

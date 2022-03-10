@@ -12,6 +12,7 @@ open Formulas
 open Fol
 open Fol_ex
 open Ast2fol
+open Ast2theorem
 open Utils
 
 (** Take a put datalog program and generate the FO sentence of checking whether the view is unique or not. *)
@@ -61,7 +62,7 @@ let view_uniqueness_sentence_of_stt (log:bool) prog =
 (* Take a view update put datalog program and generate the theorem of checking view uniqueness. *)
 let lean_simp_theorem_of_view_uniqueness (log:bool) prog =
     if log then (print_endline "==> generating theorem for view uniqueness";) else ();
-    "theorem view_uniqueness " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (Ast2theorem.source_to_lean_func_types prog)) ^
+    "theorem view_uniqueness " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
      ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt log prog,
      view_uniqueness_sentence_of_stt log prog)))
 
@@ -69,10 +70,10 @@ let lean_simp_theorem_of_view_uniqueness (log:bool) prog =
 let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
     (* verifying djsdelta property *)
     let prog = constraint2rule inputprog in
-    let disdelta_thm = Ast2theorem.lean_simp_theorem_of_disjoint_delta (log) prog in
+    let disdelta_thm = lean_simp_theorem_of_disjoint_delta (log) prog in
     if (not speedup) then
         (if log then print_endline "==> verifying the delta disjointness property";
-        let exitcode, disdel_mess =  verify_fo_lean (log) timeout (Ast2theorem.gen_lean_code_for_theorems [disdelta_thm]) in
+        let exitcode, disdel_mess =  verify_fo_lean (log) timeout (gen_lean_code_for_theorems [disdelta_thm]) in
         if not (exitcode=0) then
             (if (exitcode = 124) then (
                 if log then print_endline "Stop verifying the delta disjointness property: Timeout";
@@ -126,10 +127,10 @@ let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
     if log then (print_endline "==> generating a theorem for the view existence property";) else ();
 
     (* checking the FO sentence of the existence of a view *)
-    let theorem_of_view_existence =  "theorem view_existence " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (Ast2theorem.source_to_lean_func_types prog)) ^
+    let theorem_of_view_existence =  "theorem view_existence " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
      ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (non_view_constraint_sentence_of_stt log prog,
      And(sentence_of_view_existence, generalize (Imp (phi, False)))))) in
-    let lean_code_view_existence = Ast2theorem.gen_lean_code_for_theorems [theorem_of_view_existence] in
+    let lean_code_view_existence = gen_lean_code_for_theorems [theorem_of_view_existence] in
 
     if (not speedup) then
         (if log then print_endline "==> verifying the view existence property";
@@ -155,8 +156,8 @@ let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
     (* verify the putget property *)
     (* let get_rules exp = fst (Rule_preprocess.seperate_rules exp) in  *)
     let bi_prog = Expr.add_rules get_ast.rules inputprog in
-    let putget_thm = (Ast2theorem.lean_simp_theorem_of_putget (log) (constraint2rule bi_prog)) in
-    let lean_code_putget = Ast2theorem.gen_lean_code_for_theorems [ putget_thm ] in
+    let putget_thm = (lean_simp_theorem_of_putget (log) (constraint2rule bi_prog)) in
+    let lean_code_putget = gen_lean_code_for_theorems [ putget_thm ] in
 
     if (not speedup) then (
         if log then print_endline "==> Verifying the putget property";
@@ -172,7 +173,7 @@ let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
 
     if speedup then (
         if log then print_endline "==> Verifying all properties of a putback program";
-        let lean_code_all = Ast2theorem.gen_lean_code_for_theorems [ disdelta_thm; theorem_of_view_existence; putget_thm ] in
+        let lean_code_all = gen_lean_code_for_theorems [ disdelta_thm; theorem_of_view_existence; putget_thm ] in
         let exitcode, message = verify_fo_lean (log) (timeout) lean_code_all in
         if not (exitcode=0) then
             if (exitcode = 124) then (
