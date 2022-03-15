@@ -27,6 +27,9 @@ MAIN_FILE=main
 LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
 
+LOGIC_FILES_WITH_MLI=\
+    lib intro formulas prop fol skolem fol_ex\
+
 TOP_FILES=\
 	expr utils parser lexer\
 	conn_ops\
@@ -38,7 +41,7 @@ TOP_FILES=\
 	debugger\
 
 TOP_FILES_WITH_MLI=\
-	parser expr conversion ast2sql\
+	parser expr conversion ast2sql ast2theorem\
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
@@ -71,6 +74,14 @@ $(TOP_FILES_WITH_MLI:%=$(OBJ_DIR)/%.cmi): $(OBJ_DIR)/%.cmi: $(SOURCE_DIR)/%.mli
 $(TOP_FILES_WITH_MLI:%=$(OBJ_DIR)/%.cmo): $(OBJ_DIR)/%.cmo: $(SOURCE_DIR)/%.ml $(OBJ_DIR)/%.cmi
 	$(DIR_GUARD)
 	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$* -c $<
+
+$(LOGIC_FILES_WITH_MLI:%=$(LOGIC_OBJ_DIR)/%.cmi): $(LOGIC_OBJ_DIR)/%.cmi: $(LOGIC_SOURCE_DIR)/%.mli
+	$(DIR_GUARD)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -o $(LOGIC_OBJ_DIR)/$* -c $<
+
+$(LOGIC_FILES_WITH_MLI:%=$(LOGIC_OBJ_DIR)/%.cmo): $(LOGIC_OBJ_DIR)/%.cmo: $(LOGIC_SOURCE_DIR)/%.ml $(LOGIC_OBJ_DIR)/%.cmi
+	$(DIR_GUARD)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(LOGIC_OBJ_DIR)/$* -c $<
 
 #General rule for compiling
 $(OBJ_DIR)/%.cmi $(OBJ_DIR)/%.cmo $(OBJ_DIR)/%.cmt: $(SOURCE_DIR)/%.ml
@@ -118,6 +129,18 @@ $(TOP_FILES_WITH_MLI:%=$(RELEASE_DIR)/%.cmo): $(RELEASE_DIR)/%.cmo: $(SOURCE_DIR
 $(TOP_FILES_WITH_MLI:%=$(RELEASE_DIR)/%.cmx): $(RELEASE_DIR)/%.cmx: $(SOURCE_DIR)/%.ml $(RELEASE_DIR)/%.cmi
 	$(DIR_GUARD)
 	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(RELEASE_DIR)/$* -c $<
+
+$(LOGIC_FILES_WITH_MLI:%=$(LOGIC_RELEASE_DIR)/%.cmi): $(LOGIC_RELEASE_DIR)/%.cmi: $(LOGIC_SOURCE_DIR)/%.mli
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -o $(LOGIC_RELEASE_DIR)/$* -c $<
+
+$(LOGIC_FILES_WITH_MLI:%=$(LOGIC_RELEASE_DIR)/%.cmo): $(LOGIC_RELEASE_DIR)/%.cmo: $(LOGIC_SOURCE_DIR)/%.ml $(LOGIC_RELEASE_DIR)/%.cmi
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(RELEASE_DIR)/$* -c $<
+
+$(LOGIC_FILES_WITH_MLI:%=$(LOGIC_RELEASE_DIR)/%.cmx): $(LOGIC_RELEASE_DIR)/%.cmx: $(LOGIC_SOURCE_DIR)/%.ml $(LOGIC_RELEASE_DIR)/%.cmi
+	$(DIR_GUARD)
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -thread -o $(LOGIC_RELEASE_DIR)/$* -c $<
 
 #General rule for compiling
 $(RELEASE_DIR)/%.cmi $(RELEASE_DIR)/%.cmx: $(SOURCE_DIR)/%.ml
