@@ -15,6 +15,9 @@ open Ast2fol
 open Ast2theorem
 open Utils
 
+let lean_string_of_fol_formula (fm : fol formula) : string =
+  stringify_lean_formula (lean_formula_of_fol_formula fm)
+
 (** Take a put datalog program and generate the FO sentence of checking whether the view is unique or not. *)
 let view_uniqueness_sentence_of_stt (log:bool) prog =
     let fm = sourcestability_sentence_of_stt ( log) prog in
@@ -60,11 +63,19 @@ let view_uniqueness_sentence_of_stt (log:bool) prog =
     sentence_of_view_uniqueness
 
 (* Take a view update put datalog program and generate the theorem of checking view uniqueness. *)
-let lean_simp_theorem_of_view_uniqueness (log:bool) prog =
+let lean_simp_theorem_of_view_uniqueness (log : bool) (prog : Expr.expr) : lean_theorem =
     if log then (print_endline "==> generating theorem for view uniqueness";) else ();
+    make_lean_theorem
+      "view_uniqueness"
+      (source_to_lean_func_types prog)
+      (Fol_ex.lean_formula_of_fol_formula
+        (Imp (Ast2fol.constraint_sentence_of_stt log prog,
+          view_uniqueness_sentence_of_stt log prog)))
+(* ORIGINAL:
     "theorem view_uniqueness " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
      ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt log prog,
      view_uniqueness_sentence_of_stt log prog)))
+*)
 
 (* Take a view update put datalog program and derive the corresponding get datalog. *)
 let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
@@ -127,9 +138,19 @@ let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
     if log then (print_endline "==> generating a theorem for the view existence property";) else ();
 
     (* checking the FO sentence of the existence of a view *)
-    let theorem_of_view_existence =  "theorem view_existence " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
+    let theorem_of_view_existence =
+      make_lean_theorem
+        "view_existence"
+        (source_to_lean_func_types prog)
+        (Fol_ex.lean_formula_of_fol_formula
+          (Imp (non_view_constraint_sentence_of_stt log prog,
+            And (sentence_of_view_existence, generalize (Imp (phi, False))))))
+(* ORIGINAL:
+      "theorem view_existence " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
      ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (non_view_constraint_sentence_of_stt log prog,
-     And(sentence_of_view_existence, generalize (Imp (phi, False)))))) in
+     And(sentence_of_view_existence, generalize (Imp (phi, False))))))
+*)
+    in
     let lean_code_view_existence = gen_lean_code_for_theorems [theorem_of_view_existence] in
 
     if (not speedup) then
@@ -144,7 +165,7 @@ let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
     (* choose the lower bound as a FO formula of the view *)
     let view_fo = view_lower_fol in
     let refined_view_fo = remove_trivial (ranf (Skolem.simplify (normalize_comparison view_fo))) in
-    if log then print_endline @@ "FO formula of the view: " ^ Fol_ex.lean_string_of_fol_formula refined_view_fo ;
+    if log then print_endline @@ "FO formula of the view: " ^ lean_string_of_fol_formula refined_view_fo ;
     if (refined_view_fo = False) then raise (ChkErr "Fail to construct the view definition, be sure there is no self-join or projection on the view in the Datalog program");
     let raw_get_ast = view_fol2datalog log (get_view prog) prog.sources view_vars (refined_view_fo ) in
     let get_ast = Ast2fol.optimize_query_datalog log {raw_get_ast with query = Some (Expr.get_schema_rterm (get_view prog))} in

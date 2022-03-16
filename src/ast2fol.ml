@@ -18,6 +18,11 @@ open Rule_preprocess
 open Stratification
 open Derivation
 
+
+let lean_string_of_fol_formula (fm : fol formula) : string =
+  stringify_lean_formula (lean_formula_of_fol_formula fm)
+
+
 (** convert vterm into Fol.term *)
 let rec folterm_of_vterm ae =
     match ae with
