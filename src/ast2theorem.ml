@@ -316,7 +316,7 @@ let stringify_lean_type (ltyp : lean_type) : string =
   let rec aux (ltyp : lean_type) : string =
     match ltyp with
     | LeanBaseType styp           -> stype_to_lean_type styp
-    | LeanFuncType (ltyp1, ltyp2) -> Printf.sprintf "(%s -> %s)" (aux ltyp1) (aux ltyp2)
+    | LeanFuncType (ltyp1, ltyp2) -> Printf.sprintf "(%s → %s)" (aux ltyp1) (aux ltyp2)
   in
   aux ltyp
 
