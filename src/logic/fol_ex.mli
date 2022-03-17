@@ -11,46 +11,7 @@ val ranf : Fol.fol Formulas.formula -> Fol.fol Formulas.formula
 
 val normalize_comparison : Fol.fol Formulas.formula -> Fol.fol Formulas.formula
 
-type lean_variable = string
-
-type lean_infix_operator =
-  | LeanInfixEqual    (* = *)
-  | LeanInfixLt       (* < *)
-  | LeanInfixGt       (* > *)
-  | LeanInfixNotEqual (* ≠ *)
-  | LeanInfixLeq      (* ≤ *)
-  | LeanInfixGeq      (* ≥ *)
-  | LeanInfixAnd
-  | LeanInfixOr
-  | LeanInfixImp
-  | LeanInfixIff
-  | LeanInfixConcat   (* ++ *)
-  | LeanInfixDiv      (* / *)
-  | LeanInfixMult     (* * *)
-  | LeanInfixSubtr    (* - *)
-  | LeanInfixAdd      (* + *)
-  | LeanInfixCons     (* :: *)
-
-(* isomorphic to `Expr.stype` *)
-type lean_annot =
-  | LeanAnnotInt
-  | LeanAnnotRat
-  | LeanAnnotString
-  | LeanAnnotProp
-
-type lean_formula =
-  | LeanNull
-  | LeanBool   of bool
-  | LeanInt    of int
-  | LeanFloat  of float
-  | LeanString of string
-  | LeanVar    of lean_variable
-  | LeanNot    of lean_formula
-  | LeanInfix  of lean_infix_operator * lean_formula * lean_formula
-  | LeanApp    of string * lean_formula list
-  | LeanForall of lean_variable * lean_formula
-  | LeanExists of lean_variable * lean_formula
-  | LeanAnnot  of lean_formula * lean_annot
+type lean_formula
 
 val stringify_lean_formula : lean_formula -> string
 

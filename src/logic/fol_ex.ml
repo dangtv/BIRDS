@@ -161,7 +161,7 @@ type lean_formula =
   | LeanNull
   | LeanBool   of bool
   | LeanInt    of int
-  | LeanFloat  of float
+  | LeanFloat  of string (* ad-hoc *)
   | LeanString of string
   | LeanVar    of lean_variable
   | LeanNot    of lean_formula
@@ -198,7 +198,7 @@ let stringify_lean_formula (lfm : lean_formula) : string =
     | LeanBool true  -> "true"
     | LeanBool false -> "false"
     | LeanInt n      -> string_of_int n
-    | LeanFloat r    -> string_of_float r
+    | LeanFloat s    -> s
     | LeanString s   -> Printf.sprintf "\"%s\"" s
     | LeanVar x      -> x
     | LeanNot lfm0   -> Printf.sprintf "(¬ %s)" (aux lfm0)
@@ -278,8 +278,8 @@ let lean_formula_of_literal (str : string) : lean_formula * lean_annot =
   with
   | _ ->
       try
-        let r = float_of_string str in
-        (LeanFloat r, LeanAnnotRat)
+        let () = ignore (float_of_string str) in
+        (LeanFloat str, LeanAnnotRat)
       with
       | _ ->
           try
