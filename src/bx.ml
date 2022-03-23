@@ -71,11 +71,6 @@ let lean_simp_theorem_of_view_uniqueness (log : bool) (prog : Expr.expr) : lean_
       (Fol_ex.lean_formula_of_fol_formula
         (Imp (Ast2fol.constraint_sentence_of_stt log prog,
           view_uniqueness_sentence_of_stt log prog)))
-(* ORIGINAL:
-    "theorem view_uniqueness " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
-     ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.constraint_sentence_of_stt log prog,
-     view_uniqueness_sentence_of_stt log prog)))
-*)
 
 (* Take a view update put datalog program and derive the corresponding get datalog. *)
 let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
@@ -145,11 +140,6 @@ let derive_get_datalog (log:bool) (speedup:bool) timeout inputprog =
         (Fol_ex.lean_formula_of_fol_formula
           (Imp (non_view_constraint_sentence_of_stt log prog,
             And (sentence_of_view_existence, generalize (Imp (phi, False))))))
-(* ORIGINAL:
-      "theorem view_existence " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^
-     ": " ^ (Fol_ex.lean_string_of_fol_formula (Imp (non_view_constraint_sentence_of_stt log prog,
-     And(sentence_of_view_existence, generalize (Imp (phi, False))))))
-*)
     in
     let lean_code_view_existence = gen_lean_code_for_theorems [theorem_of_view_existence] in
 

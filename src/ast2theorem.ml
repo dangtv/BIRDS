@@ -125,9 +125,6 @@ let source_to_lean_func_types (prog : expr) : (string * lean_type) list =
       List.fold_right (fun (_col, styp) ltyp -> LeanFuncType (LeanBaseType styp, ltyp)) lst (LeanBaseType Sbool)
     in
     (name, ltyp) :: funcs
-(* ORIGINAL:
-    (name ^ ": " ^ String.concat " → " (List.map (fun (col, typ) -> stype_to_lean_type typ) lst) ^ " → Prop") :: funcs
-*)
   in
   List.fold_left p_el [] prog.sources
 
@@ -146,9 +143,6 @@ let source_view_to_lean_func_types (prog : expr) : (string * lean_type) list =
       List.fold_right (fun (_col, styp) ltyp -> LeanFuncType (LeanBaseType styp, ltyp)) lst (LeanBaseType Sbool)
     in
     (name, ltyp) :: funcs
-(* ORIGINAL:
-    (name ^ ": " ^ String.concat " → " ( List.map (fun (col, typ) -> stype_to_lean_type typ) lst) ^ " → Prop" ) :: funcs
-*)
   in
   List.fold_left p_el [] (get_schema_stts prog)
 
@@ -207,13 +201,6 @@ let lean_simp_theorem_of_disjoint_delta (debug : bool) (prog : expr) : lean_theo
     parameter = source_view_to_lean_func_types prog;
     statement = statement;
   }
-(* ORIGINAL:
-  "theorem disjoint_deltas "
-    ^ String.concat " " (List.map (fun x -> "{" ^ x ^"}") (source_view_to_lean_func_types prog)) ^ ": "
-    ^ (Fol_ex.lean_string_of_fol_formula
-        (Imp (Ast2fol.constraint_sentence_of_stt debug prog,
-          (Imp (Ast2fol.disjoint_delta_sentence_of_stt debug prog, False)))))
-*)
 
 let lean_simp_theorem_of_getput (debug : bool) (prog : expr) : lean_theorem =
   if debug then print_endline "==> generating theorem of getput property" else ();
@@ -227,12 +214,6 @@ let lean_simp_theorem_of_getput (debug : bool) (prog : expr) : lean_theorem =
     parameter = source_to_lean_func_types prog;
     statement = statement;
   }
-(* ORIGINAL:
-  "theorem getput " ^ String.concat " " (List.map (fun x -> "{"^x^"}") (source_to_lean_func_types prog)) ^ ": "
-    ^ (Fol_ex.lean_string_of_fol_formula
-         (Imp (Ast2fol.non_view_constraint_sentence_of_stt debug prog,
-           (Imp (Ast2fol.getput_sentence_of_stt debug prog, False)))))
-*)
 
 let lean_simp_theorem_of_putget (debug : bool) (prog : expr) : lean_theorem =
   if debug then print_endline "==> generating theorem of putget property" else ();
@@ -245,12 +226,6 @@ let lean_simp_theorem_of_putget (debug : bool) (prog : expr) : lean_theorem =
     parameter = source_view_to_lean_func_types prog;
     statement = statement;
   }
-(* ORIGINAL:
-  "theorem putget "
-    ^ String.concat " " (List.map (fun x -> "{" ^ x ^ "}") (source_view_to_lean_func_types prog)) ^ ": "
-    ^ (Fol_ex.lean_string_of_fol_formula
-        (Imp (Ast2fol.constraint_sentence_of_stt debug prog, Ast2fol.putget_sentence_of_stt debug prog)))
-*)
 
 (* take a view update datalog program and generate the theorem of checking whether all delta relations are disjoint *)
 let z3_assert_of_disjoint_delta (debug:bool) prog =
@@ -303,11 +278,6 @@ let lean_simp_sourcestability_theorem_of_stt (debug : bool) (prog : expr) : lean
     parameter = source_to_lean_func_types prog;
     statement = statement;
   }
-(* ORIGINAL:
-  "theorem sourcestability "
-    ^ String.concat " " (List.map (fun x -> "{" ^ x ^ "}") (source_to_lean_func_types prog)) ^ ": "
-    ^ (Fol_ex.lean_string_of_fol_formula (Imp (Ast2fol.sourcestability_sentence_of_stt debug prog, False)))
-*)
 
 let make_lean_theorem (name : string) (parameter : (string * lean_type) list) (statement : Fol_ex.lean_formula) : lean_theorem =
   LeanTheorem { name; parameter; statement }

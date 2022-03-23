@@ -228,48 +228,6 @@ let stringify_lean_formula (lfm : lean_formula) : string =
   in
   aux lfm
 
-(*
-let lean_logic_character name = match name with
-    | "false" -> "false"
-    | "true" -> "true"
-    | "not" -> "¬"
-    | "and" -> "∧"
-    | "or" -> "∨"
-    | "imply" -> "→"
-    | "iff" -> "↔"
-    | "forall" -> "∀"
-    | "exists" -> "∃"
-    | "quantifer_sep" -> ","
-    | _ -> failwith "unkown symbol of "^name
-
-let lean_character_of_operator o = match o with
-  | "<>" -> "≠"
-  | ">=" -> "≥"
-  | "<=" -> "≤"
-  | "=" | "<"| ">" -> o
-  | _ -> failwith "unkown symbol of "^o
-
-let lean_stype_of_string (str : string) =
-  try  (ignore(int_of_string str); "int") with
-    (* try test () with *)
-    | Failure e ->
-        try  (ignore(float_of_string str); "rat") with
-        (* try test () with *)
-        | Failure e ->
-            try  ( ignore(bool_of_string str); "Prop") with
-            | Failure e | Invalid_argument e ->  if (str = "null") then  "int" else  "string"
-
-let lean_string_of_string (str : string) =
-  try  (ignore(int_of_string str); str) with
-    (* try test () with *)
-    | Failure e ->
-        try  (ignore(float_of_string str); str) with
-        (* try test () with *)
-        | Failure e ->
-            try  ( ignore(bool_of_string str); str) with
-            | Failure e | Invalid_argument e ->
-            if (str = "null") then  str else "\""^(String.sub str 1 (String.length str -2))^"\""
-*)
 
 let lean_formula_of_literal (str : string) : lean_formula * lean_annot =
   try
@@ -304,45 +262,7 @@ let rec lean_formula_of_term (fm : term) : lean_formula =
   | Fn ("::", [tm1; tm2])      -> LeanInfix (LeanInfixCons, iter tm1, iter tm2)
   | Fn (literal, [])           -> let (lfm, styp) = lean_formula_of_literal literal in LeanAnnot (lfm, styp)
   | Fn (f, ((_ :: _) as args)) -> LeanApp (f, List.map iter args)
-(* ORIGINAL:
-  match fm with
-    Var x -> x
-  | Fn("^",[tm1;tm2]) -> lean_string_of_infix_term true prec 24 "++" tm1 tm2
-  | Fn("/",[tm1;tm2]) -> lean_string_of_infix_term true prec 22 " /" tm1 tm2
-  | Fn("*",[tm1;tm2]) -> lean_string_of_infix_term false prec 20 " *" tm1 tm2
-  | Fn("-",[tm1;tm2]) -> lean_string_of_infix_term true prec 18 " -" tm1 tm2
-  | Fn("+",[tm1;tm2]) -> lean_string_of_infix_term false prec 16 " +" tm1 tm2
-  | Fn("::",[tm1;tm2]) -> lean_string_of_infix_term false prec 14 "::" tm1 tm2
-  | Fn(f,args) -> lean_string_of_fargs f args
-*)
 
-(*
-and lean_string_of_fargs (f : string) (args : term list) : lean_formula =
-  if args = [] then
-    "("^(lean_string_of_string f)^":"^ (lean_stype_of_string f)^")"
-  else
-    f^ ( "("^
-    lean_string_of_term 0 (hd args)^ break_line 0^
-    String.concat "" (List.map (fun t ->  ","^break_line 0^ lean_string_of_term 0 t)
-            (tl args))^
-    ")")
-
-and lean_string_of_infix_term isleft oldprec newprec sym p q =
-  if oldprec > newprec then "(" else ""^
-  lean_string_of_term (if isleft then newprec else newprec+1) p^
-   sym^
-  break_line (if String.sub sym 0 1 = " " then 1 else 0)^
-  lean_string_of_term (if isleft then newprec+1 else newprec) q^
-  (if oldprec > newprec then  ")" else "");;
-
-let lean_string_of_fargs f args =
-    f^
-    if args = [] then "" else
-    ( " "^
-    lean_string_of_term 0 (hd args)^ break_line 0^
-    String.concat "" (List.map (fun t ->  " "^break_line 0^ lean_string_of_term 0 t)
-            (tl args)))
-*)
 
 let lean_formula_of_atom (R (p, args) : fol) : lean_formula =
   let iter = lean_formula_of_term in
@@ -355,27 +275,20 @@ let lean_formula_of_atom (R (p, args) : fol) : lean_formula =
   | (">=", [tm1; tm2]) -> LeanInfix (LeanInfixGeq, iter tm1, iter tm2)
   | _                  -> LeanApp (p, List.map iter args)
 
-(* ORIGINAL:
-  if mem p ["="; "<"; "<="; ">"; ">="; "<>"] && length args = 2 then
-    lean_string_of_infix_term false 12 12 (" "^ lean_character_of_operator p) (el 0 args) (el 1 args)
-  else
-    lean_string_of_fargs p args
-*)
-
 
 let lean_formula_of_fol_formula (fm : fol formula) : lean_formula =
   let rec aux fm =
     match fm with
-    | False        -> LeanBool false
-    | True         -> LeanBool true
-    | Atom pargs   -> lean_formula_of_atom pargs
-    | Not p        -> LeanNot (aux p)
-    | And (p, q)   -> LeanInfix (LeanInfixAnd, aux p, aux q)
-    | Or (p, q)    -> LeanInfix (LeanInfixOr, aux p, aux q)
-    | Imp(p, q)    -> LeanInfix (LeanInfixImp, aux p, aux q)
-    | Iff(p, q)    -> LeanInfix (LeanInfixIff, aux p, aux q)
-    | Forall(x, p) -> LeanForall (x, aux p)
-    | Exists(x, p) -> LeanExists (x, aux p)
+    | False         -> LeanBool false
+    | True          -> LeanBool true
+    | Atom pargs    -> lean_formula_of_atom pargs
+    | Not p         -> LeanNot (aux p)
+    | And (p, q)    -> LeanInfix (LeanInfixAnd, aux p, aux q)
+    | Or (p, q)     -> LeanInfix (LeanInfixOr, aux p, aux q)
+    | Imp (p, q)    -> LeanInfix (LeanInfixImp, aux p, aux q)
+    | Iff (p, q)    -> LeanInfix (LeanInfixIff, aux p, aux q)
+    | Forall (x, p) -> LeanForall (x, aux p)
+    | Exists (x, p) -> LeanExists (x, aux p)
   in
   aux (normalize_comparison fm)
 
