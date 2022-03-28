@@ -11,7 +11,11 @@ val ranf : Fol.fol Formulas.formula -> Fol.fol Formulas.formula
 
 val normalize_comparison : Fol.fol Formulas.formula -> Fol.fol Formulas.formula
 
-val lean_string_of_fol_formula : Fol.fol Formulas.formula -> string
+type lean_formula
+
+val stringify_lean_formula : lean_formula -> string
+
+val lean_formula_of_fol_formula : Fol.fol Formulas.formula -> lean_formula
 
 val remove_trivial : Fol.fol Formulas.formula -> Fol.fol Formulas.formula
 
