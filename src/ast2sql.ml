@@ -1595,12 +1595,6 @@ end = struct
 end
 
 
-(* A module for substitutions that map variables to
-
-   - a pair of a table instance and a column name, or
-   - a constant value. *)
-module Subst = Map.Make(String)
-
 type named_var = string
 
 type table_name = string
@@ -1608,6 +1602,42 @@ type table_name = string
 type column_name = string
 
 type instance_name = string
+
+(* A module for substitutions that map variables to
+
+   - a pair of a table instance and a column name, or
+   - a constant value. *)
+module Subst : sig
+
+  type t
+
+  val empty : t
+
+  val add : named_var -> instance_name * column_name -> t -> t
+
+  val fold : (named_var -> (instance_name * column_name) list -> 'a -> 'a) -> t -> 'a -> 'a
+
+end = struct
+
+  module InternalMap = Map.Make(String)
+
+  type t = ((instance_name * column_name) list) InternalMap.t
+
+
+  let empty =
+    InternalMap.empty
+
+
+  let add x (inst, col) subst =
+    match subst |> InternalMap.find_opt x with
+    | None    -> subst |> InternalMap.add x [ (inst, col) ]
+    | Some vs -> subst |> InternalMap.add x ((inst, col) :: vs)
+
+
+  let fold f i subst =
+    InternalMap.fold f i subst
+
+end
 
 type argument =
   | ArgNamedVar of named_var
@@ -1755,9 +1785,11 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   decompose_body body >>= fun (poss, negs, comps) ->
   let named_poss = assign_instance_names poss in
   let _ =
-    named_poss |> List.fold_left (fun res (pos, instance_name) ->
-      res >>= fun subst ->
-      failwith "TODO"
+    named_poss |> List.fold_left (fun res (Positive (table, args), instance_name) ->
+      args |> List.fold_left (fun res arg ->
+        res >>= fun subst ->
+        failwith "TODO"
+      ) res
     ) (return Subst.empty)
   in
   failwith "TODO: build SQL queries"
