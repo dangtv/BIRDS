@@ -1816,8 +1816,12 @@ let as_const_or_var (vt : vterm) : as_const_or_var =
   | _                -> NotConstOrNamedVar
 
 
-let sql_of_vterm_new (vt : vterm) : (sql_vterm, error) result =
+let sql_of_vterm_new (varmap : Subst.entry VarMap.t) (vt : vterm) : (sql_vterm, error) result =
   failwith "TODO: sql_of_vterm_new"
+
+
+let sql_vterm_of_arg (varmap : Subst.entry VarMap.t) (arg : argument) : (sql_vterm, error) result =
+  failwith "TODO: sql_vterm_of_arg"
 
 
 let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
@@ -1905,8 +1909,8 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   (* Adds comparison constraints to SQL constraints: *)
   comp |> List.fold_left (fun res (Comparison (op, vt1, vt2)) ->
     res >>= fun sql_constraint_acc ->
-    sql_of_vterm_new vt1 >>= fun sql_vt1 ->
-    sql_of_vterm_new vt2 >>= fun sql_vt2 ->
+    sql_of_vterm_new varmap vt1 >>= fun sql_vt1 ->
+    sql_of_vterm_new varmap vt2 >>= fun sql_vt2 ->
     let sql_op =
       match op with
       | EqualTo              -> SqlRelEqual
@@ -1917,6 +1921,21 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
       | GreaterThanOrEqualTo -> SqlRelGeneral ">="
     in
     return @@ SqlConstraint (sql_vt1, sql_op, sql_vt2) :: sql_constraint_acc
+  ) (return sql_constraint_acc) >>= fun sql_constraint_acc ->
+
+  (* Adds constraints that stem from negative predicates: *)
+  negs |> List.fold_left (fun res (Negative (table, args)) ->
+    res >>= fun sql_constraint_acc ->
+    let instance = "t" in
+    let sql_from = SqlFrom [ (SqlFromTable table, instance) ] in
+    combine_column_names table args >>= fun column_and_arg_pairs ->
+    column_and_arg_pairs |> List.fold_left (fun res (column, arg) ->
+      res >>= fun acc ->
+      sql_vterm_of_arg varmap arg >>= fun sql_vt ->
+      return @@ SqlConstraint (SqlColumn (Some instance, column), SqlRelEqual, sql_vt) :: acc
+    ) (return []) >>= fun acc ->
+    let sql_where = SqlWhere (List.rev acc) in
+    return @@ SqlNotExist (sql_from, sql_where) :: sql_constraint_acc
   ) (return sql_constraint_acc) >>= fun sql_constraint_acc ->
 
   (* Builds the SELECT clause: *)
@@ -1941,4 +1960,12 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   in
   let sql_from = SqlFrom from_clause_entries in
 
-  failwith "TODO: build SQL queries"
+  (* Builds the WHERE clause: *)
+  let sql_where = SqlWhere (List.rev sql_constraint_acc) in
+
+  return @@ SqlQuery {
+    select = sql_select;
+    from   = sql_from;
+    where  = sql_where;
+    agg    = (SqlGroupBy [], SqlHaving []);
+  }
