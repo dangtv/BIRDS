@@ -1601,27 +1601,57 @@ end
    - a constant value. *)
 module Subst = Map.Make(String)
 
+type named_var = string
+
+type table_name = string
+
 type column_name = string
+
+type instance_name = string
+
+type argument =
+  | ArgNamedVar of named_var
+  | ArgConst    of const
+
+type positive_predicate =
+  | Positive of table_name * argument list
+
+type negative_predicate =
+  | Negative of table_name * argument list
+
+type comparison_operator =
+  | EqualTo
+  | NotEqualTo
+  | LessThan
+  | GreaterThan
+  | LessThanOrEqualTo
+  | GreaterThanOrEqualTo
+
+type comparison =
+  | Comparison of comparison_operator * vterm * vterm
 
 type error =
   | InvalidArgInHead of var
+  | InvalidArgInBody of var
   | ArityMismatch of { expected : int; got : int }
   | UnknownComparisonOperator of string
+  | PredOccursInRuleHead of rterm
+  | DeltaOccursInRuleBody of rterm
 
 
-let get_column_names_from_table (table : string) : (column_name list, error) result =
+let get_column_names_from_table (table : table_name) : (column_name list, error) result =
   failwith "TODO: get_column_names_from_table"
 
 
 (* Returns `(table_name, column_and_var_pairs)`. *)
-let get_spec_from_head (head : rterm) : (string * (string * string) list, error) result =
+let get_spec_from_head (head : rterm) : (table_name * (column_name * named_var) list, error) result =
   let open ResultMonad in
-  let (table, args) =
+  begin
     match head with
-    | Pred (table, args)
-    | Deltainsert (table, args)
-    | Deltadelete (table, args) -> (table, args)
-  in
+    | Pred (table, args)        -> err @@ PredOccursInRuleHead head
+    | Deltainsert (table, args) -> return (table, args)
+    | Deltadelete (table, args) -> return (table, args)
+  end >>= fun (table, args) ->
   begin
     args |> List.fold_left (fun res arg ->
       res >>= fun x_acc ->
@@ -1645,24 +1675,6 @@ let get_spec_from_head (head : rterm) : (string * (string * string) list, error)
   return (table, column_and_var_pairs)
 
 
-type positive_predicate =
-  | Positive of rterm
-
-type negative_predicate =
-  | Negative of rterm
-
-type comparison_operator =
-  | EqualTo
-  | NotEqualTo
-  | LessThan
-  | GreaterThan
-  | LessThanOrEqualTo
-  | GreaterThanOrEqualTo
-
-type comparison =
-  | Comparison of comparison_operator * vterm * vterm
-
-
 let get_comparison_operator (op_str : string) : (comparison_operator, error) result =
   let open ResultMonad in
   match op_str with
@@ -1676,12 +1688,24 @@ let get_comparison_operator (op_str : string) : (comparison_operator, error) res
 
 
 let negate_comparison_operator = function
-  | EqualTo -> NotEqualTo
-  | NotEqualTo -> EqualTo
-  | LessThan -> GreaterThanOrEqualTo
-  | GreaterThan -> LessThanOrEqualTo
-  | LessThanOrEqualTo -> GreaterThan
+  | EqualTo              -> NotEqualTo
+  | NotEqualTo           -> EqualTo
+  | LessThan             -> GreaterThanOrEqualTo
+  | GreaterThan          -> LessThanOrEqualTo
+  | LessThanOrEqualTo    -> GreaterThan
   | GreaterThanOrEqualTo -> LessThan
+
+
+let validate_args (vars : var list) : (argument list, error) result =
+  let open ResultMonad in
+  vars |> List.fold_left (fun res var ->
+    res >>= fun arg_acc ->
+    match var with
+    | NamedVar x -> return @@ ArgNamedVar x :: arg_acc
+    | ConstVar c -> return @@ ArgConst c :: arg_acc
+    | _          -> err @@ InvalidArgInBody var
+  ) (return []) >>= fun arg_acc ->
+  return @@ List.rev arg_acc
 
 
 (* Separate predicates in a given rule body into positive ones, negative ones, and comparisons. *)
@@ -1690,11 +1714,19 @@ let decompose_body (body : term list) : (positive_predicate list * negative_pred
   body |> List.fold_left (fun res term ->
     res >>= fun (pos_acc, neg_acc, comp_acc) ->
     match term with
+    | Rel (Pred (table, vars)) ->
+        validate_args vars >>= fun args ->
+        return (Positive (table, args) :: pos_acc, neg_acc, comp_acc)
+
     | Rel rt ->
-        return (Positive rt :: pos_acc, neg_acc, comp_acc)
+        err @@ DeltaOccursInRuleBody rt
+
+    | Not (Pred (table, vars)) ->
+        validate_args vars >>= fun args ->
+        return (pos_acc, Negative (table, args) :: neg_acc, comp_acc)
 
     | Not rt ->
-        return (pos_acc, Negative rt :: neg_acc, comp_acc)
+        err @@ DeltaOccursInRuleBody rt
 
     | Equat (Equation (op_str, t1, t2)) ->
         get_comparison_operator op_str >>= fun op ->
@@ -1708,13 +1740,22 @@ let decompose_body (body : term list) : (positive_predicate list * negative_pred
   return (List.rev pos_acc, List.rev neg_acc, List.rev comp_acc)
 
 
+let assign_instance_names (poss : positive_predicate list) : (positive_predicate * instance_name) list =
+  poss |> List.mapi (fun index pos ->
+    let Positive (table, _args) = pos in
+    let instance_name = Printf.sprintf "%s%d" table index in
+    (pos, instance_name)
+  )
+
+
 let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   let open ResultMonad in
   let (head, body) = rule in
   get_spec_from_head head >>= fun (table, column_and_var_pairs) ->
   decompose_body body >>= fun (poss, negs, comps) ->
+  let named_poss = assign_instance_names poss in
   let _ =
-    body |> List.fold_left (fun res predicate ->
+    named_poss |> List.fold_left (fun res (pos, instance_name) ->
       res >>= fun subst ->
       failwith "TODO"
     ) (return Subst.empty)
