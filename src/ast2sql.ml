@@ -1606,6 +1606,7 @@ type column_name = string
 type error =
   | InvalidArgInHead of var
   | ArityMismatch of { expected : int; got : int }
+  | UnknownComparisonOperator of string
 
 
 let get_column_names_from_table (table : string) : (column_name list, error) result =
@@ -1644,8 +1645,78 @@ let get_spec_from_head (head : rterm) : (string * (string * string) list, error)
   return (table, column_and_var_pairs)
 
 
+type positive_predicate =
+  | Positive of rterm
+
+type negative_predicate =
+  | Negative of rterm
+
+type comparison_operator =
+  | EqualTo
+  | NotEqualTo
+  | LessThan
+  | GreaterThan
+  | LessThanOrEqualTo
+  | GreaterThanOrEqualTo
+
+type comparison =
+  | Comparison of comparison_operator * vterm * vterm
+
+
+let get_comparison_operator (op_str : string) : (comparison_operator, error) result =
+  let open ResultMonad in
+  match op_str with
+  | "="  -> return EqualTo
+  | "<>" -> return NotEqualTo
+  | "<"  -> return LessThan
+  | ">"  -> return GreaterThan
+  | "<=" -> return LessThanOrEqualTo
+  | ">=" -> return GreaterThanOrEqualTo
+  | _    -> err @@ UnknownComparisonOperator op_str
+
+
+let negate_comparison_operator = function
+  | EqualTo -> NotEqualTo
+  | NotEqualTo -> EqualTo
+  | LessThan -> GreaterThanOrEqualTo
+  | GreaterThan -> LessThanOrEqualTo
+  | LessThanOrEqualTo -> GreaterThan
+  | GreaterThanOrEqualTo -> LessThan
+
+
+(* Separate predicates in a given rule body into positive ones, negative ones, and comparisons. *)
+let decompose_body (body : term list) : (positive_predicate list * negative_predicate list * comparison list, error) result =
+  let open ResultMonad in
+  body |> List.fold_left (fun res term ->
+    res >>= fun (pos_acc, neg_acc, comp_acc) ->
+    match term with
+    | Rel rt ->
+        return (Positive rt :: pos_acc, neg_acc, comp_acc)
+
+    | Not rt ->
+        return (pos_acc, Negative rt :: neg_acc, comp_acc)
+
+    | Equat (Equation (op_str, t1, t2)) ->
+        get_comparison_operator op_str >>= fun op ->
+        return (pos_acc, neg_acc, Comparison (op, t1, t2) :: comp_acc)
+
+    | Noneq (Equation (op_str, t1, t2)) ->
+        get_comparison_operator op_str >>= fun op ->
+        let op_dual = negate_comparison_operator op in
+        return (pos_acc, neg_acc, Comparison (op_dual, t1, t2) :: comp_acc)
+  ) (return ([], [], [])) >>= fun (pos_acc, neg_acc, comp_acc) ->
+  return (List.rev pos_acc, List.rev neg_acc, List.rev comp_acc)
+
+
 let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   let open ResultMonad in
   let (head, body) = rule in
   get_spec_from_head head >>= fun (table, column_and_var_pairs) ->
-  failwith "TODO: traverse 'body' and construct a substitution"
+  decompose_body body >>= fun (poss, negs, comps) ->
+  let _ =
+    body |> List.fold_left (fun res predicate ->
+      res >>= fun subst ->
+      failwith "TODO"
+    ) (return Subst.empty)
+  in
+  failwith "TODO: build SQL queries"
