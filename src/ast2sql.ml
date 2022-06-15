@@ -37,9 +37,11 @@ type sql_operator =
 
 type sql_column_name = string
 
+type sql_instance_name = string
+
 type sql_vterm =
   | SqlConst    of Expr.const
-  | SqlColumn   of sql_column_name
+  | SqlColumn   of sql_instance_name option * sql_column_name
   | SqlUnaryOp  of sql_unary_operator * sql_vterm
   | SqlBinaryOp of sql_binary_operator * sql_vterm * sql_vterm
   | SqlAggVar   of sql_agg_function * sql_vterm
@@ -98,8 +100,11 @@ let rec stringify_sql_vterm (vt : sql_vterm) : string =
   | SqlConst c ->
       string_of_const c
 
-  | SqlColumn column_name ->
+  | SqlColumn (None, column_name) ->
       column_name
+
+  | SqlColumn (Some instance_name, column_name) ->
+      Printf.sprintf "%s.%s" instance_name column_name
 
   | SqlUnaryOp (un_op, vt1) ->
       let s_op =
@@ -285,7 +290,7 @@ let sql_of_vterm (vt : vartab) (eqt : eqtab) (expr : vterm) : sql_vterm =
          * is the name of the respective rterm's table column *)
         if Hashtbl.mem vt (string_of_var variable) then
           let column = List.hd (Hashtbl.find vt (string_of_var variable)) in
-          SqlColumn column
+          SqlColumn (None, column)
         (* If the variable does not appear in a positive rterm, but
          * it does in an equality value, then the value is the eq's evaluation *)
         else if Hashtbl.mem eqt (Var variable) then
@@ -316,7 +321,7 @@ let var_to_col (vt : vartab) (eqt : eqtab) (key : symtkey) (variable : var) : sq
    * is the name of the respective rterm's table column *)
   if Hashtbl.mem vt (string_of_var variable) then
     let column = List.hd (Hashtbl.find vt (string_of_var variable)) in
-    SqlColumn column
+    SqlColumn (None, column)
   (* If the variable does not appear in a positive rterm, but
    * it does in an equality value, then the value is the eq's
    * constant, the var has to be removed from the eqtab *)
@@ -487,7 +492,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
             | [] ->
                 acc
             | hd :: tl ->
-                let eq_rels el = SqlConstraint (SqlColumn hd, SqlRelEqual, SqlColumn el) in
+                let eq_rels el = SqlConstraint (SqlColumn (None, hd), SqlRelEqual, SqlColumn (None, el)) in
                 (List.map eq_rels tl) :: acc
           in
           let fvt = List.flatten (Hashtbl.fold var_const vt []) in
@@ -532,12 +537,12 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                 (* print_endline "___neg sql___"; print_string from_sql; print_endline "___neg sql___"; *)
                 (* Get the where sql of the rterm *)
                 let build_const (acc : sql_constraint list) (col : sql_column_name) (var : var) : sql_constraint list =
-                  let left = SqlColumn (alias ^ "." ^ col) in
+                  let left = SqlColumn (Some alias, col) in
                   match var with
                   | NamedVar vn ->
                       let right =
                         if Hashtbl.mem vt vn then
-                          SqlColumn (List.hd (Hashtbl.find vt vn))
+                          SqlColumn (None, List.hd (Hashtbl.find vt vn))
                         else if Hashtbl.mem eqt (Var var) then
                           sql_of_vterm vt eqt (Hashtbl.find eqt (Var var))
                         else
@@ -553,7 +558,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                       let vn = string_of_var var in
                       let right =
                         if Hashtbl.mem vt vn then
-                          SqlColumn (List.hd (Hashtbl.find vt vn))
+                          SqlColumn (None, List.hd (Hashtbl.find vt vn))
                         else if Hashtbl.mem eqt (Var var) then
                           sql_of_vterm vt eqt (Hashtbl.find eqt (Var var))
                         else
@@ -616,7 +621,7 @@ let non_rec_unfold_sql_of_query (dbschema : string) (idb : symtable) (cnt : coln
   else
     let cols = Hashtbl.find cnt (symtkey_of_rterm query) in
     let sel_lst =
-      List.map (fun (a, b) -> (SqlColumn (qrule_alias ^ "." ^ a), b)) (List.combine cols cols_by_var)
+      List.map (fun (a, b) -> (SqlColumn (Some qrule_alias, a), b)) (List.combine cols cols_by_var)
     in
     let sql_from =
       (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))), qrule_alias)
@@ -1603,6 +1608,8 @@ type column_name = string
 
 type instance_name = string
 
+module VarMap = Map.Make(String)
+
 (* A module for substitutions that map variables to
 
    - a pair of a table instance and a column name, or
@@ -1627,7 +1634,7 @@ end = struct
     | Occurrence   of instance_name * column_name
     | EqualToConst of const
 
-  module InternalMap = Map.Make(String)
+  module InternalMap = VarMap
 
   type t = (entry * entry list) InternalMap.t
 
@@ -1680,6 +1687,7 @@ type error =
   | UnknownComparisonOperator of string
   | PredOccursInRuleHead of rterm
   | DeltaOccursInRuleBody of rterm
+  | EqualToMoreThanOneConstant of { variable : named_var; const1 : const; const2 : const }
 
 
 let get_column_names_from_table (table : table_name) : (column_name list, error) result =
@@ -1848,5 +1856,45 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
     ) ([], subst)
   in
   let comp = List.rev comp_acc in
+
+  Subst.fold (fun x (entry, entries) res ->
+    res >>= fun (sql_constraint_acc, varmap) ->
+    let (consts, occurrences) =
+      (entry :: entries) |> List.partition_map (function
+      | Subst.EqualToConst c             -> Left c
+      | Subst.Occurrence (table, column) -> Right (table, column)
+      )
+    in
+    match (consts, occurrences) with
+    | ([], []) ->
+        assert false
+
+    | ([], (table0, column0) :: occurrence_rest) ->
+        let sql_constraint_acc =
+          let right = SqlColumn (Some table0, column0) in
+          occurrence_rest |> List.fold_left (fun sql_constraint_acc (table, column) ->
+            SqlConstraint (SqlColumn (Some table, column), SqlRelEqual, right) :: sql_constraint_acc
+          ) sql_constraint_acc
+        in
+        let varmap = varmap |> VarMap.add x (Subst.Occurrence (table0, column0)) in
+        return (sql_constraint_acc, varmap)
+
+    | ([ c ], _) ->
+        let sql_constraint_acc =
+          let right = SqlConst c in
+          occurrences |> List.fold_left (fun sql_constraint_acc (table, column) ->
+            SqlConstraint (SqlColumn (Some table, column), SqlRelEqual, right) :: sql_constraint_acc
+          ) sql_constraint_acc
+        in
+        let varmap = varmap |> VarMap.add x (Subst.EqualToConst c) in
+        return (sql_constraint_acc, varmap)
+
+    | (c1 :: c2 :: _, _) ->
+        err @@ EqualToMoreThanOneConstant {
+          variable = x;
+          const1 = c1;
+          const2 = c2;
+        }
+  ) subst (return ([], VarMap.empty)) >>= fun (sql_constraint_acc, varmap) ->
 
   failwith "TODO: build SQL queries"
