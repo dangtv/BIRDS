@@ -1566,3 +1566,39 @@ AS $$
 $$;
 "
     in trigger_pgsql
+
+
+(* A module for substitutions that map variables to
+
+   - a pair of a table instance and a column name, or
+   - a constant value. *)
+module Subst = Map.Make(String)
+
+type column_name = string
+
+type error = unit (* TEMPORARY *)
+
+
+let ( >>= ) x f =
+  failwith "TODO: >>="
+
+
+let get_column_names_from_table (table : string) : (column_name list, error) result =
+  failwith "TODO: get_column_names_from_table"
+
+
+let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
+  let (head, body) = rule in
+  let (table, vars) =
+    match head with
+    | Pred (table, args)
+    | Deltainsert (table, args)
+    | Deltadelete (table, args) ->
+        let vars = failwith "TODO: args to vars" in
+        (table, vars)
+  in
+  get_column_names_from_table table >>= fun columns ->
+  begin
+    try Ok (List.combine columns vars) with _ -> Error ()
+  end >>= fun column_and_var_pairs ->
+  failwith "TODO: traverse 'body' and construct a substitution"
