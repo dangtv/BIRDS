@@ -1568,6 +1568,33 @@ $$;
     in trigger_pgsql
 
 
+
+module ResultMonad : sig
+  val return : 'a -> ('a, 'e) result
+  val err : 'e -> ('a, 'e) result
+  val map_err : ('e1 -> 'e2) -> ('a, 'e1) result -> ('a, 'e2) result
+  val ( >>= ) : ('a, 'e) result -> ('a -> ('b, 'e) result) -> ('b, 'e) result
+end = struct
+
+  let return v =
+    Ok v
+
+  let err e =
+    Error e
+
+  let ( >>= ) v f =
+    match v with
+    | Ok x    -> f x
+    | Error e -> Error e
+
+  let map_err f v =
+    match v with
+    | Ok x    -> Ok x
+    | Error e -> Error (f e)
+
+end
+
+
 (* A module for substitutions that map variables to
 
    - a pair of a table instance and a column name, or
@@ -1576,29 +1603,49 @@ module Subst = Map.Make(String)
 
 type column_name = string
 
-type error = unit (* TEMPORARY *)
-
-
-let ( >>= ) x f =
-  failwith "TODO: >>="
+type error =
+  | InvalidArgInHead of var
+  | ArityMismatch of { expected : int; got : int }
 
 
 let get_column_names_from_table (table : string) : (column_name list, error) result =
   failwith "TODO: get_column_names_from_table"
 
 
-let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
-  let (head, body) = rule in
-  let (table, vars) =
+(* Returns `(table_name, column_and_var_pairs)`. *)
+let get_spec_from_head (head : rterm) : (string * (string * string) list, error) result =
+  let open ResultMonad in
+  let (table, args) =
     match head with
     | Pred (table, args)
     | Deltainsert (table, args)
-    | Deltadelete (table, args) ->
-        let vars = failwith "TODO: args to vars" in
-        (table, vars)
+    | Deltadelete (table, args) -> (table, args)
   in
+  begin
+    args |> List.fold_left (fun res arg ->
+      res >>= fun x_acc ->
+      match arg with
+      | NamedVar x -> return @@ x :: x_acc
+      | _          -> err @@ InvalidArgInHead arg
+    ) (return []) >>= fun x_acc ->
+    return (table, List.rev x_acc)
+  end >>= fun (table, vars) ->
   get_column_names_from_table table >>= fun columns ->
   begin
-    try Ok (List.combine columns vars) with _ -> Error ()
+    try
+      return (List.combine columns vars)
+    with
+    | _ ->
+        err @@ ArityMismatch {
+          expected = List.length columns;
+          got = List.length vars;
+        }
   end >>= fun column_and_var_pairs ->
+  return (table, column_and_var_pairs)
+
+
+let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
+  let open ResultMonad in
+  let (head, body) = rule in
+  get_spec_from_head head >>= fun (table, column_and_var_pairs) ->
   failwith "TODO: traverse 'body' and construct a substitution"
