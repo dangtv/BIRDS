@@ -1829,20 +1829,24 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
     return subst
   ) (return Subst.empty) >>= fun subst ->
 
-  (* Extends `subst` by constraints where a variable is equal to a constant: *)
-  let subst =
-    comps |> List.fold_left (fun subst (Comparison (op, vt1, vt2)) ->
+  (* Extends `subst` by constraints where a variable is equal to a constant
+     Consumed equality constraints are removed from `comp`: *)
+  let (comp_acc, subst) =
+    comps |> List.fold_left (fun (comp_acc, subst) comp ->
+      let Comparison (op, vt1, vt2) = comp in
       match op with
       | EqualTo ->
           begin
             match (as_const_or_var vt1, as_const_or_var vt2) with
-            | (AsNamedVar x, AsConst c) -> subst |> Subst.add x (Subst.EqualToConst c)
-            | (AsConst c, AsNamedVar x) -> subst |> Subst.add x (Subst.EqualToConst c)
-            | _                         -> subst
+            | (AsNamedVar x, AsConst c) -> (comp_acc, subst |> Subst.add x (Subst.EqualToConst c))
+            | (AsConst c, AsNamedVar x) -> (comp_acc, subst |> Subst.add x (Subst.EqualToConst c))
+            | _                         -> (comp :: comp_acc, subst)
           end
 
       | _ ->
-          subst
-    ) subst
+          (comp :: comp_acc, subst)
+    ) ([], subst)
   in
+  let comp = List.rev comp_acc in
+
   failwith "TODO: build SQL queries"
