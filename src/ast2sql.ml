@@ -1609,33 +1609,46 @@ type instance_name = string
    - a constant value. *)
 module Subst : sig
 
+  type entry =
+    | Occurrence   of instance_name * column_name
+    | EqualToConst of const
+
   type t
 
   val empty : t
 
-  val add : named_var -> instance_name * column_name -> t -> t
+  val add : named_var -> entry -> t -> t
 
-  val fold : (named_var -> (instance_name * column_name) list -> 'a -> 'a) -> t -> 'a -> 'a
+  val fold : (named_var -> entry * entry list -> 'a -> 'a) -> t -> 'a -> 'a
 
 end = struct
 
+  type entry =
+    | Occurrence   of instance_name * column_name
+    | EqualToConst of const
+
   module InternalMap = Map.Make(String)
 
-  type t = ((instance_name * column_name) list) InternalMap.t
+  type t = (entry * entry list) InternalMap.t
 
 
   let empty =
     InternalMap.empty
 
 
-  let add x (inst, col) subst =
+  let add x entry subst =
     match subst |> InternalMap.find_opt x with
-    | None    -> subst |> InternalMap.add x [ (inst, col) ]
-    | Some vs -> subst |> InternalMap.add x ((inst, col) :: vs)
+    | None ->
+        subst |> InternalMap.add x (entry, [])
+
+    | Some (entry0, entry_acc) ->
+        subst |> InternalMap.add x (entry0, entry :: entry_acc)
 
 
-  let fold f i subst =
-    InternalMap.fold f i subst
+  let fold f subst acc =
+    InternalMap.fold (fun x (entry0, entry_acc) acc ->
+      f x (entry0, List.rev entry_acc) acc
+    ) subst acc
 
 end
 
@@ -1673,6 +1686,19 @@ let get_column_names_from_table (table : table_name) : (column_name list, error)
   failwith "TODO: get_column_names_from_table"
 
 
+let combine_column_names (table : table_name) (xs : 'a list) : ((column_name * 'a) list, error) result =
+  let open ResultMonad in
+  get_column_names_from_table table >>= fun columns ->
+  try
+    return (List.combine columns xs)
+  with
+  | _ ->
+      err @@ ArityMismatch {
+        expected = List.length columns;
+        got = List.length xs;
+      }
+
+
 (* Returns `(table_name, column_and_var_pairs)`. *)
 let get_spec_from_head (head : rterm) : (table_name * (column_name * named_var) list, error) result =
   let open ResultMonad in
@@ -1691,17 +1717,7 @@ let get_spec_from_head (head : rterm) : (table_name * (column_name * named_var) 
     ) (return []) >>= fun x_acc ->
     return (table, List.rev x_acc)
   end >>= fun (table, vars) ->
-  get_column_names_from_table table >>= fun columns ->
-  begin
-    try
-      return (List.combine columns vars)
-    with
-    | _ ->
-        err @@ ArityMismatch {
-          expected = List.length columns;
-          got = List.length vars;
-        }
-  end >>= fun column_and_var_pairs ->
+  combine_column_names table vars >>= fun column_and_var_pairs ->
   return (table, column_and_var_pairs)
 
 
@@ -1778,18 +1794,55 @@ let assign_instance_names (poss : positive_predicate list) : (positive_predicate
   )
 
 
+type as_const_or_var =
+  | AsNamedVar of named_var
+  | AsConst    of const
+  | NotConstOrNamedVar
+
+
+let as_const_or_var (vt : vterm) : as_const_or_var =
+  match vt with
+  | Const c          -> AsConst c
+  | Var (NamedVar x) -> AsNamedVar x
+  | Var (ConstVar c) -> AsConst c
+  | _                -> NotConstOrNamedVar
+
+
 let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   let open ResultMonad in
   let (head, body) = rule in
   get_spec_from_head head >>= fun (table, column_and_var_pairs) ->
   decompose_body body >>= fun (poss, negs, comps) ->
+
+  (* Extends `subst` by traversing occurrence of variables in positive predicates: *)
   let named_poss = assign_instance_names poss in
-  let _ =
-    named_poss |> List.fold_left (fun res (Positive (table, args), instance_name) ->
-      args |> List.fold_left (fun res arg ->
-        res >>= fun subst ->
-        failwith "TODO"
-      ) res
-    ) (return Subst.empty)
+  named_poss |> List.fold_left (fun res (Positive (table, args), instance_name) ->
+    res >>= fun subst ->
+    combine_column_names table args >>= fun column_and_arg_pairs ->
+    let subst =
+      column_and_arg_pairs |> List.fold_left (fun subst (column, arg) ->
+        match arg with
+        | ArgNamedVar x -> subst |> Subst.add x (Subst.Occurrence (table, column))
+        | ArgConst _    -> subst
+      ) subst
+    in
+    return subst
+  ) (return Subst.empty) >>= fun subst ->
+
+  (* Extends `subst` by constraints where a variable is equal to a constant: *)
+  let subst =
+    comps |> List.fold_left (fun subst (Comparison (op, vt1, vt2)) ->
+      match op with
+      | EqualTo ->
+          begin
+            match (as_const_or_var vt1, as_const_or_var vt2) with
+            | (AsNamedVar x, AsConst c) -> subst |> Subst.add x (Subst.EqualToConst c)
+            | (AsConst c, AsNamedVar x) -> subst |> Subst.add x (Subst.EqualToConst c)
+            | _                         -> subst
+          end
+
+      | _ ->
+          subst
+    ) subst
   in
   failwith "TODO: build SQL queries"
