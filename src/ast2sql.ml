@@ -35,6 +35,8 @@ type sql_operator =
   | SqlRelNotEqual
   | SqlRelGeneral of string
 
+type sql_table_name = string
+
 type sql_column_name = string
 
 type sql_instance_name = string
@@ -59,7 +61,7 @@ type sql_having =
   | SqlHaving of sql_comp_const list
 
 type sql_from_target =
-  | SqlFromColumn of sql_column_name
+  | SqlFromTable of sql_table_name
   | SqlFromOther of sql_union
 
 and sql_from_clause_entry =
@@ -161,11 +163,8 @@ let stringify_sql_comp_const (SqlCompConst (vt, op, c) : sql_comp_const) : strin
 
 let rec stringify_sql_from_target (target : sql_from_target) : string =
   match target with
-  | SqlFromColumn column_name ->
-      column_name
-
-  | SqlFromOther sql_union ->
-      Printf.sprintf "(%s)" (stringify_sql_union sql_union)
+  | SqlFromTable table     -> table
+  | SqlFromOther sql_union -> Printf.sprintf "(%s)" (stringify_sql_union sql_union)
 
 
 and stringify_sql_from_clause (SqlFrom froms : sql_from_clause) : string =
@@ -467,9 +466,9 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
             in
             let edb_alias (pname : string) (arity : int) (n : int) : sql_from_clause_entry =
               if str_contains pname "__tmp_" then
-                (SqlFromColumn pname, pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
+                (SqlFromTable pname, pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
               else
-                (SqlFromColumn (dbschema ^ "." ^ pname), pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
+                (SqlFromTable (dbschema ^ "." ^ pname), pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
             in
             let set_alias (rterm : rterm) (a_lst, n) =
               let pname = get_rterm_predname rterm in
@@ -530,9 +529,9 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                   if Hashtbl.mem idb key then
                     SqlFrom [ (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity)), alias) ]
                   else if str_contains pname "__tmp_" then
-                    SqlFrom [ (SqlFromColumn pname, alias) ]
+                    SqlFrom [ (SqlFromTable pname, alias) ]
                   else
-                    SqlFrom [ (SqlFromColumn (dbschema ^ "." ^ pname), alias) ]
+                    SqlFrom [ (SqlFromTable (dbschema ^ "." ^ pname), alias) ]
                 in
                 (* print_endline "___neg sql___"; print_string from_sql; print_endline "___neg sql___"; *)
                 (* Get the where sql of the rterm *)
@@ -1817,6 +1816,10 @@ let as_const_or_var (vt : vterm) : as_const_or_var =
   | _                -> NotConstOrNamedVar
 
 
+let sql_of_vterm_new (vt : vterm) : (sql_vterm, error) result =
+  failwith "TODO: sql_of_vterm_new"
+
+
 let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   let open ResultMonad in
   let (head, body) = rule in
@@ -1899,6 +1902,23 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
         }
   ) subst (return ([], VarMap.empty)) >>= fun (sql_constraint_acc, varmap) ->
 
+  (* Adds comparison constraints to SQL constraints: *)
+  comp |> List.fold_left (fun res (Comparison (op, vt1, vt2)) ->
+    res >>= fun sql_constraint_acc ->
+    sql_of_vterm_new vt1 >>= fun sql_vt1 ->
+    sql_of_vterm_new vt2 >>= fun sql_vt2 ->
+    let sql_op =
+      match op with
+      | EqualTo              -> SqlRelEqual
+      | NotEqualTo           -> SqlRelNotEqual
+      | LessThan             -> SqlRelGeneral "<"
+      | GreaterThan          -> SqlRelGeneral ">"
+      | LessThanOrEqualTo    -> SqlRelGeneral "<="
+      | GreaterThanOrEqualTo -> SqlRelGeneral ">="
+    in
+    return @@ SqlConstraint (sql_vt1, sql_op, sql_vt2) :: sql_constraint_acc
+  ) (return sql_constraint_acc) >>= fun sql_constraint_acc ->
+
   (* Builds the SELECT clause: *)
   column_and_var_pairs |> List.fold_left (fun res (column0, x0) ->
     res >>= fun selected_acc ->
@@ -1914,5 +1934,11 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
 
   ) (return []) >>= fun selected_acc ->
   let sql_select = SqlSelect (List.rev selected_acc) in
+
+  (* Builds the FROM clause: *)
+  let from_clause_entries =
+    named_poss |> List.map (fun (Positive (table, _args), instance) -> (SqlFromTable table, instance))
+  in
+  let sql_from = SqlFrom from_clause_entries in
 
   failwith "TODO: build SQL queries"
