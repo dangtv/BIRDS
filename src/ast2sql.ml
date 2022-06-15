@@ -60,7 +60,7 @@ type sql_having =
 
 type sql_from_target =
   | SqlFromColumn of sql_column_name
-  | SqlFromOther  of sql_union
+  | SqlFromOther of sql_union
 
 and sql_from_clause_entry =
   sql_from_target * sql_column_name
@@ -1688,6 +1688,7 @@ type error =
   | PredOccursInRuleHead of rterm
   | DeltaOccursInRuleBody of rterm
   | EqualToMoreThanOneConstant of { variable : named_var; const1 : const; const2 : const }
+  | HeadVariableDoesNotOccurInBody of named_var
 
 
 let get_column_names_from_table (table : table_name) : (column_name list, error) result =
@@ -1824,13 +1825,13 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
 
   (* Extends `subst` by traversing occurrence of variables in positive predicates: *)
   let named_poss = assign_instance_names poss in
-  named_poss |> List.fold_left (fun res (Positive (table, args), instance_name) ->
+  named_poss |> List.fold_left (fun res (Positive (table, args), instance) ->
     res >>= fun subst ->
     combine_column_names table args >>= fun column_and_arg_pairs ->
     let subst =
       column_and_arg_pairs |> List.fold_left (fun subst (column, arg) ->
         match arg with
-        | ArgNamedVar x -> subst |> Subst.add x (Subst.Occurrence (table, column))
+        | ArgNamedVar x -> subst |> Subst.add x (Subst.Occurrence (instance, column))
         | ArgConst _    -> subst
       ) subst
     in
@@ -1857,26 +1858,27 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   in
   let comp = List.rev comp_acc in
 
+  (* Converts `subst` into SQL constraints and `varmap`: *)
   Subst.fold (fun x (entry, entries) res ->
     res >>= fun (sql_constraint_acc, varmap) ->
     let (consts, occurrences) =
       (entry :: entries) |> List.partition_map (function
-      | Subst.EqualToConst c             -> Left c
-      | Subst.Occurrence (table, column) -> Right (table, column)
+      | Subst.EqualToConst c                -> Left c
+      | Subst.Occurrence (instance, column) -> Right (instance, column)
       )
     in
     match (consts, occurrences) with
     | ([], []) ->
         assert false
 
-    | ([], (table0, column0) :: occurrence_rest) ->
+    | ([], (instance0, column0) :: occurrence_rest) ->
         let sql_constraint_acc =
-          let right = SqlColumn (Some table0, column0) in
-          occurrence_rest |> List.fold_left (fun sql_constraint_acc (table, column) ->
-            SqlConstraint (SqlColumn (Some table, column), SqlRelEqual, right) :: sql_constraint_acc
+          let right = SqlColumn (Some instance0, column0) in
+          occurrence_rest |> List.fold_left (fun sql_constraint_acc (instance, column) ->
+            SqlConstraint (SqlColumn (Some instance, column), SqlRelEqual, right) :: sql_constraint_acc
           ) sql_constraint_acc
         in
-        let varmap = varmap |> VarMap.add x (Subst.Occurrence (table0, column0)) in
+        let varmap = varmap |> VarMap.add x (Subst.Occurrence (instance0, column0)) in
         return (sql_constraint_acc, varmap)
 
     | ([ c ], _) ->
@@ -1896,5 +1898,21 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
           const2 = c2;
         }
   ) subst (return ([], VarMap.empty)) >>= fun (sql_constraint_acc, varmap) ->
+
+  (* Builds the SELECT clause: *)
+  column_and_var_pairs |> List.fold_left (fun res (column0, x0) ->
+    res >>= fun selected_acc ->
+    match varmap |> VarMap.find_opt x0 with
+    | None ->
+        err @@ HeadVariableDoesNotOccurInBody x0
+
+    | Some (Subst.Occurrence (instance, column)) ->
+        return @@ (SqlColumn (Some instance, column), column0) :: selected_acc
+
+    | Some (Subst.EqualToConst c) ->
+        return @@ (SqlConst c, column0) :: selected_acc
+
+  ) (return []) >>= fun selected_acc ->
+  let sql_select = SqlSelect (List.rev selected_acc) in
 
   failwith "TODO: build SQL queries"
