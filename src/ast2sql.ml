@@ -1695,17 +1695,22 @@ type error =
   | UnexpectedVarForm of var
   | UnknownBinaryOperator of string
   | UnknownUnaryOperator of string
+  | UnknownTable of { table : table_name; arity : int }
 
 
-let get_column_names_from_table (table : table_name) : (column_name list, error) result =
-  failwith "TODO: get_column_names_from_table"
+let get_column_names_from_table (colnamtab : colnamtab) (table : table_name) (arity : int) : (column_name list, error) result =
+  let open ResultMonad in
+  match Hashtbl.find_opt colnamtab (table, arity) with
+  | None      -> err @@ UnknownTable { table; arity }
+  | Some cols -> return cols
 
 
 (* Gets the list `cols` of column names of table named `table` and zips it with `xs`.
    Returns `Error _` when the length of `xs` is different from that of `cols`. *)
-let combine_column_names (table : table_name) (xs : 'a list) : ((column_name * 'a) list, error) result =
+let combine_column_names (colnamtab : colnamtab) (table : table_name) (xs : 'a list) : ((column_name * 'a) list, error) result =
   let open ResultMonad in
-  get_column_names_from_table table >>= fun columns ->
+  let arity = List.length xs in
+  get_column_names_from_table colnamtab table arity >>= fun columns ->
   try
     return (List.combine columns xs)
   with
@@ -1717,7 +1722,7 @@ let combine_column_names (table : table_name) (xs : 'a list) : ((column_name * '
 
 
 (* Returns `(table_name, column_and_var_pairs)`. *)
-let get_spec_from_head (head : rterm) : (table_name * (column_name * named_var) list, error) result =
+let get_spec_from_head (colnamtab : colnamtab) (head : rterm) : (table_name * (column_name * named_var) list, error) result =
   let open ResultMonad in
   begin
     match head with
@@ -1734,7 +1739,7 @@ let get_spec_from_head (head : rterm) : (table_name * (column_name * named_var) 
     ) (return []) >>= fun x_acc ->
     return (table, List.rev x_acc)
   end >>= fun (table, vars) ->
-  combine_column_names table vars >>= fun column_and_var_pairs ->
+  combine_column_names colnamtab table vars >>= fun column_and_var_pairs ->
   return (table, column_and_var_pairs)
 
 
@@ -1898,17 +1903,17 @@ let sql_vterm_of_arg (varmap : Subst.entry VarMap.t) (arg : argument) : (sql_vte
       return @@ SqlConst c
 
 
-let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
+let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (sql_query, error) result =
   let open ResultMonad in
   let (head, body) = rule in
-  get_spec_from_head head >>= fun (table, column_and_var_pairs) ->
+  get_spec_from_head colnamtab head >>= fun (table, column_and_var_pairs) ->
   decompose_body body >>= fun (poss, negs, comps) ->
 
   (* Extends `subst` by traversing occurrence of variables in positive predicates: *)
   let named_poss = assign_instance_names poss in
   named_poss |> List.fold_left (fun res (Positive (table, args), instance) ->
     res >>= fun subst ->
-    combine_column_names table args >>= fun column_and_arg_pairs ->
+    combine_column_names colnamtab table args >>= fun column_and_arg_pairs ->
     let subst =
       column_and_arg_pairs |> List.fold_left (fun subst (column, arg) ->
         match arg with
@@ -2002,7 +2007,7 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
     res >>= fun sql_constraint_acc ->
     let instance = "t" in
     let sql_from = SqlFrom [ (SqlFromTable (None, table), instance) ] in
-    combine_column_names table args >>= fun column_and_arg_pairs ->
+    combine_column_names colnamtab table args >>= fun column_and_arg_pairs ->
     column_and_arg_pairs |> List.fold_left (fun res (column, arg) ->
       res >>= fun acc ->
       sql_vterm_of_arg varmap arg >>= fun sql_vt ->
