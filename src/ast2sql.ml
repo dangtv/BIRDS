@@ -1838,6 +1838,14 @@ let get_sql_unary_operation (un_op_str : string) : (sql_unary_operator, error) r
   | _   -> err @@ UnknownUnaryOperator un_op_str
 
 
+let get_named_var (varmap : Subst.entry VarMap.t) (x : named_var) : sql_vterm option =
+  let open ResultMonad in
+  match varmap |> VarMap.find_opt x with
+  | None                                       -> None
+  | Some (Subst.Occurrence (instance, column)) -> Some (SqlColumn (Some instance, column))
+  | Some (Subst.EqualToConst c)                -> Some (SqlConst c)
+
+
 let sql_of_vterm_new (varmap : Subst.entry VarMap.t) (vt : vterm) : (sql_vterm, error) result =
   let open ResultMonad in
   let rec aux (vt : vterm) =
@@ -1848,10 +1856,9 @@ let sql_of_vterm_new (varmap : Subst.entry VarMap.t) (vt : vterm) : (sql_vterm, 
 
     | Var (NamedVar x) ->
         begin
-          match varmap |> VarMap.find_opt x with
-          | None                                       -> err @@ UnexpectedNamedVar x
-          | Some (Subst.Occurrence (instance, column)) -> return @@ SqlColumn (Some instance, column)
-          | Some (Subst.EqualToConst c)                -> return @@ SqlConst c
+          match get_named_var varmap x with
+          | None        -> err @@ UnexpectedNamedVar x
+          | Some sql_vt -> return sql_vt
         end
 
     | Var var ->
@@ -1872,7 +1879,17 @@ let sql_of_vterm_new (varmap : Subst.entry VarMap.t) (vt : vterm) : (sql_vterm, 
 
 
 let sql_vterm_of_arg (varmap : Subst.entry VarMap.t) (arg : argument) : (sql_vterm, error) result =
-  failwith "TODO: sql_vterm_of_arg"
+  let open ResultMonad in
+  match arg with
+  | ArgNamedVar x ->
+        begin
+          match get_named_var varmap x with
+          | None        -> err @@ UnexpectedNamedVar x
+          | Some sql_vt -> return sql_vt
+        end
+
+  | ArgConst c ->
+      return @@ SqlConst c
 
 
 let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
