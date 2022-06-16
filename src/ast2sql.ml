@@ -35,6 +35,8 @@ type sql_operator =
   | SqlRelNotEqual
   | SqlRelGeneral of string
 
+type sql_schema_name = string
+
 type sql_table_name = string
 
 type sql_column_name = string
@@ -61,7 +63,7 @@ type sql_having =
   | SqlHaving of sql_comp_const list
 
 type sql_from_target =
-  | SqlFromTable of sql_table_name
+  | SqlFromTable of sql_schema_name option * sql_table_name
   | SqlFromOther of sql_union
 
 and sql_from_clause_entry =
@@ -163,8 +165,9 @@ let stringify_sql_comp_const (SqlCompConst (vt, op, c) : sql_comp_const) : strin
 
 let rec stringify_sql_from_target (target : sql_from_target) : string =
   match target with
-  | SqlFromTable table     -> table
-  | SqlFromOther sql_union -> Printf.sprintf "(%s)" (stringify_sql_union sql_union)
+  | SqlFromTable (None, table)        -> table
+  | SqlFromTable (Some schema, table) -> Printf.sprintf "%s.%s" schema table
+  | SqlFromOther sql_union            -> Printf.sprintf "(%s)" (stringify_sql_union sql_union)
 
 
 and stringify_sql_from_clause (SqlFrom froms : sql_from_clause) : string =
@@ -466,9 +469,9 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
             in
             let edb_alias (pname : string) (arity : int) (n : int) : sql_from_clause_entry =
               if str_contains pname "__tmp_" then
-                (SqlFromTable pname, pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
+                (SqlFromTable (None, pname), pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
               else
-                (SqlFromTable (dbschema ^ "." ^ pname), pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
+                (SqlFromTable (Some dbschema, pname), pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
             in
             let set_alias (rterm : rterm) (a_lst, n) =
               let pname = get_rterm_predname rterm in
@@ -529,9 +532,9 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                   if Hashtbl.mem idb key then
                     SqlFrom [ (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity)), alias) ]
                   else if str_contains pname "__tmp_" then
-                    SqlFrom [ (SqlFromTable pname, alias) ]
+                    SqlFrom [ (SqlFromTable (None, pname), alias) ]
                   else
-                    SqlFrom [ (SqlFromTable (dbschema ^ "." ^ pname), alias) ]
+                    SqlFrom [ (SqlFromTable (Some dbschema, pname), alias) ]
                 in
                 (* print_endline "___neg sql___"; print_string from_sql; print_endline "___neg sql___"; *)
                 (* Get the where sql of the rterm *)
@@ -1698,6 +1701,8 @@ let get_column_names_from_table (table : table_name) : (column_name list, error)
   failwith "TODO: get_column_names_from_table"
 
 
+(* Gets the list `cols` of column names of table named `table` and zips it with `xs`.
+   Returns `Error _` when the length of `xs` is different from that of `cols`. *)
 let combine_column_names (table : table_name) (xs : 'a list) : ((column_name * 'a) list, error) result =
   let open ResultMonad in
   get_column_names_from_table table >>= fun columns ->
@@ -1754,7 +1759,7 @@ let negate_comparison_operator = function
   | GreaterThanOrEqualTo -> LessThan
 
 
-let validate_args (vars : var list) : (argument list, error) result =
+let validate_args_in_body (vars : var list) : (argument list, error) result =
   let open ResultMonad in
   vars |> List.fold_left (fun res var ->
     res >>= fun arg_acc ->
@@ -1773,14 +1778,14 @@ let decompose_body (body : term list) : (positive_predicate list * negative_pred
     res >>= fun (pos_acc, neg_acc, comp_acc) ->
     match term with
     | Rel (Pred (table, vars)) ->
-        validate_args vars >>= fun args ->
+        validate_args_in_body vars >>= fun args ->
         return (Positive (table, args) :: pos_acc, neg_acc, comp_acc)
 
     | Rel rt ->
         err @@ DeltaOccursInRuleBody rt
 
     | Not (Pred (table, vars)) ->
-        validate_args vars >>= fun args ->
+        validate_args_in_body vars >>= fun args ->
         return (pos_acc, Negative (table, args) :: neg_acc, comp_acc)
 
     | Not rt ->
@@ -1794,6 +1799,7 @@ let decompose_body (body : term list) : (positive_predicate list * negative_pred
         get_comparison_operator op_str >>= fun op ->
         let op_dual = negate_comparison_operator op in
         return (pos_acc, neg_acc, Comparison (op_dual, t1, t2) :: comp_acc)
+
   ) (return ([], [], [])) >>= fun (pos_acc, neg_acc, comp_acc) ->
   return (List.rev pos_acc, List.rev neg_acc, List.rev comp_acc)
 
@@ -1995,7 +2001,7 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
   negs |> List.fold_left (fun res (Negative (table, args)) ->
     res >>= fun sql_constraint_acc ->
     let instance = "t" in
-    let sql_from = SqlFrom [ (SqlFromTable table, instance) ] in
+    let sql_from = SqlFrom [ (SqlFromTable (None, table), instance) ] in
     combine_column_names table args >>= fun column_and_arg_pairs ->
     column_and_arg_pairs |> List.fold_left (fun res (column, arg) ->
       res >>= fun acc ->
@@ -2024,7 +2030,7 @@ let convert_to_operation_based_sql (rule : rule) : (sql_query, error) result =
 
   (* Builds the FROM clause: *)
   let from_clause_entries =
-    named_poss |> List.map (fun (Positive (table, _args), instance) -> (SqlFromTable table, instance))
+    named_poss |> List.map (fun (Positive (table, _args), instance) -> (SqlFromTable (None, table), instance))
   in
   let sql_from = SqlFrom from_clause_entries in
 
