@@ -1688,6 +1688,10 @@ type error =
   | DeltaOccursInRuleBody of rterm
   | EqualToMoreThanOneConstant of { variable : named_var; const1 : const; const2 : const }
   | HeadVariableDoesNotOccurInBody of named_var
+  | UnexpectedNamedVar of named_var
+  | UnexpectedVarForm of var
+  | UnknownBinaryOperator of string
+  | UnknownUnaryOperator of string
 
 
 let get_column_names_from_table (table : table_name) : (column_name list, error) result =
@@ -1816,8 +1820,55 @@ let as_const_or_var (vt : vterm) : as_const_or_var =
   | _                -> NotConstOrNamedVar
 
 
+let get_sql_binary_operation (bin_op_str : string) : (sql_binary_operator, error) result =
+  let open ResultMonad in
+  match bin_op_str with
+  | "+" -> return SqlPlus
+  | "-" -> return SqlMinus
+  | "*" -> return SqlTimes
+  | "/" -> return SqlDivides
+  | "^" -> return SqlLor
+  | _   -> err @@ UnknownBinaryOperator bin_op_str
+
+
+let get_sql_unary_operation (un_op_str : string) : (sql_unary_operator, error) result =
+  let open ResultMonad in
+  match un_op_str with
+  | "-" -> return SqlNegate
+  | _   -> err @@ UnknownUnaryOperator un_op_str
+
+
 let sql_of_vterm_new (varmap : Subst.entry VarMap.t) (vt : vterm) : (sql_vterm, error) result =
-  failwith "TODO: sql_of_vterm_new"
+  let open ResultMonad in
+  let rec aux (vt : vterm) =
+    match vt with
+    | Const c
+    | Var (ConstVar c) ->
+        return @@ SqlConst c
+
+    | Var (NamedVar x) ->
+        begin
+          match varmap |> VarMap.find_opt x with
+          | None                                       -> err @@ UnexpectedNamedVar x
+          | Some (Subst.Occurrence (instance, column)) -> return @@ SqlColumn (Some instance, column)
+          | Some (Subst.EqualToConst c)                -> return @@ SqlConst c
+        end
+
+    | Var var ->
+        err @@ UnexpectedVarForm var
+
+    | BinaryOp (bin_op_str, vt1, vt2) ->
+        get_sql_binary_operation bin_op_str >>= fun sql_bin_op ->
+        aux vt1 >>= fun sql_vt1 ->
+        aux vt2 >>= fun sql_vt2 ->
+        return @@ SqlBinaryOp (sql_bin_op, sql_vt1, sql_vt2)
+
+    | UnaryOp (un_op_str, vt1) ->
+        get_sql_unary_operation un_op_str >>= fun sql_un_op ->
+        aux vt1 >>= fun sql_vt1 ->
+        return @@ SqlUnaryOp (sql_un_op, sql_vt1)
+  in
+  aux vt
 
 
 let sql_vterm_of_arg (varmap : Subst.entry VarMap.t) (arg : argument) : (sql_vterm, error) result =
