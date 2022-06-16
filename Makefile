@@ -5,6 +5,7 @@ DIR_GUARD=@mkdir -p $(@D)
 
 #Name of the final executable file to be generated
 EX_NAME=birds
+TEST_NAME=birds_unit_tests
 
 # source folder
 SOURCE_DIR=src
@@ -24,6 +25,7 @@ OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR)
 
 #Name of the files that are part of the project
 MAIN_FILE=main
+TEST_FILE=test_main
 LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
 
@@ -47,8 +49,11 @@ FILES=\
     $(LOGIC_FILES:%=logic/%)\
     $(TOP_FILES) \
 
-.PHONY: all release clean depend #annot
+.PHONY: all release clean depend test #annot
 all: $(BIN_DIR)/$(EX_NAME)
+
+test: $(BIN_DIR)/$(TEST_NAME)
+	./$(BIN_DIR)/$(TEST_NAME)
 
 #Rule for generating the final executable file
 $(BIN_DIR)/$(EX_NAME): $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(MAIN_FILE).cmo
@@ -59,6 +64,14 @@ $(BIN_DIR)/$(EX_NAME): $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(MAIN_FILE).cmo
 $(OBJ_DIR)/$(MAIN_FILE).cmo: $(FILES:%=$(OBJ_DIR)/%.cmo) $(SOURCE_DIR)/$(MAIN_FILE).ml
 	$(DIR_GUARD)
 	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$(MAIN_FILE) -c $(SOURCE_DIR)/$(MAIN_FILE).ml
+
+$(BIN_DIR)/$(TEST_NAME): $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(TEST_FILE).cmo
+	$(DIR_GUARD)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -linkpkg $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(TEST_FILE).cmo -o $(BIN_DIR)/$(TEST_NAME)
+
+$(OBJ_DIR)/$(TEST_FILE).cmo: $(FILES:%=$(OBJ_DIR)/%.cmo) $(SOURCE_DIR)/$(TEST_FILE).ml
+	$(DIR_GUARD)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$(TEST_FILE) -c $(SOURCE_DIR)/$(TEST_FILE).ml
 
 #Special rules for creating the lexer and parser
 $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/parser.mli: $(SOURCE_DIR)/parser.mly
