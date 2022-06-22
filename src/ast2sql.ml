@@ -1903,14 +1903,9 @@ let sql_vterm_of_arg (varmap : Subst.entry VarMap.t) (arg : argument) : (sql_vte
       return @@ SqlConst c
 
 
-let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (sql_query, error) result =
+(* Extends `subst` by traversing occurrence of variables in positive predicates. *)
+let extend_substitution_by_traversing_positives (colnamtab : colnamtab) (named_poss : (positive_predicate * instance_name) list) (subst : Subst.t) : (Subst.t, error) result =
   let open ResultMonad in
-  let (head, body) = rule in
-  get_spec_from_head colnamtab head >>= fun (table, column_and_var_pairs) ->
-  decompose_body body >>= fun (poss, negs, comps) ->
-
-  (* Extends `subst` by traversing occurrence of variables in positive predicates: *)
-  let named_poss = assign_instance_names poss in
   named_poss |> List.fold_left (fun res (Positive (table, args), instance) ->
     res >>= fun subst ->
     combine_column_names colnamtab table args >>= fun column_and_arg_pairs ->
@@ -1922,10 +1917,13 @@ let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (sql_
       ) subst
     in
     return subst
-  ) (return Subst.empty) >>= fun subst ->
+  ) (return subst) >>= fun subst ->
+  return subst
 
-  (* Extends `subst` by constraints where a variable is equal to a constant
-     Consumed equality constraints are removed from `comp`: *)
+
+(* Extends `subst` by constraints where a variable is equal to a constant
+   Consumed equality constraints are removed from `comps`. *)
+let extend_substitution_by_traversing_conparisons (comps : comparison list) (subst : Subst.t) : comparison list * Subst.t =
   let (comp_acc, subst) =
     comps |> List.fold_left (fun (comp_acc, subst) comp ->
       let Comparison (op, vt1, vt2) = comp in
@@ -1942,7 +1940,20 @@ let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (sql_
           (comp :: comp_acc, subst)
     ) ([], subst)
   in
-  let comp = List.rev comp_acc in
+  let comps = List.rev comp_acc in
+  (comps, subst)
+
+
+let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (sql_query, error) result =
+  let open ResultMonad in
+  let (head, body) = rule in
+  get_spec_from_head colnamtab head >>= fun (table, column_and_var_pairs) ->
+  decompose_body body >>= fun (poss, negs, comps) ->
+
+  let named_poss = assign_instance_names poss in
+  let subst = Subst.empty in
+  extend_substitution_by_traversing_positives colnamtab named_poss subst >>= fun subst ->
+  let (comps, subst) = extend_substitution_by_traversing_conparisons comps subst in
 
   (* Converts `subst` into SQL constraints and `varmap`: *)
   Subst.fold (fun x (entry, entries) res ->
@@ -1986,7 +1997,7 @@ let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (sql_
   ) subst (return ([], VarMap.empty)) >>= fun (sql_constraint_acc, varmap) ->
 
   (* Adds comparison constraints to SQL constraints: *)
-  comp |> List.fold_left (fun res (Comparison (op, vt1, vt2)) ->
+  comps |> List.fold_left (fun res (Comparison (op, vt1, vt2)) ->
     res >>= fun sql_constraint_acc ->
     sql_of_vterm_new varmap vt1 >>= fun sql_vt1 ->
     sql_of_vterm_new varmap vt2 >>= fun sql_vt2 ->
