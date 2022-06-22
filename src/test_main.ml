@@ -90,6 +90,27 @@ let () =
           ];
       };
 
+      (* -eed(E, D) :- ed(V1, D), eed(E, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬eed(V1, D). *)
+      {
+        title = "2nd rule";
+        tables = tables;
+        rule =
+          (Deltadelete ("eed", [ NamedVar "E"; NamedVar "D" ]), [
+            Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
+            Rel (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
+            Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
+            Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
+            Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
+            Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
+          ]);
+        expected =
+          String.concat " "[
+            "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0, eed AS eed1 WHERE";
+            "ed0.dept_name = 'A' AND eed1.dept_name = 'A' AND eed1.emp_name = 'Joe' AND ed0.emp_name <> 'Joe' AND";
+            "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
+          ];
+      };
+
       (* "+ed(E, D) :- ed(V1, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬ed(E, D), ¬eed(V1, D)." *)
       {
         title = "3rd rule";
