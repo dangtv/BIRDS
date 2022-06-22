@@ -37,10 +37,22 @@ let main () =
     (head, body)
   in
 
+  let expected =
+    "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND NOT EXISTS ( SELECT * FROM ed AS t WHERE t.emp_name = 'Joe' AND t.dept_name = 'A' ) AND NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )  "
+  in
+
   Ast2sql.convert_to_operation_based_sql colnamtab rule >>= fun sql ->
-  let s = Ast2sql.stringify_sql_query sql in
-  Printf.printf "query: %s\n" s;
-  return ()
+  let got = Ast2sql.stringify_sql_query sql in
+
+  if String.equal got expected then begin
+    Printf.printf "OK\n";
+    return ()
+  end else begin
+    Printf.printf "FAILED\n";
+    Printf.printf "expected:\n\"%s\"\n" expected;
+    Printf.printf "got:\n\"%s\"\n" got;
+    return ()
+  end
 
 
 let () =
