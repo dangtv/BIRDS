@@ -181,7 +181,7 @@ and stringify_sql_from_clause (SqlFrom froms : sql_from_clause) : string =
           Printf.sprintf "%s AS %s" (stringify_sql_from_target target) name
         ) |> String.concat ", "
       in
-      Printf.sprintf "FROM %s" s
+      Printf.sprintf " FROM %s" s
 
 
 and stringify_sql_constraint (sql_constraint : sql_constraint) : string =
@@ -195,7 +195,7 @@ and stringify_sql_constraint (sql_constraint : sql_constraint) : string =
   | SqlNotExist (from, where) ->
       let s_from = stringify_sql_from_clause from in
       let s_where = stringify_sql_where_clause where in
-      Printf.sprintf "NOT EXISTS ( SELECT * %s %s )" s_from s_where
+      Printf.sprintf "NOT EXISTS ( SELECT *%s%s )" s_from s_where
 
 
 and stringify_sql_where_clause (SqlWhere constraints : sql_where_clause) : string =
@@ -207,7 +207,7 @@ and stringify_sql_where_clause (SqlWhere constraints : sql_where_clause) : strin
       let s =
         constraints |> List.map stringify_sql_constraint |> String.concat " AND "
       in
-      Printf.sprintf "WHERE %s" s
+      Printf.sprintf " WHERE %s" s
 
 
 and stringify_sql_aggregation_clause (agg : sql_aggregation_clause) : string =
@@ -215,7 +215,7 @@ and stringify_sql_aggregation_clause (agg : sql_aggregation_clause) : string =
   let s_group_by =
     match column_names with
     | []     -> ""
-    | _ :: _ -> Printf.sprintf "GROUP BY %s" (String.concat ", " column_names)
+    | _ :: _ -> Printf.sprintf " GROUP BY %s" (String.concat ", " column_names)
   in
   let s_having =
     match comp_consts with
@@ -224,9 +224,9 @@ and stringify_sql_aggregation_clause (agg : sql_aggregation_clause) : string =
 
     | _ :: _ ->
         let s = comp_consts |> List.map stringify_sql_comp_const |> String.concat " AND " in
-        Printf.sprintf "HAVING %s" s
+        Printf.sprintf " HAVING %s" s
   in
-  Printf.sprintf "%s %s" s_group_by s_having
+  Printf.sprintf "%s%s" s_group_by s_having
 
 
 and stringify_sql_query (sql : sql_query) : string =
@@ -239,7 +239,7 @@ and stringify_sql_query (sql : sql_query) : string =
       let s_from = stringify_sql_from_clause from in
       let s_where = stringify_sql_where_clause where in
       let s_agg = stringify_sql_aggregation_clause agg in
-      Printf.sprintf "%s %s %s %s" s_select s_from s_where s_agg
+      Printf.sprintf "%s%s%s%s" s_select s_from s_where s_agg
 
 
 and stringify_sql_union (SqlUnion (union_op, queries) : sql_union) : string =

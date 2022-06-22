@@ -38,7 +38,7 @@ let main () =
   in
 
   let expected =
-    "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND NOT EXISTS ( SELECT * FROM ed AS t WHERE t.emp_name = 'Joe' AND t.dept_name = 'A' ) AND NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )  "
+    "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND NOT EXISTS ( SELECT * FROM ed AS t WHERE t.emp_name = 'Joe' AND t.dept_name = 'A' ) AND NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )"
   in
 
   Ast2sql.convert_to_operation_based_sql colnamtab rule >>= fun sql ->
