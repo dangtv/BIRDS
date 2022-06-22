@@ -71,7 +71,7 @@ let () =
   in
   let test_cases =
     [
-      (* +eed(E, D) :- ed(E, D), D = 'A', E != 'Joe', ¬eed(E, D). *)
+      (* "+eed(E, D) :- ed(E, D), D = 'A', E != 'Joe', ¬eed(E, D)." *)
       {
         title = "1st rule";
         tables = tables;
@@ -90,7 +90,7 @@ let () =
           ];
       };
 
-      (* -eed(E, D) :- ed(V1, D), eed(E, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬eed(V1, D). *)
+      (* "-eed(E, D) :- ed(V1, D), eed(E, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬eed(V1, D)." *)
       {
         title = "2nd rule";
         tables = tables;
