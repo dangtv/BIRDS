@@ -63,15 +63,37 @@ let test (test_cases : test_case list) : bool =
 
 
 let () =
+  let tables =
+    [
+      ("ed", ["emp_name"; "dept_name"]);
+      ("eed", ["emp_name"; "dept_name"]);
+    ]
+  in
   let test_cases =
     [
+      (* +eed(E, D) :- ed(E, D), D = 'A', E != 'Joe', ¬eed(E, D). *)
+      {
+        title = "1st rule";
+        tables = tables;
+        rule =
+          (Deltainsert ("eed", [ NamedVar "E"; NamedVar "D" ]), [
+            Rel (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
+            Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
+            Equat (Equation ("<>", Var (NamedVar "E"), Const (String "'Joe'")));
+            Not (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
+          ]);
+        expected =
+          String.concat " " [
+            "SELECT ed0.emp_name AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE";
+            "ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND";
+            "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
+          ];
+      };
+
+      (* "+ed(E, D) :- ed(V1, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬ed(E, D), ¬eed(V1, D)." *)
       {
         title = "3rd rule";
-        tables = [
-          ("ed", ["emp_name"; "dept_name"]);
-          ("eed", ["emp_name"; "dept_name"]);
-        ];
-        (* "+ed(E, D) :- ed(V1, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬ed(E, D), ¬eed(V1, D)." *)
+        tables = tables;
         rule =
           (Deltainsert ("ed", [ NamedVar "E"; NamedVar "D" ]), [
             Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
