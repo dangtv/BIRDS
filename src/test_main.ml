@@ -104,7 +104,7 @@ let () =
             Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
           ]);
         expected =
-          String.concat " "[
+          String.concat " " [
             "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0, eed AS eed1 WHERE";
             "ed0.dept_name = 'A' AND eed1.dept_name = 'A' AND eed1.emp_name = 'Joe' AND ed0.emp_name <> 'Joe' AND";
             "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
