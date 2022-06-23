@@ -5,7 +5,7 @@ DIR_GUARD=@mkdir -p $(@D)
 
 #Name of the final executable file to be generated
 EX_NAME=birds
-TEST_NAME=birds_unit_tests
+TEST_EX_NAME=birds_unit_tests
 
 # source folder
 SOURCE_DIR=src
@@ -25,7 +25,7 @@ OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR)
 
 #Name of the files that are part of the project
 MAIN_FILE=main
-TEST_FILE=test_main
+TEST_MAIN_FILE=test_main
 LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
 
@@ -45,15 +45,22 @@ TOP_FILES=\
 TOP_FILES_WITH_MLI=\
 	parser expr conversion ast2sql ast2theorem\
 
+TEST_ONLY_FILES=\
+    ast2sql_operation_based_conversion_test\
+
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
     $(TOP_FILES) \
 
+TEST_FILES=\
+    $(FILES)\
+    $(TEST_ONLY_FILES)\
+
 .PHONY: all release clean depend test #annot
 all: $(BIN_DIR)/$(EX_NAME)
 
-test: $(BIN_DIR)/$(TEST_NAME)
-	./$(BIN_DIR)/$(TEST_NAME)
+test: $(BIN_DIR)/$(TEST_EX_NAME)
+	./$(BIN_DIR)/$(TEST_EX_NAME)
 
 #Rule for generating the final executable file
 $(BIN_DIR)/$(EX_NAME): $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(MAIN_FILE).cmo
@@ -65,13 +72,13 @@ $(OBJ_DIR)/$(MAIN_FILE).cmo: $(FILES:%=$(OBJ_DIR)/%.cmo) $(SOURCE_DIR)/$(MAIN_FI
 	$(DIR_GUARD)
 	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$(MAIN_FILE) -c $(SOURCE_DIR)/$(MAIN_FILE).ml
 
-$(BIN_DIR)/$(TEST_NAME): $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(TEST_FILE).cmo
+$(BIN_DIR)/$(TEST_EX_NAME): $(TEST_FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(TEST_MAIN_FILE).cmo
 	$(DIR_GUARD)
-	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -linkpkg $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(TEST_FILE).cmo -o $(BIN_DIR)/$(TEST_NAME)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -linkpkg $(TEST_FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(TEST_MAIN_FILE).cmo -o $(BIN_DIR)/$(TEST_EX_NAME)
 
-$(OBJ_DIR)/$(TEST_FILE).cmo: $(FILES:%=$(OBJ_DIR)/%.cmo) $(SOURCE_DIR)/$(TEST_FILE).ml
+$(OBJ_DIR)/$(TEST_MAIN_FILE).cmo: $(TEST_FILES:%=$(OBJ_DIR)/%.cmo) $(SOURCE_DIR)/$(TEST_MAIN_FILE).ml
 	$(DIR_GUARD)
-	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$(TEST_FILE) -c $(SOURCE_DIR)/$(TEST_FILE).ml
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$(TEST_MAIN_FILE) -c $(SOURCE_DIR)/$(TEST_MAIN_FILE).ml
 
 #Special rules for creating the lexer and parser
 $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/parser.mli: $(SOURCE_DIR)/parser.mly
