@@ -262,6 +262,18 @@ and stringify_sql_union (SqlUnion (union_op, queries) : sql_union) : string =
   queries |> List.map stringify_sql_query |> String.concat sep
 
 
+let stringify_sql_operation (sql_op : sql_operation) : string =
+  match sql_op with
+  | SqlCreateTemporaryTable (table, sql_query) ->
+      Printf.sprintf "CREATE TEMPORARY TABLE %s AS %s;" table (stringify_sql_query sql_query)
+
+  | SqlInsertInto (table, sql_from_clause) ->
+      Printf.sprintf "INSERT INTO %s SELECT * FROM %s;" table (stringify_sql_from_clause sql_from_clause)
+
+  | SqlDeleteFrom (table, sql_where_clause) ->
+      Printf.sprintf "DELETE FROM %s%s;" table (stringify_sql_where_clause sql_where_clause)
+
+
 (** Given an aggregate function name, checks if it is supported and returns it. *)
 let check_agg_function (fn : string) : sql_agg_function =
   match fn with

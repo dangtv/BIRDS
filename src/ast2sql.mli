@@ -8,8 +8,14 @@ type error
 
 type sql_query
 
+type sql_operation
+
 type delta_kind
+
+val stringify_sql_query : sql_query -> string
+
+val stringify_sql_operation : sql_operation -> string
 
 val convert_to_operation_based_sql : colnamtab -> Expr.rule -> (delta_kind * sql_query, error) result
 
-val stringify_sql_query : sql_query -> string
+val convert_expr_to_operation_based_sql : Expr.expr -> (sql_operation list, error) result
