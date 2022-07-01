@@ -51,7 +51,7 @@ type sql_vterm =
   | SqlAggVar   of sql_agg_function * sql_vterm
 
 type sql_select_clause =
-  | SqlSelect of (sql_vterm * string) list
+  | SqlSelect of (sql_vterm * sql_column_name) list
 
 type sql_comp_const =
   | SqlCompConst of sql_vterm * sql_operator * const
@@ -67,7 +67,7 @@ type sql_from_target =
   | SqlFromOther of sql_union
 
 and sql_from_clause_entry =
-  sql_from_target * sql_column_name
+  sql_from_target * sql_instance_name
 
 and sql_from_clause =
   | SqlFrom of sql_from_clause_entry list
@@ -75,6 +75,7 @@ and sql_from_clause =
 and sql_constraint =
   | SqlConstraint of sql_vterm * sql_operator * sql_vterm
   | SqlNotExist   of sql_from_clause * sql_where_clause
+  | SqlExist      of sql_from_clause * sql_where_clause
 
 and sql_where_clause =
   | SqlWhere of sql_constraint list
@@ -97,6 +98,11 @@ and sql_union_operation =
 
 and sql_union =
   | SqlUnion of sql_union_operation * sql_query list
+
+type sql_operation =
+  | SqlCreateTemporaryTable of table_name * sql_query
+  | SqlInsertInto           of table_name * sql_from_clause
+  | SqlDeleteFrom           of table_name * sql_where_clause
 
 
 let rec stringify_sql_vterm (vt : sql_vterm) : string =
@@ -196,6 +202,11 @@ and stringify_sql_constraint (sql_constraint : sql_constraint) : string =
       let s_from = stringify_sql_from_clause from in
       let s_where = stringify_sql_where_clause where in
       Printf.sprintf "NOT EXISTS ( SELECT *%s%s )" s_from s_where
+
+  | SqlExist (from, where) ->
+      let s_from = stringify_sql_from_clause from in
+      let s_where = stringify_sql_where_clause where in
+      Printf.sprintf "EXISTS ( SELECT *%s%s )" s_from s_where
 
 
 and stringify_sql_where_clause (SqlWhere constraints : sql_where_clause) : string =
@@ -2033,7 +2044,7 @@ let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (delt
   return (delta_kind, sql_query)
 
 
-let convert_expr_to_operation_based_sql (expr : expr) : ((delta_kind * sql_query) list, error) result =
+let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, error) result =
   let open ResultMonad in
   let colnamtab =
     let colnamtab = Hashtbl.create 32 in
@@ -2045,8 +2056,27 @@ let convert_expr_to_operation_based_sql (expr : expr) : ((delta_kind * sql_query
     colnamtab
   in
   expr.rules |> List.fold_left (fun res rule ->
-    res >>= fun acc ->
-    convert_to_operation_based_sql colnamtab rule >>= fun delta_sql_query ->
-    return (delta_sql_query :: acc)
-  ) (return []) >>= fun acc ->
-  return (List.rev acc)
+    res >>= fun (i, creation_acc, update_acc) ->
+    convert_to_operation_based_sql colnamtab rule >>= fun (delta_kind, sql_query) ->
+    let temporary_table = Printf.sprintf "temp%d" i in
+    let instance_name = "inst" in
+    let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
+    let update =
+      match delta_kind with
+      | Insert ->
+          SqlInsertInto
+            (temporary_table,
+              SqlFrom [ (SqlFromTable (None, temporary_table), instance_name) ])
+
+      | Delete ->
+          SqlDeleteFrom
+            (temporary_table,
+              SqlWhere [
+                SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), instance_name) ], SqlWhere []) ])
+    in
+    return (i + 1, creation :: creation_acc, update :: update_acc)
+  ) (return (0, [], [])) >>= fun (_, creation_acc, update_acc) ->
+  return @@ List.concat [
+    List.rev creation_acc;
+    List.rev update_acc;
+  ]
