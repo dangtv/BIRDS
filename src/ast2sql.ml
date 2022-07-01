@@ -1647,6 +1647,10 @@ type comparison_operator =
 type comparison =
   | Comparison of comparison_operator * vterm * vterm
 
+type delta_kind =
+  | Insert
+  | Delete
+
 type error =
   | InvalidArgInHead of var
   | InvalidArgInBody of var
@@ -1687,14 +1691,14 @@ let combine_column_names (colnamtab : colnamtab) (table : table_name) (xs : 'a l
 
 
 (* Returns `(table_name, column_and_var_pairs)`. *)
-let get_spec_from_head (colnamtab : colnamtab) (head : rterm) : (table_name * (column_name * named_var) list, error) result =
+let get_spec_from_head (colnamtab : colnamtab) (head : rterm) : (delta_kind * table_name * (column_name * named_var) list, error) result =
   let open ResultMonad in
   begin
     match head with
     | Pred (table, args)        -> err @@ PredOccursInRuleHead head
-    | Deltainsert (table, args) -> return (table, args)
-    | Deltadelete (table, args) -> return (table, args)
-  end >>= fun (table, args) ->
+    | Deltainsert (table, args) -> return (Insert, table, args)
+    | Deltadelete (table, args) -> return (Delete, table, args)
+  end >>= fun (delta_kind, table, args) ->
   begin
     args |> List.fold_left (fun res arg ->
       res >>= fun x_acc ->
@@ -1705,7 +1709,7 @@ let get_spec_from_head (colnamtab : colnamtab) (head : rterm) : (table_name * (c
     return (table, List.rev x_acc)
   end >>= fun (table, vars) ->
   combine_column_names colnamtab table vars >>= fun column_and_var_pairs ->
-  return (table, column_and_var_pairs)
+  return (delta_kind, table, column_and_var_pairs)
 
 
 let get_comparison_operator (op_str : string) : (comparison_operator, error) result =
@@ -1909,10 +1913,10 @@ let extend_substitution_by_traversing_conparisons (comps : comparison list) (sub
   (comps, subst)
 
 
-let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (sql_query, error) result =
+let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (delta_kind * sql_query, error) result =
   let open ResultMonad in
   let (head, body) = rule in
-  get_spec_from_head colnamtab head >>= fun (table, column_and_var_pairs) ->
+  get_spec_from_head colnamtab head >>= fun (delta_kind, table, column_and_var_pairs) ->
   decompose_body body >>= fun (poss, negs, comps) ->
 
   let named_poss = assign_instance_names poss in
@@ -2018,9 +2022,31 @@ let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (sql_
   (* Builds the WHERE clause: *)
   let sql_where = SqlWhere (List.rev sql_constraint_acc) in
 
-  return @@ SqlQuery {
-    select = sql_select;
-    from   = sql_from;
-    where  = sql_where;
-    agg    = (SqlGroupBy [], SqlHaving []);
-  }
+  let sql_query =
+    SqlQuery {
+      select = sql_select;
+      from   = sql_from;
+      where  = sql_where;
+      agg    = (SqlGroupBy [], SqlHaving []);
+    }
+  in
+  return (delta_kind, sql_query)
+
+
+let convert_expr_to_operation_based_sql (expr : expr) : ((delta_kind * sql_query) list, error) result =
+  let open ResultMonad in
+  let colnamtab =
+    let colnamtab = Hashtbl.create 32 in
+    expr.sources |> List.iter (fun (table, col_and_type_pairs) ->
+      let arity = List.length col_and_type_pairs in
+      let cols = col_and_type_pairs |> List.map fst in
+      Hashtbl.add colnamtab (table, arity) cols
+    );
+    colnamtab
+  in
+  expr.rules |> List.fold_left (fun res rule ->
+    res >>= fun acc ->
+    convert_to_operation_based_sql colnamtab rule >>= fun delta_sql_query ->
+    return (delta_sql_query :: acc)
+  ) (return []) >>= fun acc ->
+  return (List.rev acc)

@@ -32,8 +32,8 @@ let run_test (test_case : test_case) : (test_result, Ast2sql.error) result =
   let rule = test_case.rule in
   let expected = test_case.expected in
 
-  Ast2sql.convert_to_operation_based_sql colnamtab rule >>= fun sql ->
-  let got = Ast2sql.stringify_sql_query sql in
+  Ast2sql.convert_to_operation_based_sql colnamtab rule >>= fun (_delta_kind, sql_query) ->
+  let got = Ast2sql.stringify_sql_query sql_query in
 
   if String.equal got expected then
     return Pass
