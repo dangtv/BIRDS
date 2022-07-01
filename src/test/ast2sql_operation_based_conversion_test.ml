@@ -3,12 +3,9 @@ open Utils
 open Expr
 
 
-type table_definition = table_name * column_name list
-
 type test_case = {
   title    : string;
-  tables   : table_definition list;
-  rule     : rule;
+  expr     : expr;
   expected : string;
 }
 
@@ -17,23 +14,13 @@ type test_result =
   | Fail of { expected : string; got : string }
 
 
-let make_colnamtab (defs : table_definition list) : colnamtab =
-  let colnamtab : colnamtab = Hashtbl.create 32 in
-  defs |> List.iter (fun (table, cols) ->
-    let arity = List.length cols in
-    Hashtbl.add colnamtab (table, arity) cols
-  );
-  colnamtab
-
-
 let run_test (test_case : test_case) : (test_result, Ast2sql.error) result =
   let open ResultMonad in
-  let colnamtab = make_colnamtab test_case.tables in
-  let rule = test_case.rule in
+  let expr = test_case.expr in
   let expected = test_case.expected in
 
-  Ast2sql.convert_to_operation_based_sql colnamtab rule >>= fun (_delta_kind, sql_query) ->
-  let got = Ast2sql.stringify_sql_query sql_query in
+  Ast2sql.convert_expr_to_operation_based_sql expr >>= fun sql_operations ->
+  let got = sql_operations |> List.map Ast2sql.stringify_sql_operation |> String.concat " " in
 
   if String.equal got expected then
     return Pass
@@ -64,74 +51,83 @@ let run_tests (test_cases : test_case list) : bool =
 
 
 let main () =
-  let tables =
-    [
-      ("ed", ["emp_name"; "dept_name"]);
-      ("eed", ["emp_name"; "dept_name"]);
-    ]
-  in
   let test_cases =
     [
-      (* "+eed(E, D) :- ed(E, D), D = 'A', E != 'Joe', ¬eed(E, D)." *)
       {
-        title = "1st rule";
-        tables = tables;
-        rule =
-          (Deltainsert ("eed", [ NamedVar "E"; NamedVar "D" ]), [
-            Rel (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
-            Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
-            Equat (Equation ("<>", Var (NamedVar "E"), Const (String "'Joe'")));
-            Not (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
-          ]);
-        expected =
-          String.concat " " [
-            "SELECT ed0.emp_name AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE";
-            "ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND";
-            "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
-          ];
-      };
+        title =
+          "ed and eed";
+        expr =
+          {
+            rules = [
+              (* "+eed(E, D) :- ed(E, D), D = 'A', E != 'Joe', ¬eed(E, D)." *)
+              Deltainsert ("eed", [ NamedVar "E"; NamedVar "D" ]), [
+                Rel (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
+                Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
+                Equat (Equation ("<>", Var (NamedVar "E"), Const (String "'Joe'")));
+                Not (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
+              ];
 
-      (* "-eed(E, D) :- ed(V1, D), eed(E, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬eed(V1, D)." *)
-      {
-        title = "2nd rule";
-        tables = tables;
-        rule =
-          (Deltadelete ("eed", [ NamedVar "E"; NamedVar "D" ]), [
-            Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
-            Rel (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
-            Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
-            Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
-            Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
-            Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
-          ]);
-        expected =
-          String.concat " " [
-            "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0, eed AS eed1 WHERE";
-            "ed0.dept_name = 'A' AND eed1.dept_name = 'A' AND eed1.emp_name = 'Joe' AND ed0.emp_name <> 'Joe' AND";
-            "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
-          ];
-      };
+              (* "-eed(E, D) :- ed(V1, D), eed(E, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬eed(V1, D)." *)
+              Deltadelete ("eed", [ NamedVar "E"; NamedVar "D" ]), [
+                Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
+                Rel (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
+                Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
+                Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
+                Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
+                Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
+              ];
 
-      (* "+ed(E, D) :- ed(V1, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬ed(E, D), ¬eed(V1, D)." *)
-      {
-        title = "3rd rule";
-        tables = tables;
-        rule =
-          (Deltainsert ("ed", [ NamedVar "E"; NamedVar "D" ]), [
-            Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
-            Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
-            Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
-            Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
-            Not (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
-            Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
-          ]);
+              (* "+ed(E, D) :- ed(V1, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬ed(E, D), ¬eed(V1, D)." *)
+              Deltainsert ("ed", [ NamedVar "E"; NamedVar "D" ]), [
+                Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
+                Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
+                Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
+                Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
+                Not (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
+                Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
+              ];
+            ];
+            facts = [];
+            query = None;
+            sources = [
+              ("ed", [ ("emp_name", Sstring); ("dept_name", Sstring) ]);
+              ("eed", [ ("emp_name", Sstring); ("dept_name", Sstring) ]);
+            ];
+            view = None;
+            constraints = [];
+            primary_keys = [];
+          };
         expected =
+          let query1 =
+            String.concat " " [
+              "SELECT ed0.emp_name AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE";
+              "ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND";
+              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
+            ]
+          in
+          let query2 =
+            String.concat " " [
+              "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0, eed AS eed1 WHERE";
+              "ed0.dept_name = 'A' AND eed1.dept_name = 'A' AND eed1.emp_name = 'Joe' AND ed0.emp_name <> 'Joe' AND";
+              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
+            ]
+          in
+          let query3 =
+            String.concat " " [
+              "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE";
+              "ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND";
+              "NOT EXISTS ( SELECT * FROM ed AS t WHERE t.emp_name = 'Joe' AND t.dept_name = 'A' ) AND";
+              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
+            ]
+          in
           String.concat " " [
-            "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE";
-            "ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND";
-            "NOT EXISTS ( SELECT * FROM ed AS t WHERE t.emp_name = 'Joe' AND t.dept_name = 'A' ) AND";
-            "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
-          ];
+            Printf.sprintf "CREATE TEMPORARY TABLE temp0 AS %s;" query1;
+            Printf.sprintf "CREATE TEMPORARY TABLE temp1 AS %s;" query2;
+            Printf.sprintf "CREATE TEMPORARY TABLE temp2 AS %s;" query3;
+            "INSERT INTO temp0 SELECT * FROM temp0 AS inst;";
+            "DELETE FROM temp1 WHERE EXISTS ( SELECT * FROM temp1 AS inst );";
+            "INSERT INTO temp2 SELECT * FROM temp2 AS inst;";
+          ]
       };
     ]
   in

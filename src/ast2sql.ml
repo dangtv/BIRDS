@@ -268,7 +268,7 @@ let stringify_sql_operation (sql_op : sql_operation) : string =
       Printf.sprintf "CREATE TEMPORARY TABLE %s AS %s;" table (stringify_sql_query sql_query)
 
   | SqlInsertInto (table, sql_from_clause) ->
-      Printf.sprintf "INSERT INTO %s SELECT * FROM %s;" table (stringify_sql_from_clause sql_from_clause)
+      Printf.sprintf "INSERT INTO %s SELECT *%s;" table (stringify_sql_from_clause sql_from_clause)
 
   | SqlDeleteFrom (table, sql_where_clause) ->
       Printf.sprintf "DELETE FROM %s%s;" table (stringify_sql_where_clause sql_where_clause)
@@ -1936,7 +1936,7 @@ let extend_substitution_by_traversing_conparisons (comps : comparison list) (sub
   (comps, subst)
 
 
-let convert_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (delta_kind * sql_query, error) result =
+let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (delta_kind * sql_query, error) result =
   let open ResultMonad in
   let (head, body) = rule in
   get_spec_from_head colnamtab head >>= fun (delta_kind, table, column_and_var_pairs) ->
@@ -2069,7 +2069,7 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
   in
   expr.rules |> List.fold_left (fun res rule ->
     res >>= fun (i, creation_acc, update_acc) ->
-    convert_to_operation_based_sql colnamtab rule >>= fun (delta_kind, sql_query) ->
+    convert_rule_to_operation_based_sql colnamtab rule >>= fun (delta_kind, sql_query) ->
     let temporary_table = Printf.sprintf "temp%d" i in
     let instance_name = "inst" in
     let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
