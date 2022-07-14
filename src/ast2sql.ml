@@ -62,9 +62,13 @@ type sql_group_by =
 type sql_having =
   | SqlHaving of sql_comp_const list
 
+type sql_union_operation =
+  | SqlUnionOp
+  | SqlUnionAllOp
+
 type sql_from_target =
   | SqlFromTable of sql_schema_name option * sql_table_name
-  | SqlFromOther of sql_union
+  | SqlFromOther of sql_query
 
 and sql_from_clause_entry =
   sql_from_target * sql_instance_name
@@ -91,12 +95,6 @@ and sql_query =
       agg    : sql_aggregation_clause;
     }
   | SqlQuerySelectWhereFalse
-
-and sql_union_operation =
-  | SqlUnionOp
-  | SqlUnionAllOp
-
-and sql_union =
   | SqlUnion of sql_union_operation * sql_query list
 
 type sql_operation =
@@ -173,7 +171,7 @@ let rec stringify_sql_from_target (target : sql_from_target) : string =
   match target with
   | SqlFromTable (None, table)        -> table
   | SqlFromTable (Some schema, table) -> Printf.sprintf "%s.%s" schema table
-  | SqlFromOther sql_union            -> Printf.sprintf "(%s)" (stringify_sql_union sql_union)
+  | SqlFromOther sql_query            -> Printf.sprintf "(%s)" (stringify_sql_query sql_query)
 
 
 and stringify_sql_from_clause (SqlFrom froms : sql_from_clause) : string =
@@ -252,14 +250,13 @@ and stringify_sql_query (sql : sql_query) : string =
       let s_agg = stringify_sql_aggregation_clause agg in
       Printf.sprintf "%s%s%s%s" s_select s_from s_where s_agg
 
-
-and stringify_sql_union (SqlUnion (union_op, queries) : sql_union) : string =
-  let sep =
-    match union_op with
-    | SqlUnionOp    -> " UNION "
-    | SqlUnionAllOp -> " UNION ALL "
-  in
-  queries |> List.map stringify_sql_query |> String.concat sep
+  | SqlUnion (union_op, queries) ->
+      let sep =
+        match union_op with
+        | SqlUnionOp    -> " UNION "
+        | SqlUnionAllOp -> " UNION ALL "
+      in
+      queries |> List.map stringify_sql_query |> String.concat sep
 
 
 let stringify_sql_operation (sql_op : sql_operation) : string =
@@ -458,7 +455,7 @@ let get_aggregation_sql (vt : vartab) (cnt : colnamtab) (head : rterm) (agg_eqs 
     (group_by_sql, having_sql)
 
 
-let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt : colnamtab) (goal : symtkey) : sql_union =
+let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt : colnamtab) (goal : symtkey) : sql_query =
   (* get all the rule having this query in head *)
   (* print_endline ("Reach " ^ (string_of_symtkey goal)); *)
   if not (Hashtbl.mem idb goal) then
@@ -945,7 +942,7 @@ let non_rec_unfold_sql_of_update (dbschema : string) (log : bool) (optimize : bo
             SELECT array_agg(tbl) INTO array_"^ (get_rterm_predname delta)^" FROM ("^
             "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").*
             FROM ("^
-            (stringify_sql_union (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))) ^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl"
+            (stringify_sql_query (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))) ^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl"
             (* ^"
             EXCEPT
             SELECT * FROM  "^dbschema^"."^ pname  *)
@@ -981,7 +978,7 @@ let non_rec_unfold_sql_of_update (dbschema : string) (log : bool) (optimize : bo
             SELECT array_agg(tbl) INTO array_"^ (get_rterm_predname delta)^" FROM (" ^
             "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").*
             FROM ("^
-            (stringify_sql_union (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))))^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl;",
+            (stringify_sql_query (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))))^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl;",
             (* delete each tuple *)
             "
             IF array_"^ (get_rterm_predname delta)^" IS DISTINCT FROM NULL THEN
@@ -1984,10 +1981,16 @@ let partition_map f xs =
   (List.rev acc1, List.rev acc2)
 
 
-let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (delta_kind * sql_query, error) result =
+type intermediate_rule = {
+  columns_and_vars : (column_name * named_var) list;
+  body             : term list;
+}
+
+
+let convert_rule_to_operation_based_sql (colnamtab : colnamtab) ((delta_kind, table) : delta_key) (irule : intermediate_rule) : (delta_kind * sql_query, error) result =
   let open ResultMonad in
-  let (head, body) = rule in
-  get_spec_from_head colnamtab head >>= fun (delta_kind, table, column_and_var_pairs) ->
+  let column_and_var_pairs = irule.columns_and_vars in
+  let body = irule.body in
   decompose_body body >>= fun (poss, negs, comps) ->
 
   let named_poss = assign_instance_names poss in
@@ -2104,11 +2107,6 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : 
   return (delta_kind, sql_query)
 
 
-type intermediate_rule = {
-  columns_and_vars : (column_name * named_var) list;
-  body             : term list;
-}
-
 module DeltaKeySet =
   Set.Make(struct
     type t = delta_key
@@ -2169,7 +2167,6 @@ let divide_rules_into_groups (colnamtab : colnamtab) (rules : Expr.rule list) : 
       return groups
 
 
-
 let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, error) result =
   let open ResultMonad in
   let colnamtab =
@@ -2181,13 +2178,24 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
     );
     colnamtab
   in
-  expr.rules |> List.fold_left (fun res rule ->
+  divide_rules_into_groups colnamtab expr.rules >>= fun rule_groups ->
+  rule_groups |> List.fold_left (fun res (rule_group : rule_group) ->
     res >>= fun (i, creation_acc, update_acc) ->
-    convert_rule_to_operation_based_sql colnamtab rule >>= fun (delta_kind, sql_query) ->
     let temporary_table = Printf.sprintf "temp%d" i in
-    let instance_name = "inst" in
+    let (delta_key, irules) = rule_group in
+    let (delta_kind, _) = delta_key in
+    irules |> List.fold_left (fun res_acc irule ->
+      res_acc >>= fun sql_query_acc ->
+      convert_rule_to_operation_based_sql colnamtab delta_key irule >>= fun (_, sql_query) ->
+      return @@ sql_query :: sql_query_acc
+    ) (return []) >>= fun sql_query_acc ->
+    let sql_query =
+      let sql_queries = List.rev sql_query_acc in
+      SqlUnion (SqlUnionOp, sql_queries)
+    in
     let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
     let update =
+      let instance_name = "inst" in
       match delta_kind with
       | Insert ->
           SqlInsertInto
