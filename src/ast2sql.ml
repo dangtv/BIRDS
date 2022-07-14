@@ -2230,7 +2230,7 @@ let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule 
           return @@ Some {
             current_target      = delta_key;
             current_accumulated = [ intermediate ];
-            already_handled     = state.already_handled |> DeltaKeySet.add delta_key;
+            already_handled     = state.already_handled |> DeltaKeySet.add state.current_target;
             accumulated         = group :: state.accumulated;
           }
   ) (return None) >>= fun state_opt ->
