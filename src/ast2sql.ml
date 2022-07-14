@@ -1936,6 +1936,17 @@ let extend_substitution_by_traversing_conparisons (comps : comparison list) (sub
   (comps, subst)
 
 
+let partition_map f xs =
+  let (acc1, acc2) =
+    xs |> List.fold_left (fun (acc1, acc2) x ->
+      match f x with
+      | Ok v1    -> (v1 :: acc1, acc2)
+      | Error v2 -> (acc1, v2 :: acc2)
+    ) ([], [])
+  in
+  (List.rev acc1, List.rev acc2)
+
+
 let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : (delta_kind * sql_query, error) result =
   let open ResultMonad in
   let (head, body) = rule in
@@ -1951,9 +1962,9 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : 
   Subst.fold (fun x (entry, entries) res ->
     res >>= fun (sql_constraint_acc, varmap) ->
     let (consts, occurrences) =
-      (entry :: entries) |> List.partition_map (function
-      | Subst.EqualToConst c                -> Left c
-      | Subst.Occurrence (instance, column) -> Right (instance, column)
+      (entry :: entries) |> partition_map (function
+      | Subst.EqualToConst c                -> Ok c
+      | Subst.Occurrence (instance, column) -> Error (instance, column)
       )
     in
     match (consts, occurrences) with
