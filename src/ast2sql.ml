@@ -1674,6 +1674,8 @@ type delta_kind =
   | Insert
   | Delete
 
+type delta_key = delta_kind * table_name
+
 type error =
   | InvalidArgInHead of var
   | InvalidArgInBody of var
@@ -1688,6 +1690,7 @@ type error =
   | UnknownBinaryOperator of string
   | UnknownUnaryOperator of string
   | UnknownTable of { table : table_name; arity : int }
+  | HasMoreThanOneRuleGroup of delta_key
 
 
 let show_error = function
@@ -1718,6 +1721,10 @@ let show_error = function
       Printf.sprintf "unknown unary operator %s" op
   | UnknownTable r ->
       Printf.sprintf "unknown table %s of arity %d" r.table r.arity
+  | HasMoreThanOneRuleGroup (Insert, table) ->
+      Printf.sprintf "+%s has more than one rule group" table
+  | HasMoreThanOneRuleGroup (Delete, table) ->
+      Printf.sprintf "-%s has more than one rule group" table
 
 
 let get_column_names_from_table (colnamtab : colnamtab) (table : table_name) (arity : int) : (column_name list, error) result =
@@ -2095,6 +2102,72 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (rule : rule) : 
     }
   in
   return (delta_kind, sql_query)
+
+
+type intermediate_rule = {
+  columns_and_vars : (column_name * named_var) list;
+  body             : term list;
+}
+
+module DeltaKeySet =
+  Set.Make(struct
+    type t = delta_key
+
+    let compare = Stdlib.compare
+  end)
+
+type rule_group = delta_key * intermediate_rule list
+
+type grouping_state = {
+  current_target      : delta_key;
+  current_accumulated : intermediate_rule list;
+  already_handled     : DeltaKeySet.t;
+  accumulated         : rule_group list;
+}
+
+
+let divide_rules_into_groups (colnamtab : colnamtab) (rules : Expr.rule list) : (rule_group list, error) result =
+  let open ResultMonad in
+  rules |> List.fold_left (fun res rule ->
+    res >>= fun state_opt ->
+    let (head, body) = rule in
+    get_spec_from_head colnamtab head >>= fun (delta_kind, table, columns_and_vars) ->
+    let delta_key = (delta_kind, table) in
+    let intermediate = { columns_and_vars; body } in
+    match state_opt with
+    | None ->
+        return @@ Some {
+          current_target      = delta_key;
+          current_accumulated = [ intermediate ];
+          already_handled     = DeltaKeySet.empty;
+          accumulated         = [];
+        }
+
+    | Some state ->
+        if state.already_handled |> DeltaKeySet.mem delta_key then
+          err @@ HasMoreThanOneRuleGroup delta_key
+        else if delta_key = state.current_target then
+          return @@ Some { state with
+            current_accumulated = intermediate :: state.current_accumulated;
+          }
+        else
+          let group = (state.current_target, List.rev state.current_accumulated) in
+          return @@ Some {
+            current_target      = delta_key;
+            current_accumulated = [ intermediate ];
+            already_handled     = state.already_handled |> DeltaKeySet.add delta_key;
+            accumulated         = group :: state.accumulated;
+          }
+  ) (return None) >>= fun state_opt ->
+  match state_opt with
+  | None ->
+      return []
+
+  | Some state ->
+      let group_last = (state.current_target, List.rev state.current_accumulated) in
+      let groups = List.rev (group_last :: state.accumulated) in
+      return groups
+
 
 
 let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, error) result =
