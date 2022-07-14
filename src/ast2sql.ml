@@ -1650,11 +1650,19 @@ type argument =
   | ArgNamedVar of named_var
   | ArgConst    of const
 
+type delta_kind =
+  | Insert
+  | Delete
+
+type delta_key = delta_kind * table_name
+
 type positive_predicate =
-  | Positive of table_name * argument list
+  | PositivePred  of table_name * argument list
+  | PositiveDelta of delta_key * argument list
 
 type negative_predicate =
-  | Negative of table_name * argument list
+  | NegativePred  of table_name * argument list
+  | NegativeDelta of delta_key * argument list
 
 type comparison_operator =
   | EqualTo
@@ -1667,19 +1675,12 @@ type comparison_operator =
 type comparison =
   | Comparison of comparison_operator * vterm * vterm
 
-type delta_kind =
-  | Insert
-  | Delete
-
-type delta_key = delta_kind * table_name
-
 type error =
   | InvalidArgInHead of var
   | InvalidArgInBody of var
   | ArityMismatch of { expected : int; got : int }
   | UnknownComparisonOperator of string
   | PredOccursInRuleHead of rterm
-  | DeltaOccursInRuleBody of rterm
   | EqualToMoreThanOneConstant of { variable : named_var; const1 : const; const2 : const }
   | HeadVariableDoesNotOccurInBody of named_var
   | UnexpectedNamedVar of named_var
@@ -1701,8 +1702,6 @@ let show_error = function
       Printf.sprintf "unknown comparison operator %s" op
   | PredOccursInRuleHead rterm ->
       Printf.sprintf "a predicate occurs in a rule head: %s" (string_of_rterm rterm)
-  | DeltaOccursInRuleBody rterm ->
-      Printf.sprintf "a delta predicate occurs in a rule body: %s" (string_of_rterm rterm)
   | EqualToMoreThanOneConstant r ->
       Printf.sprintf "variable %s are required to be equal to more than one constants; %s and %s"
         r.variable (string_of_const r.const1) (string_of_const r.const2)
@@ -1810,17 +1809,31 @@ let decompose_body (body : term list) : (positive_predicate list * negative_pred
     match term with
     | Rel (Pred (table, vars)) ->
         validate_args_in_body vars >>= fun args ->
-        return (Positive (table, args) :: pos_acc, neg_acc, comp_acc)
+        return (PositivePred (table, args) :: pos_acc, neg_acc, comp_acc)
 
-    | Rel rt ->
-        err @@ DeltaOccursInRuleBody rt
+    | Rel (Deltainsert (table, vars)) ->
+        validate_args_in_body vars >>= fun args ->
+        let delta_key = (Insert, table) in
+        return (PositiveDelta (delta_key, args) :: pos_acc, neg_acc, comp_acc)
+
+    | Rel (Deltadelete (table, vars)) ->
+        validate_args_in_body vars >>= fun args ->
+        let delta_key = (Delete, table) in
+        return (PositiveDelta (delta_key, args) :: pos_acc, neg_acc, comp_acc)
 
     | Not (Pred (table, vars)) ->
         validate_args_in_body vars >>= fun args ->
-        return (pos_acc, Negative (table, args) :: neg_acc, comp_acc)
+        return (pos_acc, NegativePred (table, args) :: neg_acc, comp_acc)
 
-    | Not rt ->
-        err @@ DeltaOccursInRuleBody rt
+    | Not (Deltainsert (table, vars)) ->
+        validate_args_in_body vars >>= fun args ->
+        let delta_key = (Insert, table) in
+        return (pos_acc, NegativeDelta (delta_key, args) :: neg_acc, comp_acc)
+
+    | Not (Deltadelete (table, vars)) ->
+        validate_args_in_body vars >>= fun args ->
+        let delta_key = (Delete, table) in
+        return (pos_acc, NegativeDelta (delta_key, args) :: neg_acc, comp_acc)
 
     | Equat (Equation (op_str, t1, t2)) ->
         get_comparison_operator op_str >>= fun op ->
@@ -1837,9 +1850,13 @@ let decompose_body (body : term list) : (positive_predicate list * negative_pred
 
 let assign_instance_names (poss : positive_predicate list) : (positive_predicate * instance_name) list =
   poss |> List.mapi (fun index pos ->
-    let Positive (table, _args) = pos in
-    let instance_name = Printf.sprintf "%s%d" table index in
-    (pos, instance_name)
+    match pos with
+    | PositivePred (table, _args) ->
+        let instance_name = Printf.sprintf "%s%d" table index in
+        (pos, instance_name)
+
+    | _ ->
+        failwith "TODO: PositiveDelta, associate instance names"
   )
 
 
@@ -1932,9 +1949,17 @@ let sql_vterm_of_arg (varmap : Subst.entry VarMap.t) (arg : argument) : (sql_vte
 (* Extends `subst` by traversing occurrence of variables in positive predicates. *)
 let extend_substitution_by_traversing_positives (colnamtab : colnamtab) (named_poss : (positive_predicate * instance_name) list) (subst : Subst.t) : (Subst.t, error) result =
   let open ResultMonad in
-  named_poss |> List.fold_left (fun res (Positive (table, args), instance) ->
+  named_poss |> List.fold_left (fun res (pos, instance) ->
     res >>= fun subst ->
-    combine_column_names colnamtab table args >>= fun column_and_arg_pairs ->
+    begin
+      match pos with
+      | PositivePred (table, args) ->
+          combine_column_names colnamtab table args
+
+      | _ ->
+          failwith "TODO: PositiveDelta, column_and_arg_pairs"
+
+    end >>= fun column_and_arg_pairs ->
     let subst =
       column_and_arg_pairs |> List.fold_left (fun subst (column, arg) ->
         match arg with
@@ -1990,7 +2015,7 @@ type headless_rule = {
 }
 
 
-let convert_rule_to_operation_based_sql (colnamtab : colnamtab) ((delta_kind, table) : delta_key) (headless_rule : headless_rule) : (sql_query, error) result =
+let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (headless_rule : headless_rule) : (sql_query, error) result =
   let open ResultMonad in
   let column_and_var_pairs = headless_rule.columns_and_vars in
   let body = headless_rule.body in
@@ -2060,11 +2085,20 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) ((delta_kind, ta
   ) (return sql_constraint_acc) >>= fun sql_constraint_acc ->
 
   (* Adds constraints that stem from negative predicates: *)
-  negs |> List.fold_left (fun res (Negative (table, args)) ->
+  negs |> List.fold_left (fun res neg ->
     res >>= fun sql_constraint_acc ->
+    begin
+      match neg with
+      | NegativePred (table, args) ->
+          combine_column_names colnamtab table args >>= fun column_and_arg_pairs ->
+          return (table, column_and_arg_pairs)
+
+      | _ ->
+          failwith "TODO: NegativeDelta, column_and_arg_pairs"
+
+    end >>= fun (table, column_and_arg_pairs) ->
     let instance = "t" in
     let sql_from = SqlFrom [ (SqlFromTable (None, table), instance) ] in
-    combine_column_names colnamtab table args >>= fun column_and_arg_pairs ->
     column_and_arg_pairs |> List.fold_left (fun res (column, arg) ->
       res >>= fun acc ->
       sql_vterm_of_arg varmap arg >>= fun sql_vt ->
@@ -2092,7 +2126,14 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) ((delta_kind, ta
 
   (* Builds the FROM clause: *)
   let from_clause_entries =
-    named_poss |> List.map (fun (Positive (table, _args), instance) -> (SqlFromTable (None, table), instance))
+    named_poss |> List.map (fun (pos, instance) ->
+      match pos with
+      | PositivePred (table, _args) ->
+          [ (SqlFromTable (None, table), instance) ]
+
+      | _ ->
+          []
+    ) |> List.concat
   in
   let sql_from = SqlFrom from_clause_entries in
 
@@ -2186,7 +2227,7 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
     let (delta_kind, _) = delta_key in
     headless_rules |> List.fold_left (fun res_acc headless_rule ->
       res_acc >>= fun sql_query_acc ->
-      convert_rule_to_operation_based_sql colnamtab delta_key headless_rule >>= fun sql_query ->
+      convert_rule_to_operation_based_sql colnamtab headless_rule >>= fun sql_query ->
       return @@ sql_query :: sql_query_acc
     ) (return []) >>= fun sql_query_acc ->
     let sql_query =
