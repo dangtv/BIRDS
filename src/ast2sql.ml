@@ -1981,16 +1981,19 @@ let partition_map f xs =
   (List.rev acc1, List.rev acc2)
 
 
-type intermediate_rule = {
+(* The type for representing a rule without its head predicate,
+   i.e., the part `(X_1, ..., X_m) :- C_1, ..., C_n` of
+   a rule `±r(X_1, ..., X_m) :- C_1, ..., C_n`. *)
+type headless_rule = {
   columns_and_vars : (column_name * named_var) list;
   body             : term list;
 }
 
 
-let convert_rule_to_operation_based_sql (colnamtab : colnamtab) ((delta_kind, table) : delta_key) (irule : intermediate_rule) : (delta_kind * sql_query, error) result =
+let convert_rule_to_operation_based_sql (colnamtab : colnamtab) ((delta_kind, table) : delta_key) (headless_rule : headless_rule) : (sql_query, error) result =
   let open ResultMonad in
-  let column_and_var_pairs = irule.columns_and_vars in
-  let body = irule.body in
+  let column_and_var_pairs = headless_rule.columns_and_vars in
+  let body = headless_rule.body in
   decompose_body body >>= fun (poss, negs, comps) ->
 
   let named_poss = assign_instance_names poss in
@@ -2096,15 +2099,12 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) ((delta_kind, ta
   (* Builds the WHERE clause: *)
   let sql_where = SqlWhere (List.rev sql_constraint_acc) in
 
-  let sql_query =
-    SqlQuery {
-      select = sql_select;
-      from   = sql_from;
-      where  = sql_where;
-      agg    = (SqlGroupBy [], SqlHaving []);
-    }
-  in
-  return (delta_kind, sql_query)
+  return @@ SqlQuery {
+    select = sql_select;
+    from   = sql_from;
+    where  = sql_where;
+    agg    = (SqlGroupBy [], SqlHaving []);
+  }
 
 
 module DeltaKeySet =
@@ -2114,11 +2114,11 @@ module DeltaKeySet =
     let compare = Stdlib.compare
   end)
 
-type rule_group = delta_key * intermediate_rule list
+type rule_group = delta_key * headless_rule list
 
 type grouping_state = {
   current_target      : delta_key;
-  current_accumulated : intermediate_rule list;
+  current_accumulated : headless_rule list;
   already_handled     : DeltaKeySet.t;
   accumulated         : rule_group list;
 }
@@ -2179,14 +2179,14 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
     colnamtab
   in
   divide_rules_into_groups colnamtab expr.rules >>= fun rule_groups ->
-  rule_groups |> List.fold_left (fun res (rule_group : rule_group) ->
+  rule_groups |> List.fold_left (fun res rule_group ->
     res >>= fun (i, creation_acc, update_acc) ->
     let temporary_table = Printf.sprintf "temp%d" i in
-    let (delta_key, irules) = rule_group in
+    let (delta_key, headless_rules) = rule_group in
     let (delta_kind, _) = delta_key in
-    irules |> List.fold_left (fun res_acc irule ->
+    headless_rules |> List.fold_left (fun res_acc headless_rule ->
       res_acc >>= fun sql_query_acc ->
-      convert_rule_to_operation_based_sql colnamtab delta_key irule >>= fun (_, sql_query) ->
+      convert_rule_to_operation_based_sql colnamtab delta_key headless_rule >>= fun sql_query ->
       return @@ sql_query :: sql_query_acc
     ) (return []) >>= fun sql_query_acc ->
     let sql_query =
