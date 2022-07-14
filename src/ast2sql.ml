@@ -1689,6 +1689,7 @@ type error =
   | UnknownUnaryOperator of string
   | UnknownTable of { table : table_name; arity : int }
   | HasMoreThanOneRuleGroup of delta_key
+  | DeltaNotFound of delta_key
 
 
 let show_error = function
@@ -1721,6 +1722,10 @@ let show_error = function
       Printf.sprintf "+%s has more than one rule group" table
   | HasMoreThanOneRuleGroup (Delete, table) ->
       Printf.sprintf "-%s has more than one rule group" table
+  | DeltaNotFound (Insert, table) ->
+      Printf.sprintf "no rule has already been defined for +%s" table
+  | DeltaNotFound (Delete, table) ->
+      Printf.sprintf "no rule has already been defined for -%s" table
 
 
 let get_column_names_from_table (colnamtab : colnamtab) (table : table_name) (arity : int) : (column_name list, error) result =
@@ -1848,16 +1853,37 @@ let decompose_body (body : term list) : (positive_predicate list * negative_pred
   return (List.rev pos_acc, List.rev neg_acc, List.rev comp_acc)
 
 
-let assign_instance_names (poss : positive_predicate list) : (positive_predicate * instance_name) list =
-  poss |> List.mapi (fun index pos ->
+module DeltaKey = struct
+  type t = delta_key
+
+  let compare = Stdlib.compare
+end
+
+module DeltaEnv = Map.Make(DeltaKey)
+
+type delta_environment = instance_name DeltaEnv.t
+
+
+let assign_or_lookup_instance_names (delta_env : delta_environment) (poss : positive_predicate list) : ((positive_predicate * instance_name) list, error) result =
+  let open ResultMonad in
+  poss |> List.fold_left (fun res pos ->
+    res >>= fun (index, acc) ->
     match pos with
     | PositivePred (table, _args) ->
-        let instance_name = Printf.sprintf "%s%d" table index in
-        (pos, instance_name)
+        let instance = Printf.sprintf "%s%d" table index in
+        return (index + 1, (pos, instance) :: acc)
 
-    | _ ->
-        failwith "TODO: PositiveDelta, associate instance names"
-  )
+    | PositiveDelta (delta_key, _args) ->
+        begin
+          match delta_env |> DeltaEnv.find_opt delta_key with
+          | None ->
+              err @@ DeltaNotFound delta_key
+
+          | Some instance ->
+              return (index, (pos, instance) :: acc)
+        end
+  ) (return (0, [])) >>= fun (_, acc) ->
+  return @@ List.rev acc
 
 
 type as_const_or_var =
@@ -2015,13 +2041,13 @@ type headless_rule = {
 }
 
 
-let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (headless_rule : headless_rule) : (sql_query, error) result =
+let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (delta_env : delta_environment) (headless_rule : headless_rule) : (sql_query, error) result =
   let open ResultMonad in
   let column_and_var_pairs = headless_rule.columns_and_vars in
   let body = headless_rule.body in
   decompose_body body >>= fun (poss, negs, comps) ->
 
-  let named_poss = assign_instance_names poss in
+  assign_or_lookup_instance_names delta_env poss >>= fun named_poss ->
   let subst = Subst.empty in
   extend_substitution_by_traversing_positives colnamtab named_poss subst >>= fun subst ->
   let (comps, subst) = extend_substitution_by_traversing_conparisons comps subst in
@@ -2148,12 +2174,7 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (headless_rule :
   }
 
 
-module DeltaKeySet =
-  Set.Make(struct
-    type t = delta_key
-
-    let compare = Stdlib.compare
-  end)
+module DeltaKeySet = Set.Make(DeltaKey)
 
 type rule_group = delta_key * headless_rule list
 
@@ -2221,21 +2242,22 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
   in
   divide_rules_into_groups colnamtab expr.rules >>= fun rule_groups ->
   rule_groups |> List.fold_left (fun res rule_group ->
-    res >>= fun (i, creation_acc, update_acc) ->
+    res >>= fun (i, creation_acc, update_acc, delta_env) ->
     let temporary_table = Printf.sprintf "temp%d" i in
     let (delta_key, headless_rules) = rule_group in
-    let (delta_kind, _) = delta_key in
     headless_rules |> List.fold_left (fun res_acc headless_rule ->
       res_acc >>= fun sql_query_acc ->
-      convert_rule_to_operation_based_sql colnamtab headless_rule >>= fun sql_query ->
+      convert_rule_to_operation_based_sql colnamtab delta_env headless_rule >>= fun sql_query ->
       return @@ sql_query :: sql_query_acc
     ) (return []) >>= fun sql_query_acc ->
     let sql_query =
       let sql_queries = List.rev sql_query_acc in
       SqlUnion (SqlUnionOp, sql_queries)
     in
+    let delta_env = delta_env |> DeltaEnv.add delta_key temporary_table in
     let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
     let update =
+      let (delta_kind, _) = delta_key in
       let instance_name = "inst" in
       match delta_kind with
       | Insert ->
@@ -2249,8 +2271,8 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
               SqlWhere [
                 SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), instance_name) ], SqlWhere []) ])
     in
-    return (i + 1, creation :: creation_acc, update :: update_acc)
-  ) (return (0, [], [])) >>= fun (_, creation_acc, update_acc) ->
+    return (i + 1, creation :: creation_acc, update :: update_acc, delta_env)
+  ) (return (0, [], [], DeltaEnv.empty)) >>= fun (_, creation_acc, update_acc, _) ->
   return @@ List.concat [
     List.rev creation_acc;
     List.rev update_acc;
