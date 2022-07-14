@@ -1861,10 +1861,10 @@ end
 
 module DeltaEnv = Map.Make(DeltaKey)
 
-type delta_environment = instance_name DeltaEnv.t
+type delta_environment = (instance_name * column_name list) DeltaEnv.t
 
 
-let assign_or_lookup_instance_names (delta_env : delta_environment) (poss : positive_predicate list) : ((positive_predicate * instance_name) list, error) result =
+let assign_or_find_instance_names (delta_env : delta_environment) (poss : positive_predicate list) : ((positive_predicate * instance_name) list, error) result =
   let open ResultMonad in
   poss |> List.fold_left (fun res pos ->
     res >>= fun (index, acc) ->
@@ -1876,12 +1876,10 @@ let assign_or_lookup_instance_names (delta_env : delta_environment) (poss : posi
     | PositiveDelta (delta_key, _args) ->
         begin
           match delta_env |> DeltaEnv.find_opt delta_key with
-          | None ->
-              err @@ DeltaNotFound delta_key
-
-          | Some instance ->
-              return (index, (pos, instance) :: acc)
+          | None                   -> err @@ DeltaNotFound delta_key
+          | Some (instance, _cols) -> return (index, (pos, instance) :: acc)
         end
+
   ) (return (0, [])) >>= fun (_, acc) ->
   return @@ List.rev acc
 
@@ -1972,19 +1970,31 @@ let sql_vterm_of_arg (varmap : Subst.entry VarMap.t) (arg : argument) : (sql_vte
       return @@ SqlConst c
 
 
+let combine_delta_column_names (delta_env : delta_environment) (delta_key : delta_key) (args : argument list) =
+  let open ResultMonad in
+  match delta_env |> DeltaEnv.find_opt delta_key with
+  | None ->
+      err @@ DeltaNotFound delta_key
+
+  | Some (_instance, cols) ->
+      begin
+        try
+          return @@ List.combine cols args
+        with
+        | _ ->
+            err @@ ArityMismatch { expected = List.length cols; got = List.length args }
+      end
+
+
 (* Extends `subst` by traversing occurrence of variables in positive predicates. *)
-let extend_substitution_by_traversing_positives (colnamtab : colnamtab) (named_poss : (positive_predicate * instance_name) list) (subst : Subst.t) : (Subst.t, error) result =
+let extend_substitution_by_traversing_positives (colnamtab : colnamtab) (delta_env : delta_environment) (named_poss : (positive_predicate * instance_name) list) (subst : Subst.t) : (Subst.t, error) result =
   let open ResultMonad in
   named_poss |> List.fold_left (fun res (pos, instance) ->
     res >>= fun subst ->
     begin
       match pos with
-      | PositivePred (table, args) ->
-          combine_column_names colnamtab table args
-
-      | _ ->
-          failwith "TODO: PositiveDelta, column_and_arg_pairs"
-
+      | PositivePred (table, args)      -> combine_column_names colnamtab table args
+      | PositiveDelta (delta_key, args) -> combine_delta_column_names delta_env delta_key args
     end >>= fun column_and_arg_pairs ->
     let subst =
       column_and_arg_pairs |> List.fold_left (fun subst (column, arg) ->
@@ -2047,9 +2057,9 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (delta_env : del
   let body = headless_rule.body in
   decompose_body body >>= fun (poss, negs, comps) ->
 
-  assign_or_lookup_instance_names delta_env poss >>= fun named_poss ->
+  assign_or_find_instance_names delta_env poss >>= fun named_poss ->
   let subst = Subst.empty in
-  extend_substitution_by_traversing_positives colnamtab named_poss subst >>= fun subst ->
+  extend_substitution_by_traversing_positives colnamtab delta_env named_poss subst >>= fun subst ->
   let (comps, subst) = extend_substitution_by_traversing_conparisons comps subst in
 
   (* Converts `subst` into SQL constraints and `varmap`: *)
@@ -2119,8 +2129,10 @@ let convert_rule_to_operation_based_sql (colnamtab : colnamtab) (delta_env : del
           combine_column_names colnamtab table args >>= fun column_and_arg_pairs ->
           return (table, column_and_arg_pairs)
 
-      | _ ->
-          failwith "TODO: NegativeDelta, column_and_arg_pairs"
+      | NegativeDelta (delta_key, args) ->
+          combine_delta_column_names delta_env delta_key args >>= fun column_and_arg_pairs ->
+          let (_, table) = delta_key in
+          return (table, column_and_arg_pairs)
 
     end >>= fun (table, column_and_arg_pairs) ->
     let instance = "t" in
@@ -2254,10 +2266,11 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
       let sql_queries = List.rev sql_query_acc in
       SqlUnion (SqlUnionOp, sql_queries)
     in
-    let delta_env = delta_env |> DeltaEnv.add delta_key temporary_table in
+    let (delta_kind, table) = delta_key in
+    let cols = [] (* TODO: get the list of column names from `table` *) in
+    let delta_env = delta_env |> DeltaEnv.add delta_key (temporary_table, cols) in
     let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
     let update =
-      let (delta_kind, _) = delta_key in
       let instance_name = "inst" in
       match delta_kind with
       | Insert ->
