@@ -1690,6 +1690,36 @@ type error =
   | UnknownTable of { table : table_name; arity : int }
 
 
+let show_error = function
+  | InvalidArgInHead var ->
+      Printf.sprintf "invalid arg %s in a rule head" (string_of_var var)
+  | InvalidArgInBody var ->
+      Printf.sprintf "invalid arg %s in a rule body" (string_of_var var)
+  | ArityMismatch r ->
+      Printf.sprintf "arity mismatch (expected: %d, got: %d)" r.expected r.got
+  | UnknownComparisonOperator op ->
+      Printf.sprintf "unknown comparison operator %s" op
+  | PredOccursInRuleHead rterm ->
+      Printf.sprintf "a predicate occurs in a rule head: %s" (string_of_rterm rterm)
+  | DeltaOccursInRuleBody rterm ->
+      Printf.sprintf "a delta predicate occurs in a rule body: %s" (string_of_rterm rterm)
+  | EqualToMoreThanOneConstant r ->
+      Printf.sprintf "variable %s are required to be equal to more than one constants; %s and %s"
+        r.variable (string_of_const r.const1) (string_of_const r.const2)
+  | HeadVariableDoesNotOccurInBody named_var ->
+      Printf.sprintf "variable %s in a rule head does not occur in the rule body" named_var
+  | UnexpectedNamedVar named_var ->
+      Printf.sprintf "unexpected named variable %s" named_var
+  | UnexpectedVarForm var ->
+      Printf.sprintf "unexpected variable form: %s" (string_of_var var)
+  | UnknownBinaryOperator op ->
+      Printf.sprintf "unknown binary operator %s" op
+  | UnknownUnaryOperator op ->
+      Printf.sprintf "unknown unary operator %s" op
+  | UnknownTable r ->
+      Printf.sprintf "unknown table %s of arity %d" r.table r.arity
+
+
 let get_column_names_from_table (colnamtab : colnamtab) (table : table_name) (arity : int) : (column_name list, error) result =
   let open ResultMonad in
   match Hashtbl.find_opt colnamtab (table, arity) with

@@ -6,6 +6,8 @@ val unfold_delta_trigger_stt : string -> bool -> bool -> string -> string -> boo
 
 type error
 
+val show_error : error -> string
+
 type sql_operation
 
 val stringify_sql_operation : sql_operation -> string
