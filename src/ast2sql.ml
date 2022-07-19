@@ -2204,7 +2204,7 @@ let convert_rule_to_operation_based_sql (table_env : table_environment) (delta_e
 module DeltaKeySet = Set.Make(DeltaKey)
 
 type rule_group =
-  | PredGroup  of table_name * (column_name * named_var) list
+  | PredGroup  of table_name * headless_rule
   | DeltaGroup of delta_key * headless_rule list
 
 type delta_grouping_state = {
@@ -2221,7 +2221,7 @@ let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule 
     let (head, body) = rule in
     get_spec_from_head table_env head >>= function
     | PredHead(table, columns_and_vars) ->
-        let group = PredGroup(table, columns_and_vars) in
+        let group = PredGroup(table, { columns_and_vars; body }) in
         begin
           match state_opt with
           | None ->
@@ -2284,8 +2284,8 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
     res >>= fun (i, creation_acc, update_acc, delta_env) ->
     let temporary_table = Printf.sprintf "temp%d" i in
     match rule_group with
-    | PredGroup(table, _columns_and_vars) ->
-        let sql_query = failwith "TODO: PredGroup" in
+    | PredGroup(table, headless_rule) ->
+        convert_rule_to_operation_based_sql table_env DeltaEnv.empty headless_rule >>= fun sql_query ->
         let creation = SqlCreateView (table, sql_query) in
         return (i + 1, creation :: creation_acc, update_acc, delta_env)
 
