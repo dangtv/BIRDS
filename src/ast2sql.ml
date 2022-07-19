@@ -1684,7 +1684,6 @@ type error =
   | InvalidArgInBody of var
   | ArityMismatch of { expected : int; got : int }
   | UnknownComparisonOperator of string
-  | PredOccursInRuleHead of rterm
   | EqualToMoreThanOneConstant of { variable : named_var; const1 : const; const2 : const }
   | HeadVariableDoesNotOccurInBody of named_var
   | UnexpectedNamedVar of named_var
@@ -1705,8 +1704,6 @@ let show_error = function
       Printf.sprintf "arity mismatch (expected: %d, got: %d)" r.expected r.got
   | UnknownComparisonOperator op ->
       Printf.sprintf "unknown comparison operator %s" op
-  | PredOccursInRuleHead rterm ->
-      Printf.sprintf "a predicate occurs in a rule head: %s" (string_of_rterm rterm)
   | EqualToMoreThanOneConstant r ->
       Printf.sprintf "variable %s are required to be equal to more than one constants; %s and %s"
         r.variable (string_of_const r.const1) (string_of_const r.const2)
@@ -1754,26 +1751,37 @@ let combine_column_names (table_env : table_environment) (table : table_name) (x
       }
 
 
-(* Returns `(table_name, column_and_var_pairs)`. *)
-let get_spec_from_head (table_env : table_environment) (head : rterm) : (delta_kind * table_name * (column_name * named_var) list, error) result =
+let validate_args_in_head (table_env : table_environment) (table : table_name) (args : var list) =
   let open ResultMonad in
-  begin
-    match head with
-    | Pred (table, args)        -> err @@ PredOccursInRuleHead head
-    | Deltainsert (table, args) -> return (Insert, table, args)
-    | Deltadelete (table, args) -> return (Delete, table, args)
-  end >>= fun (delta_kind, table, args) ->
-  begin
-    args |> List.fold_left (fun res arg ->
-      res >>= fun x_acc ->
-      match arg with
-      | NamedVar x -> return @@ x :: x_acc
-      | _          -> err @@ InvalidArgInHead arg
-    ) (return []) >>= fun x_acc ->
-    return (table, List.rev x_acc)
-  end >>= fun (table, vars) ->
-  combine_column_names table_env table vars >>= fun column_and_var_pairs ->
-  return (delta_kind, table, column_and_var_pairs)
+  args |> List.fold_left (fun res arg ->
+    res >>= fun x_acc ->
+    match arg with
+    | NamedVar x -> return @@ x :: x_acc
+    | _          -> err @@ InvalidArgInHead arg
+  ) (return []) >>= fun x_acc ->
+  let vars = List.rev x_acc in
+  combine_column_names table_env table vars
+
+
+type head_spec =
+  | PredHead  of table_name * (column_name * named_var) list
+  | DeltaHead of delta_kind * table_name * (column_name * named_var) list
+
+
+let get_spec_from_head (table_env : table_environment) (head : rterm) : (head_spec, error) result =
+  let open ResultMonad in
+  match head with
+  | Pred (table, args) ->
+      validate_args_in_head table_env table args >>= fun column_and_var_pairs ->
+      return @@ PredHead(table, column_and_var_pairs)
+
+  | Deltainsert (table, args) ->
+      validate_args_in_head table_env table args >>= fun column_and_var_pairs ->
+      return @@ DeltaHead(Insert, table, column_and_var_pairs)
+
+  | Deltadelete (table, args) ->
+      validate_args_in_head table_env table args >>= fun column_and_var_pairs ->
+      return @@ DeltaHead(Delete, table, column_and_var_pairs)
 
 
 let get_comparison_operator (op_str : string) : (comparison_operator, error) result =
@@ -2206,33 +2214,37 @@ let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule 
   rules |> List.fold_left (fun res rule ->
     res >>= fun state_opt ->
     let (head, body) = rule in
-    get_spec_from_head table_env head >>= fun (delta_kind, table, columns_and_vars) ->
-    let delta_key = (delta_kind, table) in
-    let intermediate = { columns_and_vars; body } in
-    match state_opt with
-    | None ->
-        return @@ Some {
-          current_target      = delta_key;
-          current_accumulated = [ intermediate ];
-          already_handled     = DeltaKeySet.empty;
-          accumulated         = [];
-        }
+    get_spec_from_head table_env head >>= function
+    | PredHead(_table, _columns_and_vars) ->
+        failwith "TODO: PredHead"
 
-    | Some state ->
-        if state.already_handled |> DeltaKeySet.mem delta_key then
-          err @@ HasMoreThanOneRuleGroup delta_key
-        else if delta_key = state.current_target then
-          return @@ Some { state with
-            current_accumulated = intermediate :: state.current_accumulated;
-          }
-        else
-          let group = (state.current_target, List.rev state.current_accumulated) in
-          return @@ Some {
-            current_target      = delta_key;
-            current_accumulated = [ intermediate ];
-            already_handled     = state.already_handled |> DeltaKeySet.add state.current_target;
-            accumulated         = group :: state.accumulated;
-          }
+    | DeltaHead(delta_kind, table, columns_and_vars) ->
+        let delta_key = (delta_kind, table) in
+        let intermediate = { columns_and_vars; body } in
+        match state_opt with
+        | None ->
+            return @@ Some {
+              current_target      = delta_key;
+              current_accumulated = [ intermediate ];
+              already_handled     = DeltaKeySet.empty;
+              accumulated         = [];
+            }
+
+        | Some state ->
+            if state.already_handled |> DeltaKeySet.mem delta_key then
+              err @@ HasMoreThanOneRuleGroup delta_key
+            else if delta_key = state.current_target then
+              return @@ Some { state with
+                current_accumulated = intermediate :: state.current_accumulated;
+              }
+            else
+              let group = (state.current_target, List.rev state.current_accumulated) in
+              return @@ Some {
+                current_target      = delta_key;
+                current_accumulated = [ intermediate ];
+                already_handled     = state.already_handled |> DeltaKeySet.add state.current_target;
+                accumulated         = group :: state.accumulated;
+              }
   ) (return None) >>= fun state_opt ->
   match state_opt with
   | None ->
