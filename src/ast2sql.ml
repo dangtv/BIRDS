@@ -99,6 +99,7 @@ and sql_query =
 
 type sql_operation =
   | SqlCreateTemporaryTable of table_name * sql_query
+  | SqlCreateView           of table_name * sql_query
   | SqlInsertInto           of table_name * sql_from_clause
   | SqlDeleteFrom           of table_name * sql_where_clause
 
@@ -263,6 +264,9 @@ let stringify_sql_operation (sql_op : sql_operation) : string =
   match sql_op with
   | SqlCreateTemporaryTable (table, sql_query) ->
       Printf.sprintf "CREATE TEMPORARY TABLE %s AS %s;" table (stringify_sql_query sql_query)
+
+  | SqlCreateView (table, sql_query) ->
+      Printf.sprintf "CREATE VIEW %s AS %s;" table (stringify_sql_query sql_query)
 
   | SqlInsertInto (table, sql_from_clause) ->
       Printf.sprintf "INSERT INTO %s SELECT *%s;" table (stringify_sql_from_clause sql_from_clause)
@@ -2280,8 +2284,10 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
     res >>= fun (i, creation_acc, update_acc, delta_env) ->
     let temporary_table = Printf.sprintf "temp%d" i in
     match rule_group with
-    | PredGroup(_table, _columns_and_vars) ->
-        failwith "TODO: PredGroup"
+    | PredGroup(table, _columns_and_vars) ->
+        let sql_query = failwith "TODO: PredGroup" in
+        let creation = SqlCreateView (table, sql_query) in
+        return (i + 1, creation :: creation_acc, update_acc, delta_env)
 
     | DeltaGroup(delta_key, headless_rules) ->
         headless_rules |> List.fold_left (fun res_acc headless_rule ->
