@@ -58,35 +58,40 @@ let main () =
           "ed and eed";
         expr =
           {
-            rules = [
-              (* "+eed(E, D) :- ed(E, D), D = 'A', E != 'Joe', ¬eed(E, D)." *)
-              Deltainsert ("eed", [ NamedVar "E"; NamedVar "D" ]), [
-                Rel (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
-                Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
-                Equat (Equation ("<>", Var (NamedVar "E"), Const (String "'Joe'")));
-                Not (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
-              ];
-
-              (* "-eed(E, D) :- ed(V1, D), eed(E, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬eed(V1, D)." *)
-              Deltadelete ("eed", [ NamedVar "E"; NamedVar "D" ]), [
-                Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
-                Rel (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
-                Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
-                Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
-                Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
-                Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
-              ];
-
-              (* "+ed(E, D) :- ed(V1, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬ed(E, D), ¬eed(V1, D)." *)
-              Deltainsert ("ed", [ NamedVar "E"; NamedVar "D" ]), [
-                Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
-                Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
-                Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
-                Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
-                Not (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
-                Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
-              ];
-            ];
+            rules = begin
+              let rule1 =
+                (* "+eed(E, D) :- ed(E, D), D = 'A', E != 'Joe', ¬eed(E, D)." *)
+                Deltainsert ("eed", [ NamedVar "E"; NamedVar "D" ]), [
+                  Rel (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
+                  Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
+                  Equat (Equation ("<>", Var (NamedVar "E"), Const (String "'Joe'")));
+                  Not (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
+                ]
+              in
+              let rule2 =
+                (* "-eed(E, D) :- ed(V1, D), eed(E, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬eed(V1, D)." *)
+                Deltadelete ("eed", [ NamedVar "E"; NamedVar "D" ]), [
+                  Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
+                  Rel (Pred ("eed", [ NamedVar "E"; NamedVar "D" ]));
+                  Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
+                  Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
+                  Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
+                  Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
+                ]
+              in
+              let rule3 =
+                (* "+ed(E, D) :- ed(V1, D), E = 'Joe', D = 'A', V1 != 'Joe', ¬ed(E, D), ¬eed(V1, D)." *)
+                Deltainsert ("ed", [ NamedVar "E"; NamedVar "D" ]), [
+                  Rel (Pred ("ed", [ NamedVar "V1"; NamedVar "D" ]));
+                  Equat (Equation ("=", Var (NamedVar "E"), Const (String "'Joe'")));
+                  Equat (Equation ("=", Var (NamedVar "D"), Const (String "'A'")));
+                  Equat (Equation ("<>", Var (NamedVar "V1"), Const (String "'Joe'")));
+                  Not (Pred ("ed", [ NamedVar "E"; NamedVar "D" ]));
+                  Not (Pred ("eed", [ NamedVar "V1"; NamedVar "D" ]));
+                ]
+              in
+              [ rule3; rule2; rule1 ] (* `expr` holds its rules in the reversed order *)
+            end;
             facts = [];
             query = None;
             sources = [

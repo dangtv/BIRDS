@@ -2279,7 +2279,8 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
       table_env |> TableEnv.add table cols
     ) TableEnv.empty
   in
-  divide_rules_into_groups table_env expr.rules >>= fun rule_groups ->
+  let rules = List.rev expr.rules in (* `expr` holds its rules in the reversed order *)
+  divide_rules_into_groups table_env rules >>= fun rule_groups ->
   rule_groups |> List.fold_left (fun res rule_group ->
     res >>= fun (i, creation_acc, update_acc, delta_env) ->
     let temporary_table = Printf.sprintf "temp%d" i in
