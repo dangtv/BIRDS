@@ -1907,24 +1907,27 @@ module DeltaEnv = Map.Make(DeltaKey)
 type delta_environment = (instance_name * column_name list) DeltaEnv.t
 
 
-let assign_or_find_instance_names (delta_env : delta_environment) (poss : positive_predicate list) : ((positive_predicate * instance_name) list, error) result =
+let assign_or_find_instance_names (delta_env : delta_environment) (poss : positive_predicate list) : ((positive_predicate * instance_name) list * instance_name list, error) result =
   let open ResultMonad in
   poss |> List.fold_left (fun res pos ->
-    res >>= fun (index, acc) ->
+    res >>= fun (index, named_pos_acc, referred_instance_acc) ->
     match pos with
     | PositivePred (table, _args) ->
-        let instance = Printf.sprintf "%s%d" table index in
-        return (index + 1, (pos, instance) :: acc)
+        let instance = Printf.sprintf "%s_%d" table index in
+        return (index + 1, (pos, instance) :: named_pos_acc, referred_instance_acc)
 
     | PositiveDelta (delta_key, _args) ->
         begin
           match delta_env |> DeltaEnv.find_opt delta_key with
-          | None                   -> err @@ DeltaNotFound delta_key
-          | Some (instance, _cols) -> return (index, (pos, instance) :: acc)
+          | None ->
+              err @@ DeltaNotFound delta_key
+
+          | Some (instance, _cols) ->
+              return (index, (pos, instance) :: named_pos_acc, instance :: referred_instance_acc)
         end
 
-  ) (return (0, [])) >>= fun (_, acc) ->
-  return @@ List.rev acc
+  ) (return (0, [], [])) >>= fun (_, named_pos_acc, referred_instance_acc) ->
+  return @@ (List.rev named_pos_acc, List.rev referred_instance_acc)
 
 
 type as_const_or_var =
@@ -2104,7 +2107,7 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
   let body = headless_rule.body in
   decompose_body ~error_detail body >>= fun (poss, negs, comps) ->
 
-  assign_or_find_instance_names delta_env poss >>= fun named_poss ->
+  assign_or_find_instance_names delta_env poss >>= fun (named_poss, referred_instances) ->
   let subst = Subst.empty in
   extend_substitution_by_traversing_positives ~error_detail table_env delta_env named_poss subst >>= fun subst ->
   let (comps, subst) = extend_substitution_by_traversing_conparisons comps subst in
@@ -2218,14 +2221,16 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
 
   (* Builds the FROM clause: *)
   let from_clause_entries =
-    named_poss |> List.map (fun (pos, instance) ->
-      match pos with
-      | PositivePred (table, _args) ->
-          [ (SqlFromTable (None, table), instance) ]
-
-      | _ ->
-          []
-    ) |> List.concat
+    List.concat [
+      named_poss |> List.map (fun (pos, instance) ->
+        match pos with
+        | PositivePred (table, _args) -> [ (SqlFromTable (None, table), instance) ]
+        | _                           -> []
+      ) |> List.concat;
+      referred_instances |> List.map (fun instance ->
+        (SqlFromTable (None, instance), instance)
+      )
+    ]
   in
   let sql_from = SqlFrom from_clause_entries in
 
