@@ -2019,16 +2019,16 @@ let sql_vterm_of_arg ~(error_detail : error_detail) (varmap : Subst.entry VarMap
       return None
 
 
-let combine_delta_column_names (delta_env : delta_environment) (delta_key : delta_key) (args : argument list) =
+let combine_delta_column_names (delta_env : delta_environment) (delta_key : delta_key) (args : argument list) : (instance_name * (column_name * argument) list, error) result =
   let open ResultMonad in
   match delta_env |> DeltaEnv.find_opt delta_key with
   | None ->
       err @@ DeltaNotFound delta_key
 
-  | Some (_instance, cols) ->
+  | Some (instance, cols) ->
       begin
         try
-          return @@ List.combine cols args
+          return @@ (instance, List.combine cols args)
         with
         | _ ->
             err @@ ArityMismatch { expected = List.length cols; got = List.length args }
@@ -2042,11 +2042,16 @@ let extend_substitution_by_traversing_positives ~(error_detail : error_detail) (
     res >>= fun subst ->
     begin
       match pos with
-      | PositivePred (table, args)      -> combine_column_names ~error_detail table_env table args
-      | PositiveDelta (delta_key, args) -> combine_delta_column_names delta_env delta_key args
-    end >>= fun column_and_arg_pairs ->
+      | PositivePred (table, args) ->
+          combine_column_names ~error_detail table_env table args
+
+      | PositiveDelta (delta_key, args) ->
+          combine_delta_column_names delta_env delta_key args >>= fun (_instance, columns_and_args) ->
+          return columns_and_args
+
+    end >>= fun columns_and_args ->
     let subst =
-      column_and_arg_pairs |> List.fold_left (fun subst (column, arg) ->
+      columns_and_args |> List.fold_left (fun subst (column, arg) ->
         match arg with
         | ArgNamedVar x -> subst |> Subst.add x (Subst.Occurrence (instance, column))
         | ArgConst _    -> subst
@@ -2178,18 +2183,16 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
     begin
       match neg with
       | NegativePred (table, args) ->
-          combine_column_names ~error_detail table_env table args >>= fun column_and_arg_pairs ->
-          return (table, column_and_arg_pairs)
+          combine_column_names ~error_detail table_env table args >>= fun columns_and_args ->
+          return (table, columns_and_args)
 
       | NegativeDelta (delta_key, args) ->
-          combine_delta_column_names delta_env delta_key args >>= fun column_and_arg_pairs ->
-          let (_, table) = delta_key in
-          return (table, column_and_arg_pairs)
+          combine_delta_column_names delta_env delta_key args
 
-    end >>= fun (table, column_and_arg_pairs) ->
+    end >>= fun (table, columns_and_args) ->
     let instance = "t" in
     let sql_from = SqlFrom [ (SqlFromTable (None, table), instance) ] in
-    column_and_arg_pairs |> List.fold_left (fun res (column, arg) ->
+    columns_and_args |> List.fold_left (fun res (column, arg) ->
       res >>= fun acc ->
       sql_vterm_of_arg ~error_detail varmap arg >>= function
       | None -> (* corresponds to underscore *)
@@ -2317,7 +2320,6 @@ let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule 
 
 
 let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, error) result =
-  Printf.printf "EXPR:\n%s\n" (Expr.to_string expr);
   let open ResultMonad in
   let table_env =
     let defs =
@@ -2325,8 +2327,8 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
       | None      -> expr.sources
       | Some view -> view :: expr.sources
     in
-    defs |> List.fold_left (fun table_env (table, col_and_type_pairs) ->
-      let cols = col_and_type_pairs |> List.map fst in
+    defs |> List.fold_left (fun table_env (table, cols_and_types) ->
+      let cols = cols_and_types |> List.map (fun (col, _) -> col) in
       table_env |> TableEnv.add table cols
     ) TableEnv.empty
   in
