@@ -625,6 +625,8 @@ module ResultMonad : sig
   val return : 'a -> ('a, 'e) result
   val err : 'e -> ('a, 'e) result
   val map_err : ('e1 -> 'e2) -> ('a, 'e1) result -> ('a, 'e2) result
+  val foldM : ('a -> 'b -> ('a, 'e) result) -> 'a -> 'b list -> ('a, 'e) result
+  val mapM : ('a -> ('b, 'e) result) -> 'a list -> ('b list, 'e) result
   val ( >>= ) : ('a, 'e) result -> ('a -> ('b, 'e) result) -> ('b, 'e) result
 end = struct
 
@@ -644,6 +646,18 @@ end = struct
     | Ok x    -> Ok x
     | Error e -> Error (f e)
 
+  let foldM f acc vs =
+    vs |> List.fold_left (fun res v ->
+      res >>= fun acc ->
+      f acc v
+    ) (return acc)
+
+  let mapM f vs =
+    vs |> foldM (fun acc v ->
+      f v >>= fun y ->
+      return (y :: acc)
+    ) [] >>= fun acc ->
+    return (List.rev acc)
 end
 
 

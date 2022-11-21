@@ -43,6 +43,7 @@ TOP_FILES=\
 	ast2theorem \
 	bx\
 	debugger\
+	simplification\
 
 TOP_FILES_WITH_MLI=\
 	parser expr conversion ast2sql ast2theorem\
