@@ -49,6 +49,7 @@ type intermediate_rule = {
 
 type error =
   | UnexpectedHeadVarForm of var
+  | UnexpectedBodyVarForm of var
 
 
 let convert_head_var (var : var) : (intermediate_head_var, error) result =
@@ -58,8 +59,33 @@ let convert_head_var (var : var) : (intermediate_head_var, error) result =
   | _          -> err (UnexpectedHeadVarForm var)
 
 
-let convert_rterm (rterm : rterm) : (intermediate_predicate * intermediate_body_var list, error) result =
-  failwith "TODO: convert_rterm"
+let convert_body_var (var : var) : (intermediate_body_var, error) result =
+  let open ResultMonad in
+  match var with
+  | NamedVar x -> return (ImBodyNamedVar x)
+  | AnonVar    -> return ImBodyAnonVar
+  | _          -> err (UnexpectedBodyVarForm var)
+
+
+let separate_predicate_and_vars (rterm : rterm) : intermediate_predicate * var list =
+  match rterm with
+  | Pred (t, vars)        -> (ImPred t, vars)
+  | Deltainsert (t, vars) -> (ImDeltaInsert t, vars)
+  | Deltadelete (t, vars) -> (ImDeltaDelete t, vars)
+
+
+let convert_head_rterm (rterm : rterm) : (intermediate_predicate * intermediate_head_var list, error) result =
+  let open ResultMonad in
+  let (impred, vars) = separate_predicate_and_vars rterm in
+  vars |> mapM convert_head_var >>= fun imhvars ->
+  return (impred, imhvars)
+
+
+let convert_body_rterm (rterm : rterm) : (intermediate_predicate * intermediate_body_var list, error) result =
+  let open ResultMonad in
+  let (impred, vars) = separate_predicate_and_vars rterm in
+  vars |> mapM convert_body_var >>= fun imbvars ->
+  return (impred, imbvars)
 
 
 let convert_eterm (eterm : eterm) : (intermediate_equation, error) result =
@@ -78,22 +104,16 @@ let extend_predicate_map (impred : intermediate_predicate) (args : intermediate_
 let convert_rule (rule : rule) : (intermediate_rule, error) result =
   let open ResultMonad in
   let (head, body) = rule in
-  let (impred, vars) =
-    match head with
-    | Pred (t, vars)        -> (ImPred t, vars)
-    | Deltainsert (t, vars) -> (ImDeltaInsert t, vars)
-    | Deltadelete (t, vars) -> (ImDeltaDelete t, vars)
-  in
-  vars |> mapM convert_head_var >>= fun imhvars ->
+  convert_head_rterm head >>= fun imhead ->
   body |> foldM (fun (predmap_pos, predmap_neg, eqn_acc) term ->
     match term with
     | Rel rterm ->
-        convert_rterm rterm >>= fun (impred, imbvars) ->
+        convert_body_rterm rterm >>= fun (impred, imbvars) ->
         let predmap_pos = predmap_pos |> extend_predicate_map impred imbvars in
         return (predmap_pos, predmap_neg, eqn_acc)
 
     | Not rterm ->
-        convert_rterm rterm >>= fun (impred, imbvars) ->
+        convert_body_rterm rterm >>= fun (impred, imbvars) ->
         let predmap_neg = predmap_neg |> extend_predicate_map impred imbvars in
         return (predmap_pos, predmap_neg, eqn_acc)
 
@@ -106,7 +126,7 @@ let convert_rule (rule : rule) : (intermediate_rule, error) result =
 
   ) (PredicateMap.empty, PredicateMap.empty, []) >>= fun (predmap_pos, predmap_neg, eqn_acc) ->
   return {
-    head           = (impred, imhvars);
+    head           = imhead;
     positive_terms = predmap_pos;
     negative_terms = predmap_neg;
     equations      = List.rev eqn_acc;
