@@ -105,24 +105,24 @@ let main () =
         expected =
           let query1 =
             String.concat " " [
-              "SELECT ed0.emp_name AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE";
-              "ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND";
-              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
+              "SELECT ed_0.emp_name AS emp_name, 'A' AS dept_name FROM ed AS ed_0 WHERE";
+              "ed_0.dept_name = 'A' AND ed_0.emp_name <> 'Joe' AND";
+              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed_0.emp_name AND t.dept_name = 'A' )";
             ]
           in
           let query2 =
             String.concat " " [
-              "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0, eed AS eed1 WHERE";
-              "ed0.dept_name = 'A' AND eed1.dept_name = 'A' AND eed1.emp_name = 'Joe' AND ed0.emp_name <> 'Joe' AND";
-              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
+              "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed_0, eed AS eed_1 WHERE";
+              "ed_0.dept_name = 'A' AND eed_1.dept_name = 'A' AND eed_1.emp_name = 'Joe' AND ed_0.emp_name <> 'Joe' AND";
+              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed_0.emp_name AND t.dept_name = 'A' )";
             ]
           in
           let query3 =
             String.concat " " [
-              "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed0 WHERE";
-              "ed0.dept_name = 'A' AND ed0.emp_name <> 'Joe' AND";
+              "SELECT 'Joe' AS emp_name, 'A' AS dept_name FROM ed AS ed_0 WHERE";
+              "ed_0.dept_name = 'A' AND ed_0.emp_name <> 'Joe' AND";
               "NOT EXISTS ( SELECT * FROM ed AS t WHERE t.emp_name = 'Joe' AND t.dept_name = 'A' ) AND";
-              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed0.emp_name AND t.dept_name = 'A' )";
+              "NOT EXISTS ( SELECT * FROM eed AS t WHERE t.emp_name = ed_0.emp_name AND t.dept_name = 'A' )";
             ]
           in
           String.concat " " [
