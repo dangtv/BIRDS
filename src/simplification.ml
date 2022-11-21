@@ -19,9 +19,6 @@ type intermediate_body_var =
   | ImBodyNamedVar of var_name
   | ImBodyAnonVar
 
-type intermediate_equation =
-  | ImEquation of var_name * const
-
 
 module PredicateMap = Map.Make(struct
   type t = intermediate_predicate
@@ -37,14 +34,18 @@ module PredicateMap = Map.Make(struct
     | (ImDeltaDelete t1, ImDeltaDelete t2) -> String.compare t1 t2
 end)
 
+module VariableMap = Map.Make(String)
+
 
 type predicate_map = ((intermediate_body_var list) list) PredicateMap.t
+
+type equation_map = const VariableMap.t
 
 type intermediate_rule = {
   head           : intermediate_predicate * intermediate_head_var list;
   positive_terms : predicate_map;
   negative_terms : predicate_map;
-  equations      : intermediate_equation list;
+  equations      : equation_map;
 }
 
 type error =
@@ -90,13 +91,13 @@ let convert_body_rterm (rterm : rterm) : (intermediate_predicate * intermediate_
   return (impred, imbvars)
 
 
-let convert_eterm (eterm : eterm) : (intermediate_equation, error) result =
+let convert_eterm (eterm : eterm) : (var_name * const, error) result =
   let open ResultMonad in
   match eterm with
-  | Equation("=", Var (NamedVar x), Const c)          -> return (ImEquation (x, c))
-  | Equation("=", Var (NamedVar x), Var (ConstVar c)) -> return (ImEquation (x, c))
-  | Equation("=", Const c, Var (NamedVar x))          -> return (ImEquation (x, c))
-  | Equation("=", Var (ConstVar c), Var (NamedVar x)) -> return (ImEquation (x, c))
+  | Equation("=", Var (NamedVar x), Const c)          -> return (x, c)
+  | Equation("=", Var (NamedVar x), Var (ConstVar c)) -> return (x, c)
+  | Equation("=", Const c, Var (NamedVar x))          -> return (x, c)
+  | Equation("=", Var (ConstVar c), Var (NamedVar x)) -> return (x, c)
   | _                                                 -> err (UnsupportedEquation eterm)
 
 
@@ -109,36 +110,79 @@ let extend_predicate_map (impred : intermediate_predicate) (args : intermediate_
   predmap |> PredicateMap.add impred (args :: argss)
 
 
-let convert_rule (rule : rule) : (intermediate_rule, error) result =
+let const_equal (c1 : const) (c2 : const) : bool =
+  match (c1, c2) with
+  | (Int n1, Int n2)       -> Int.equal n1 n2
+  | (Real r1, Real r2)     -> Float.equal r1 r2 (* Not conform to IEEE754’s equality *)
+  | (String s1, String s2) -> String.equal s1 s2
+  | (Bool b1, Bool b2)     -> Bool.equal b1 b2
+  | (Null, Null)           -> true
+  | _                      -> false
+
+
+let check_equation_map (x : var_name) (c : const) (eqnmap : equation_map) : equation_map option =
+  match eqnmap |> VariableMap.find_opt x with
+  | None ->
+      Some (eqnmap |> VariableMap.add x c)
+
+  | Some c0 ->
+      if const_equal c0 c then
+        Some eqnmap
+      else
+        None
+
+
+(* Converts rules to intermediate ones.
+   The application `convert_rule rule` returns:
+   - `Error _` if `rule` is syntactically incorrect (or in unsupported form),
+   - `Ok None` if it turns out that `rule` is syntactically correct but
+     obviously unsatisfiable according to its equations, or
+   - `Ok (Some imrule)` otherwise, i.e., if `rule` can be successfully converted to `imrule`. *)
+let convert_rule (rule : rule) : (intermediate_rule option, error) result =
   let open ResultMonad in
   let (head, body) = rule in
   convert_head_rterm head >>= fun imhead ->
-  body |> foldM (fun (predmap_pos, predmap_neg, eqn_acc) term ->
-    match term with
-    | Rel rterm ->
-        convert_body_rterm rterm >>= fun (impred, imbvars) ->
-        let predmap_pos = predmap_pos |> extend_predicate_map impred imbvars in
-        return (predmap_pos, predmap_neg, eqn_acc)
+  body |> foldM (fun opt term ->
+    match opt with
+    | None ->
+        return None
 
-    | Not rterm ->
-        convert_body_rterm rterm >>= fun (impred, imbvars) ->
-        let predmap_neg = predmap_neg |> extend_predicate_map impred imbvars in
-        return (predmap_pos, predmap_neg, eqn_acc)
+    | Some (predmap_pos, predmap_neg, eqnmap) ->
+        begin
+          match term with
+          | Rel rterm ->
+              convert_body_rterm rterm >>= fun (impred, imbvars) ->
+              let predmap_pos = predmap_pos |> extend_predicate_map impred imbvars in
+              return (Some (predmap_pos, predmap_neg, eqnmap))
 
-    | Equat eterm ->
-        convert_eterm eterm >>= fun eqn ->
-        return (predmap_pos, predmap_neg, eqn :: eqn_acc)
+          | Not rterm ->
+              convert_body_rterm rterm >>= fun (impred, imbvars) ->
+              let predmap_neg = predmap_neg |> extend_predicate_map impred imbvars in
+              return (Some (predmap_pos, predmap_neg, eqnmap))
 
-    | Noneq eterm ->
-        err (NonequalityNotSupported eterm)
+          | Equat eterm ->
+              convert_eterm eterm >>= fun (x, c) ->
+              begin
+                match eqnmap |> check_equation_map x c with
+                | None ->
+                  (* If it turns out that the list of equations are unsatisfiable: *)
+                    return None
 
-  ) (PredicateMap.empty, PredicateMap.empty, []) >>= fun (predmap_pos, predmap_neg, eqn_acc) ->
-  return {
-    head           = imhead;
-    positive_terms = predmap_pos;
-    negative_terms = predmap_neg;
-    equations      = List.rev eqn_acc;
-  }
+                | Some eqnmap ->
+                    return (Some (predmap_pos, predmap_neg, eqnmap))
+              end
+
+          | Noneq eterm ->
+              err (NonequalityNotSupported eterm)
+        end
+  ) (Some (PredicateMap.empty, PredicateMap.empty, VariableMap.empty)) >>= fun opt ->
+  return (opt |> Option.map (fun (predmap_pos, predmap_neg, eqnmap) ->
+    {
+      head           = imhead;
+      positive_terms = predmap_pos;
+      negative_terms = predmap_neg;
+      equations      = eqnmap;
+    }))
 
 
 let rule_equal (imrule1 : intermediate_rule) (imrule2 : intermediate_rule) : bool =
@@ -160,7 +204,14 @@ let rec simplify_rule_recursively (imrule1 : intermediate_rule) : intermediate_r
 
 let simplify (rules : rule list) =
   let open ResultMonad in
-  rules |> mapM convert_rule >>= fun imrules ->
+
+  (* Converts each rule to an intermediate rule (with unsatisfiable ones removed): *)
+  rules |> foldM (fun imrule_acc rule ->
+    convert_rule rule >>= function
+    | None        -> return imrule_acc
+    | Some imrule -> return (imrule :: imrule_acc)
+  ) [] >>= fun imrule_acc ->
+  let imrules = List.rev imrule_acc in
 
   (* Performs per-rule simplification: *)
   let _imrules = imrules |> List.map simplify_rule_recursively in
