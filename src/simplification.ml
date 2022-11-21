@@ -313,8 +313,44 @@ let erase_sole_occurrences (imrule : intermediate_rule) : intermediate_rule =
   { head_predicate; head_arguments; positive_terms; negative_terms; equations }
 
 
+let is_looser ~than:(args1 : body_term_arguments) (args2 : body_term_arguments) : bool =
+  match List.combine args1 args2 with
+  | exception Invalid_argument _ ->
+      false
+
+  | zipped ->
+      zipped |> List.for_all (function
+      | (_, ImBodyAnonVar)                     -> true
+      | (ImBodyAnonVar, ImBodyNamedVar _)      -> false
+      | (ImBodyNamedVar x1, ImBodyNamedVar x2) -> String.equal x1 x2
+      )
+
+
 let remove_looser_terms (imrule : intermediate_rule) : intermediate_rule =
-  failwith "TODO: remove_looser_terms"
+  let rec aux (acc : body_term_arguments list) ~(criterion : body_term_arguments) (targets : body_term_arguments list) =
+    match targets |> List.filter (fun target -> not (is_looser ~than:criterion target)) with
+    | [] ->
+        BodyTermArgumentsSet.of_list acc
+
+    | head :: tail ->
+        aux (criterion :: acc) ~criterion:head tail
+  in
+  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
+  let positive_terms =
+    positive_terms |> PredicateMap.map (fun argsset ->
+      let argss_sorted_desc = argsset |> BodyTermArgumentsSet.elements |> List.rev in
+      match argss_sorted_desc with
+      | [] ->
+          argsset
+
+      | head :: tail ->
+          aux [] ~criterion:head tail
+    )
+  in
+  let negative_terms =
+    failwith "TODO: remove_looser_terms, negative_terms"
+  in
+  { head_predicate; head_arguments; positive_terms; negative_terms; equations }
 
 
 let simplify_rule_step (imrule : intermediate_rule) : intermediate_rule =
