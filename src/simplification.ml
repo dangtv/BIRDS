@@ -20,7 +20,7 @@ type intermediate_body_var =
   | ImBodyAnonVar
 
 type intermediate_equation =
-  unit (* TODO: define this *)
+  | ImEquation of var_name * const
 
 
 module PredicateMap = Map.Make(struct
@@ -48,8 +48,10 @@ type intermediate_rule = {
 }
 
 type error =
-  | UnexpectedHeadVarForm of var
-  | UnexpectedBodyVarForm of var
+  | UnexpectedHeadVarForm   of var
+  | UnexpectedBodyVarForm   of var
+  | UnsupportedEquation     of eterm
+  | NonequalityNotSupported of eterm
 
 
 let convert_head_var (var : var) : (intermediate_head_var, error) result =
@@ -89,7 +91,13 @@ let convert_body_rterm (rterm : rterm) : (intermediate_predicate * intermediate_
 
 
 let convert_eterm (eterm : eterm) : (intermediate_equation, error) result =
-  failwith "TODO: convert_eterm"
+  let open ResultMonad in
+  match eterm with
+  | Equation("=", Var (NamedVar x), Const c)          -> return (ImEquation (x, c))
+  | Equation("=", Var (NamedVar x), Var (ConstVar c)) -> return (ImEquation (x, c))
+  | Equation("=", Const c, Var (NamedVar x))          -> return (ImEquation (x, c))
+  | Equation("=", Var (ConstVar c), Var (NamedVar x)) -> return (ImEquation (x, c))
+  | _                                                 -> err (UnsupportedEquation eterm)
 
 
 let extend_predicate_map (impred : intermediate_predicate) (args : intermediate_body_var list) (predmap : predicate_map) : predicate_map =
@@ -122,7 +130,7 @@ let convert_rule (rule : rule) : (intermediate_rule, error) result =
         return (predmap_pos, predmap_neg, eqn :: eqn_acc)
 
     | Noneq eterm ->
-        failwith "TODO: Noneq"
+        err (NonequalityNotSupported eterm)
 
   ) (PredicateMap.empty, PredicateMap.empty, []) >>= fun (predmap_pos, predmap_neg, eqn_acc) ->
   return {
@@ -133,7 +141,28 @@ let convert_rule (rule : rule) : (intermediate_rule, error) result =
   }
 
 
+let rule_equal (imrule1 : intermediate_rule) (imrule2 : intermediate_rule) : bool =
+  true (* TODO: implement this *)
+
+
+let simplify_rule_step (imrule : intermediate_rule) : intermediate_rule =
+  failwith "TODO: simplify_rule_step"
+
+
+let rec simplify_rule_recursively (imrule1 : intermediate_rule) : intermediate_rule =
+  let imrule2 = simplify_rule_step imrule1 in
+  if rule_equal imrule1 imrule2 then
+  (* If the simplification reaches a fixpoint: *)
+    imrule2
+  else
+    simplify_rule_recursively imrule2
+
+
 let simplify (rules : rule list) =
   let open ResultMonad in
   rules |> mapM convert_rule >>= fun imrules ->
+
+  (* Performs per-rule simplification: *)
+  let _imrules = imrules |> List.map simplify_rule_recursively in
+
   failwith "TODO: simplify"
