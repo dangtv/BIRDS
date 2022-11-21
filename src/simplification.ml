@@ -236,8 +236,90 @@ let convert_rule (rule : rule) : (intermediate_rule option, error) result =
     }))
 
 
+type occurrence_count_map = int VariableMap.t
+
+
+let increment_occurrence_count (x : var_name) (count_map : occurrence_count_map) : occurrence_count_map =
+  match count_map |> VariableMap.find_opt x with
+  | None       -> count_map |> VariableMap.add x 1
+  | Some count -> count_map |> VariableMap.add x (count + 1)
+
+
+let has_only_one_occurrence (count_map : occurrence_count_map) (x : var_name) : bool =
+  match count_map |> VariableMap.find_opt x with
+  | Some 1 -> true
+  | _      -> false
+
+
+let fold_predicate_map_for_counting (predmap : predicate_map) (count_map : occurrence_count_map) : occurrence_count_map =
+  PredicateMap.fold (fun impred argsset count_map ->
+    BodyTermArgumentsSet.fold (fun args count_map ->
+      args |> List.fold_left (fun count_map arg ->
+        match arg with
+        | ImBodyNamedVar x -> count_map |> increment_occurrence_count x
+        | ImBodyAnonVar    -> count_map
+      ) count_map
+    ) argsset count_map
+  ) predmap count_map
+
+
+let erase_sole_occurrences_in_predicate_map (count_map : occurrence_count_map) (predmap : predicate_map) : predicate_map =
+  predmap |> PredicateMap.map (fun argsset ->
+    argsset |> BodyTermArgumentsSet.map (fun args ->
+      args |> List.map (fun arg ->
+        match arg with
+        | ImBodyNamedVar x ->
+            if x |> has_only_one_occurrence count_map then
+              ImBodyAnonVar
+            else
+              arg
+
+      | ImBodyAnonVar ->
+          arg
+      )
+    )
+  )
+
+
+let erase_sole_occurrences (imrule : intermediate_rule) : intermediate_rule =
+  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
+
+  (* Counts occurrence of each variables: *)
+  let count_map =
+    VariableMap.empty
+      |> fold_predicate_map_for_counting positive_terms
+      |> fold_predicate_map_for_counting negative_terms
+      |> VariableMap.fold (fun x _c count_map -> count_map |> increment_occurrence_count x) equations
+  in
+
+  (* Removes variables occurring in head arguments: *)
+  let count_map =
+    head_arguments |> List.fold_left (fun count_map (ImHeadVar x) ->
+      count_map |> VariableMap.remove x
+    ) count_map
+  in
+
+  (* Converts variables that have only one occurrence with the underscore: *)
+  let positive_terms = positive_terms |> erase_sole_occurrences_in_predicate_map count_map in
+  let negative_terms = negative_terms |> erase_sole_occurrences_in_predicate_map count_map in
+  let equations =
+    VariableMap.fold (fun x c equations_new ->
+      if x |> has_only_one_occurrence count_map then
+        equations_new
+      else
+        equations_new |> VariableMap.add x c
+    ) equations VariableMap.empty
+  in
+  { head_predicate; head_arguments; positive_terms; negative_terms; equations }
+
+
+let remove_looser_terms (imrule : intermediate_rule) : intermediate_rule =
+  failwith "TODO: remove_looser_terms"
+
+
 let simplify_rule_step (imrule : intermediate_rule) : intermediate_rule =
-  failwith "TODO: simplify_rule_step"
+  let imrule = erase_sole_occurrences imrule in
+  remove_looser_terms imrule
 
 
 let rec simplify_rule_recursively (imrule1 : intermediate_rule) : intermediate_rule =
