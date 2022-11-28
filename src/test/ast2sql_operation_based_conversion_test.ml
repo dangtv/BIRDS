@@ -45,7 +45,7 @@ let run_tests (test_cases : test_case list) : bool =
         true
 
     | Error _ ->
-        Printf.printf "FAILED (error)\n";
+        Printf.printf "! %s: FAILED (error)\n" title;
         true
   ) false
 
