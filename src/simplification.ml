@@ -67,6 +67,13 @@ module VariableMap = Map.Make(String)
 type body_term_arguments = intermediate_body_var list
 
 
+let string_of_body_term_arguments imbvars =
+  imbvars |> List.map (function
+  | ImBodyNamedVar x -> x
+  | ImBodyAnonVar    -> "_"
+  ) |> String.concat ", "
+
+
 module BodyTermArguments = struct
   type t = body_term_arguments
 
@@ -189,7 +196,7 @@ let check_equation_map (x : var_name) (c : const) (eqnmap : equation_map) : equa
 
 (* Converts rules to intermediate ones.
    The application `convert_rule rule` returns:
-   - `Error _` if `rule` is syntactically incorrect (or in unsupported form),
+   - `Error _` if `rule` is syntactically incorrect (or in unsupported forms),
    - `Ok None` if it turns out that `rule` is syntactically correct but
      obviously unsatisfiable according to its equations, or
    - `Ok (Some imrule)` otherwise, i.e., if `rule` can be successfully converted to `imrule`. *)
@@ -241,184 +248,6 @@ let convert_rule (rule : rule) : (intermediate_rule option, error) result =
     }))
 
 
-type occurrence_count_map = int VariableMap.t
-
-
-let increment_occurrence_count (x : var_name) (count_map : occurrence_count_map) : occurrence_count_map =
-  match count_map |> VariableMap.find_opt x with
-  | None       -> count_map |> VariableMap.add x 1
-  | Some count -> count_map |> VariableMap.add x (count + 1)
-
-
-let has_only_one_occurrence (count_map : occurrence_count_map) (x : var_name) : bool =
-  match count_map |> VariableMap.find_opt x with
-  | Some 1 -> true
-  | _      -> false
-
-
-let fold_predicate_map_for_counting (predmap : predicate_map) (count_map : occurrence_count_map) : occurrence_count_map =
-  PredicateMap.fold (fun impred argsset count_map ->
-    BodyTermArgumentsSet.fold (fun args count_map ->
-      args |> List.fold_left (fun count_map arg ->
-        match arg with
-        | ImBodyNamedVar x -> count_map |> increment_occurrence_count x
-        | ImBodyAnonVar    -> count_map
-      ) count_map
-    ) argsset count_map
-  ) predmap count_map
-
-
-let erase_sole_occurrences_in_predicate_map (count_map : occurrence_count_map) (predmap : predicate_map) : predicate_map =
-  predmap |> PredicateMap.map (fun argsset ->
-    argsset |> BodyTermArgumentsSet.map (fun args ->
-      args |> List.map (fun arg ->
-        match arg with
-        | ImBodyNamedVar x ->
-            if x |> has_only_one_occurrence count_map then
-              ImBodyAnonVar
-            else
-              arg
-
-      | ImBodyAnonVar ->
-          arg
-      )
-    )
-  )
-
-
-let erase_sole_occurrences (imrule : intermediate_rule) : intermediate_rule =
-  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
-
-  (* Counts occurrence of each variables: *)
-  let count_map =
-    VariableMap.empty
-      |> fold_predicate_map_for_counting positive_terms
-      |> fold_predicate_map_for_counting negative_terms
-      |> VariableMap.fold (fun x _c count_map -> count_map |> increment_occurrence_count x) equations
-  in
-
-  (* Removes variables occurring in head arguments: *)
-  let count_map =
-    head_arguments |> List.fold_left (fun count_map (ImHeadVar x) ->
-      count_map |> VariableMap.remove x
-    ) count_map
-  in
-
-  (* Converts variables that have only one occurrence with the underscore: *)
-  let positive_terms = positive_terms |> erase_sole_occurrences_in_predicate_map count_map in
-  let negative_terms = negative_terms |> erase_sole_occurrences_in_predicate_map count_map in
-  let equations =
-    VariableMap.fold (fun x c equations_new ->
-      if x |> has_only_one_occurrence count_map then
-        equations_new
-      else
-        equations_new |> VariableMap.add x c
-    ) equations VariableMap.empty
-  in
-  { head_predicate; head_arguments; positive_terms; negative_terms; equations }
-
-
-let is_looser ~than:(args1 : body_term_arguments) (args2 : body_term_arguments) : bool =
-  match List.combine args1 args2 with
-  | exception Invalid_argument _ ->
-      false
-
-  | zipped ->
-      zipped |> List.for_all (function
-      | (_, ImBodyAnonVar)                     -> true
-      | (ImBodyAnonVar, ImBodyNamedVar _)      -> false
-      | (ImBodyNamedVar x1, ImBodyNamedVar x2) -> String.equal x1 x2
-      )
-
-
-let remove_looser_positive_terms (argsset : BodyTermArgumentsSet.t) : BodyTermArgumentsSet.t =
-  let rec aux (acc : body_term_arguments list) ~(criterion : body_term_arguments) (targets : body_term_arguments list) =
-    match targets |> List.filter (fun target -> not (is_looser ~than:criterion target)) with
-    | [] ->
-        BodyTermArgumentsSet.of_list acc
-
-    | head :: tail ->
-        aux (criterion :: acc) ~criterion:head tail
-  in
-  (* Sorted in descending lexicographical order as to variable name lists: *)
-  let argss_sorted_desc = argsset |> BodyTermArgumentsSet.elements |> List.rev in
-  match argss_sorted_desc with
-  | [] ->
-      argsset
-
-  | head :: tail ->
-      aux [] ~criterion:head tail
-
-
-let remove_looser_negative_terms (argsset : BodyTermArgumentsSet.t) : BodyTermArgumentsSet.t =
-  let rec aux (acc : body_term_arguments list) ~(criterion : body_term_arguments) (targets : body_term_arguments list) =
-    match targets |> List.filter (fun target -> is_looser ~than:criterion target) with
-    | [] ->
-        BodyTermArgumentsSet.of_list acc
-
-    | head :: tail ->
-        aux (criterion :: acc) ~criterion:head tail
-  in
-  (* Sorted in ascending lexicographical order as to variable name lists: *)
-  let argss_sorted_asc = argsset |> BodyTermArgumentsSet.elements in
-  match argss_sorted_asc with
-  | [] ->
-      argsset
-
-  | head :: tail ->
-      aux [] ~criterion:head tail
-
-
-let remove_looser_terms (imrule : intermediate_rule) : intermediate_rule =
-  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
-  let positive_terms = positive_terms |> PredicateMap.map remove_looser_positive_terms in
-  let negative_terms = negative_terms |> PredicateMap.map remove_looser_negative_terms in
-  { head_predicate; head_arguments; positive_terms; negative_terms; equations }
-
-
-let simplify_rule_step (imrule : intermediate_rule) : intermediate_rule =
-  let imrule = erase_sole_occurrences imrule in
-  remove_looser_terms imrule
-
-
-let rec simplify_rule_recursively (imrule1 : intermediate_rule) : intermediate_rule =
-  let imrule2 = simplify_rule_step imrule1 in
-  if rule_equal imrule1 imrule2 then
-  (* If the simplification reaches a fixpoint: *)
-    imrule2
-  else
-    simplify_rule_recursively imrule2
-
-
-let has_contradicting_body (imrule : intermediate_rule) : bool =
-  let { positive_terms; negative_terms; _ } = imrule in
-  let dom =
-    PredicateSet.empty
-      |> PredicateMap.fold (fun impred _ dom -> dom |> PredicateSet.add impred) positive_terms
-      |> PredicateMap.fold (fun impred _ dom -> dom |> PredicateSet.add impred) negative_terms
-  in
-  PredicateSet.fold (fun impred found ->
-    if found then
-      true
-    else
-      match (positive_terms |> PredicateMap.find_opt impred, negative_terms |> PredicateMap.find_opt impred) with
-      | (Some argsset_pos, Some argsset_neg) ->
-          let argss_pos = BodyTermArgumentsSet.elements argsset_pos in
-          let argss_neg = BodyTermArgumentsSet.elements argsset_neg in
-          let posnegs =
-            argss_pos |> List.map (fun args_pos ->
-              argss_neg |> List.map (fun args_neg -> (args_pos, args_neg))
-            ) |> List.concat
-          in
-          posnegs |> List.exists (fun (args_pos, args_neg) ->
-            is_looser ~than:args_pos args_neg
-          )
-
-      | _ ->
-          false
-  ) dom false
-
-
 let revert_head (impred : intermediate_predicate) (imhvars : intermediate_head_var list) : rterm =
   let vars = imhvars |> List.map (function ImHeadVar x -> NamedVar x) in
   match impred with
@@ -467,6 +296,192 @@ let revert_rule (imrule : intermediate_rule) : rule =
   (head, body)
 
 
+type occurrence_count_map = int VariableMap.t
+
+
+let increment_occurrence_count (x : var_name) (count_map : occurrence_count_map) : occurrence_count_map =
+  match count_map |> VariableMap.find_opt x with
+  | None       -> count_map |> VariableMap.add x 1
+  | Some count -> count_map |> VariableMap.add x (count + 1)
+
+
+let has_only_one_occurrence (count_map : occurrence_count_map) (x : var_name) : bool =
+  match count_map |> VariableMap.find_opt x with
+  | Some 1 -> true
+  | _      -> false
+
+
+let fold_predicate_map_for_counting (predmap : predicate_map) (count_map : occurrence_count_map) : occurrence_count_map =
+  PredicateMap.fold (fun impred argsset count_map ->
+    BodyTermArgumentsSet.fold (fun args count_map ->
+      args |> List.fold_left (fun count_map arg ->
+        match arg with
+        | ImBodyNamedVar x -> count_map |> increment_occurrence_count x
+        | ImBodyAnonVar    -> count_map
+      ) count_map
+    ) argsset count_map
+  ) predmap count_map
+
+
+let erase_sole_occurrences_in_predicate_map (count_map : occurrence_count_map) (predmap : predicate_map) : predicate_map =
+  predmap |> PredicateMap.map (fun argsset ->
+    argsset |> BodyTermArgumentsSet.map (fun args ->
+      args |> List.map (fun arg ->
+        match arg with
+        | ImBodyNamedVar x ->
+            if x |> has_only_one_occurrence count_map then
+              let () = Printf.printf "**** REMOVE THE SOLE OCCURRENCE OF %s\n" x in (* TODO: remove this *)
+              ImBodyAnonVar
+            else
+              arg
+
+      | ImBodyAnonVar ->
+          arg
+      )
+    )
+  )
+
+
+let erase_sole_occurrences (imrule : intermediate_rule) : intermediate_rule =
+  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
+
+  (* Counts occurrence of each variables: *)
+  let count_map =
+    VariableMap.empty
+      |> fold_predicate_map_for_counting positive_terms
+      |> fold_predicate_map_for_counting negative_terms
+      |> VariableMap.fold (fun x _c count_map -> count_map |> increment_occurrence_count x) equations
+  in
+
+  (* Removes variables occurring in head arguments: *)
+  let count_map =
+    head_arguments |> List.fold_left (fun count_map (ImHeadVar x) ->
+      count_map |> VariableMap.remove x
+    ) count_map
+  in
+
+  (* Converts variables that have only one occurrence with the underscore: *)
+  let positive_terms = positive_terms |> erase_sole_occurrences_in_predicate_map count_map in
+  let negative_terms = negative_terms |> erase_sole_occurrences_in_predicate_map count_map in
+  let equations =
+    VariableMap.fold (fun x c equations_new ->
+      if x |> has_only_one_occurrence count_map then
+        let () = Printf.printf "**** REMOVE THE SOLE OCCURRENCE OF %s IN EQ\n" x in (* TODO: remove this *)
+        equations_new
+      else
+        equations_new |> VariableMap.add x c
+    ) equations VariableMap.empty
+  in
+  { head_predicate; head_arguments; positive_terms; negative_terms; equations }
+
+
+let is_looser ~than:(args1 : body_term_arguments) (args2 : body_term_arguments) : bool =
+  let b = (* TODO: remove this line *)
+  match List.combine args1 args2 with
+  | exception Invalid_argument _ ->
+      false
+
+  | zipped ->
+      zipped |> List.for_all (function
+      | (_, ImBodyAnonVar)                     -> true
+      | (ImBodyAnonVar, ImBodyNamedVar _)      -> false
+      | (ImBodyNamedVar x1, ImBodyNamedVar x2) -> String.equal x1 x2
+      )
+  in (Printf.printf "**** LOOSENESS: (%s) |- (%s) => %B\n" (string_of_body_term_arguments args1) (string_of_body_term_arguments args2) b); b (* TODO: remove this line *)
+
+
+let remove_looser_positive_terms (argsset : BodyTermArgumentsSet.t) : BodyTermArgumentsSet.t =
+  let rec aux (acc : body_term_arguments list) ~(criterion : body_term_arguments) (targets : body_term_arguments list) =
+    match targets |> List.filter (fun target -> not (is_looser ~than:criterion target)) with
+    | [] ->
+        BodyTermArgumentsSet.of_list (criterion :: acc)
+
+    | head :: tail ->
+        aux (criterion :: acc) ~criterion:head tail
+  in
+  (* Sorted in descending lexicographical order as to variable name lists: *)
+  let argss_sorted_desc = argsset |> BodyTermArgumentsSet.elements |> List.rev in
+  match argss_sorted_desc with
+  | [] ->
+      argsset
+
+  | head :: tail ->
+      aux [] ~criterion:head tail
+
+
+let remove_looser_negative_terms (argsset : BodyTermArgumentsSet.t) : BodyTermArgumentsSet.t =
+  let rec aux (acc : body_term_arguments list) ~(criterion : body_term_arguments) (targets : body_term_arguments list) =
+    match targets |> List.filter (fun target -> is_looser ~than:criterion target) with
+    | [] ->
+        BodyTermArgumentsSet.of_list (criterion :: acc)
+
+    | head :: tail ->
+        aux (criterion :: acc) ~criterion:head tail
+  in
+  (* Sorted in ascending lexicographical order as to variable name lists: *)
+  let argss_sorted_asc = argsset |> BodyTermArgumentsSet.elements in
+  match argss_sorted_asc with
+  | [] ->
+      argsset
+
+  | head :: tail ->
+      aux [] ~criterion:head tail
+
+
+let remove_looser_terms (imrule : intermediate_rule) : intermediate_rule =
+  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
+  let positive_terms = positive_terms |> PredicateMap.map remove_looser_positive_terms in
+  let negative_terms = negative_terms |> PredicateMap.map remove_looser_negative_terms in
+  { head_predicate; head_arguments; positive_terms; negative_terms; equations }
+
+
+let simplify_rule_step (imrule : intermediate_rule) : intermediate_rule =
+  let imrule = erase_sole_occurrences imrule in
+
+  Printf.printf "**** SOLE OCCURRENCES REMOVED: %s\n" (string_of_rule (revert_rule imrule)); (* TODO: remove this *)
+
+  remove_looser_terms imrule
+
+
+let rec simplify_rule_recursively (imrule1 : intermediate_rule) : intermediate_rule =
+  let imrule2 = simplify_rule_step imrule1 in
+  Printf.printf "**** STEP END: %s\n" (string_of_rule (revert_rule imrule2)); (* TODO: remove this *)
+  if rule_equal imrule1 imrule2 then
+  (* If the simplification reaches a fixpoint: *)
+    imrule2
+  else
+    simplify_rule_recursively imrule2
+
+
+let has_contradicting_body (imrule : intermediate_rule) : bool =
+  let { positive_terms; negative_terms; _ } = imrule in
+  let dom =
+    PredicateSet.empty
+      |> PredicateMap.fold (fun impred _ dom -> dom |> PredicateSet.add impred) positive_terms
+      |> PredicateMap.fold (fun impred _ dom -> dom |> PredicateSet.add impred) negative_terms
+  in
+  PredicateSet.fold (fun impred found ->
+    if found then
+      true
+    else
+      match (positive_terms |> PredicateMap.find_opt impred, negative_terms |> PredicateMap.find_opt impred) with
+      | (Some argsset_pos, Some argsset_neg) ->
+          let argss_pos = BodyTermArgumentsSet.elements argsset_pos in
+          let argss_neg = BodyTermArgumentsSet.elements argsset_neg in
+          let posnegs =
+            argss_pos |> List.map (fun args_pos ->
+              argss_neg |> List.map (fun args_neg -> (args_pos, args_neg))
+            ) |> List.concat
+          in
+          posnegs |> List.exists (fun (args_pos, args_neg) ->
+            is_looser ~than:args_pos args_neg
+          )
+
+      | _ ->
+          false
+  ) dom false
+
+
 let simplify (rules : rule list) : (rule list, error) result =
   let open ResultMonad in
 
@@ -478,8 +493,12 @@ let simplify (rules : rule list) : (rule list, error) result =
   ) [] >>= fun imrule_acc ->
   let imrules = List.rev imrule_acc in
 
+  Printf.printf "**** CONVERTED: %s\n" (imrules |> List.map (fun imrule -> string_of_rule (revert_rule imrule)) |> String.concat "; "); (* TODO: remove this *)
+
   (* Performs per-rule simplification: *)
   let imrules = imrules |> List.map simplify_rule_recursively in
+
+  Printf.printf "**** SIMPLIFIED: %s\n" (imrules |> List.map (fun imrule -> string_of_rule (revert_rule imrule)) |> String.concat "; "); (* TODO: remove this *)
 
   (* Remove rules that have a contradicting body: *)
   let imrules = imrules |> List.filter (fun imrule -> not (has_contradicting_body imrule)) in
