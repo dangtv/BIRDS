@@ -108,6 +108,8 @@ let predicate_map_equal : predicate_map -> predicate_map -> bool =
   PredicateMap.equal BodyTermArgumentsSet.equal
 
 
+(* Checks that `imrule1` and `imrule2` are syntactically equal
+   (i.e. exactly the same including variable names). *)
 let rule_equal (imrule1 : intermediate_rule) (imrule2 : intermediate_rule) : bool =
   List.fold_left ( && ) true [
     predicate_equal imrule1.head_predicate imrule2.head_predicate;
@@ -147,7 +149,7 @@ let convert_head_rterm (rterm : rterm) : (intermediate_predicate * intermediate_
   return (impred, imhvars)
 
 
-let convert_body_rterm (rterm : rterm) : (intermediate_predicate * intermediate_body_var list, error) result =
+let convert_body_rterm (rterm : rterm) : (intermediate_predicate * body_term_arguments, error) result =
   let open ResultMonad in
   let (impred, vars) = separate_predicate_and_vars rterm in
   vars |> mapM convert_body_var >>= fun imbvars ->
@@ -164,7 +166,7 @@ let convert_eterm (eterm : eterm) : (var_name * const, error) result =
   | _                                                 -> err (UnsupportedEquation eterm)
 
 
-let extend_predicate_map (impred : intermediate_predicate) (args : intermediate_body_var list) (predmap : predicate_map) : predicate_map =
+let extend_predicate_map (impred : intermediate_predicate) (args : body_term_arguments) (predmap : predicate_map) : predicate_map =
   let argsset =
     match predmap |> PredicateMap.find_opt impred with
     | None          -> BodyTermArgumentsSet.empty
@@ -218,7 +220,7 @@ let convert_rule (rule : rule) : (intermediate_rule option, error) result =
               begin
                 match eqnmap |> check_equation_map x c with
                 | None ->
-                  (* If it turns out that the list of equations are unsatisfiable: *)
+                  (* If it turns out that the list of equations is unsatisfiable: *)
                     return None
 
                 | Some eqnmap ->
@@ -417,7 +419,55 @@ let has_contradicting_body (imrule : intermediate_rule) : bool =
   ) dom false
 
 
-let simplify (rules : rule list) =
+let revert_head (impred : intermediate_predicate) (imhvars : intermediate_head_var list) : rterm =
+  let vars = imhvars |> List.map (function ImHeadVar x -> NamedVar x) in
+  match impred with
+  | ImPred t        -> Pred (t, vars)
+  | ImDeltaInsert t -> Deltainsert (t, vars)
+  | ImDeltaDelete t -> Deltadelete (t, vars)
+
+
+let revert_body_term ~(positive : bool) (impred : intermediate_predicate) (args : body_term_arguments) : term =
+  let vars =
+    args |> List.map (function
+    | ImBodyNamedVar x -> NamedVar x
+    | ImBodyAnonVar    -> AnonVar
+    )
+  in
+  let rterm =
+    match impred with
+    | ImPred t        -> Pred (t, vars)
+    | ImDeltaInsert t -> Deltainsert (t, vars)
+    | ImDeltaDelete t -> Deltadelete (t, vars)
+  in
+  if positive then
+    Rel rterm
+  else
+    Not rterm
+
+
+let revert_body_terms ~(positive : bool) ((impred, argsset) : intermediate_predicate * BodyTermArgumentsSet.t) : term list =
+  let argss = argsset |> BodyTermArgumentsSet.elements in
+  argss |> List.map (revert_body_term ~positive impred)
+
+
+let revert_rule (imrule : intermediate_rule) : rule =
+  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
+  let head = revert_head head_predicate head_arguments in
+  let terms_pos =
+    positive_terms |> PredicateMap.bindings |> List.map (revert_body_terms ~positive:true) |> List.concat
+  in
+  let terms_neg =
+    negative_terms |> PredicateMap.bindings |> List.map (revert_body_terms ~positive:false) |> List.concat
+  in
+  let terms_eq =
+    equations |> VariableMap.bindings |> List.map (fun (x, c) -> Equat (Equation ("=", Var (NamedVar x), Const c)))
+  in
+  let body = List.concat [ terms_pos; terms_neg; terms_eq ] in
+  (head, body)
+
+
+let simplify (rules : rule list) : (rule list, error) result =
   let open ResultMonad in
 
   (* Converts each rule to an intermediate rule (with unsatisfiable ones removed): *)
@@ -432,6 +482,9 @@ let simplify (rules : rule list) =
   let imrules = imrules |> List.map simplify_rule_recursively in
 
   (* Remove rules that have a contradicting body: *)
-  let _imrules = imrules |> List.filter (fun imrule -> not (has_contradicting_body imrule)) in
+  let imrules = imrules |> List.filter (fun imrule -> not (has_contradicting_body imrule)) in
 
-  failwith "TODO: simplify"
+  (* TODO: remove duplicate rules here *)
+
+  let rules = imrules |> List.map revert_rule in
+  return rules
