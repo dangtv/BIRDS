@@ -43,7 +43,7 @@ let body_var_compare (imbvar1 : intermediate_body_var) (imbvar2 : intermediate_b
   | (ImBodyAnonVar, ImBodyNamedVar _)      -> -1
 
 
-module PredicateMap = Map.Make(struct
+module Predicate = struct
   type t = intermediate_predicate
 
   let compare (impred1 : t) (impred2 : t) : int =
@@ -55,8 +55,11 @@ module PredicateMap = Map.Make(struct
     | (ImDeltaInsert _, _)                 -> 1
     | (_, ImDeltaInsert _)                 -> -1
     | (ImDeltaDelete t1, ImDeltaDelete t2) -> String.compare t1 t2
-end)
+end
 
+module PredicateMap = Map.Make(Predicate)
+
+module PredicateSet = Set.Make(Predicate)
 
 module VariableMap = Map.Make(String)
 
@@ -326,7 +329,7 @@ let is_looser ~than:(args1 : body_term_arguments) (args2 : body_term_arguments) 
       )
 
 
-let remove_looser_terms (imrule : intermediate_rule) : intermediate_rule =
+let remove_looser_positive_terms (argsset : BodyTermArgumentsSet.t) : BodyTermArgumentsSet.t =
   let rec aux (acc : body_term_arguments list) ~(criterion : body_term_arguments) (targets : body_term_arguments list) =
     match targets |> List.filter (fun target -> not (is_looser ~than:criterion target)) with
     | [] ->
@@ -335,21 +338,39 @@ let remove_looser_terms (imrule : intermediate_rule) : intermediate_rule =
     | head :: tail ->
         aux (criterion :: acc) ~criterion:head tail
   in
-  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
-  let positive_terms =
-    positive_terms |> PredicateMap.map (fun argsset ->
-      let argss_sorted_desc = argsset |> BodyTermArgumentsSet.elements |> List.rev in
-      match argss_sorted_desc with
-      | [] ->
-          argsset
+  (* Sorted in descending lexicographical order as to variable name lists: *)
+  let argss_sorted_desc = argsset |> BodyTermArgumentsSet.elements |> List.rev in
+  match argss_sorted_desc with
+  | [] ->
+      argsset
 
-      | head :: tail ->
-          aux [] ~criterion:head tail
-    )
+  | head :: tail ->
+      aux [] ~criterion:head tail
+
+
+let remove_looser_negative_terms (argsset : BodyTermArgumentsSet.t) : BodyTermArgumentsSet.t =
+  let rec aux (acc : body_term_arguments list) ~(criterion : body_term_arguments) (targets : body_term_arguments list) =
+    match targets |> List.filter (fun target -> is_looser ~than:criterion target) with
+    | [] ->
+        BodyTermArgumentsSet.of_list acc
+
+    | head :: tail ->
+        aux (criterion :: acc) ~criterion:head tail
   in
-  let negative_terms =
-    failwith "TODO: remove_looser_terms, negative_terms"
-  in
+  (* Sorted in ascending lexicographical order as to variable name lists: *)
+  let argss_sorted_asc = argsset |> BodyTermArgumentsSet.elements in
+  match argss_sorted_asc with
+  | [] ->
+      argsset
+
+  | head :: tail ->
+      aux [] ~criterion:head tail
+
+
+let remove_looser_terms (imrule : intermediate_rule) : intermediate_rule =
+  let { head_predicate; head_arguments; positive_terms; negative_terms; equations } = imrule in
+  let positive_terms = positive_terms |> PredicateMap.map remove_looser_positive_terms in
+  let negative_terms = negative_terms |> PredicateMap.map remove_looser_negative_terms in
   { head_predicate; head_arguments; positive_terms; negative_terms; equations }
 
 
@@ -367,6 +388,35 @@ let rec simplify_rule_recursively (imrule1 : intermediate_rule) : intermediate_r
     simplify_rule_recursively imrule2
 
 
+let has_contradicting_body (imrule : intermediate_rule) : bool =
+  let { positive_terms; negative_terms; _ } = imrule in
+  let dom =
+    PredicateSet.empty
+      |> PredicateMap.fold (fun impred _ dom -> dom |> PredicateSet.add impred) positive_terms
+      |> PredicateMap.fold (fun impred _ dom -> dom |> PredicateSet.add impred) negative_terms
+  in
+  PredicateSet.fold (fun impred found ->
+    if found then
+      true
+    else
+      match (positive_terms |> PredicateMap.find_opt impred, negative_terms |> PredicateMap.find_opt impred) with
+      | (Some argsset_pos, Some argsset_neg) ->
+          let argss_pos = BodyTermArgumentsSet.elements argsset_pos in
+          let argss_neg = BodyTermArgumentsSet.elements argsset_neg in
+          let posnegs =
+            argss_pos |> List.map (fun args_pos ->
+              argss_neg |> List.map (fun args_neg -> (args_pos, args_neg))
+            ) |> List.concat
+          in
+          posnegs |> List.exists (fun (args_pos, args_neg) ->
+            is_looser ~than:args_pos args_neg
+          )
+
+      | _ ->
+          false
+  ) dom false
+
+
 let simplify (rules : rule list) =
   let open ResultMonad in
 
@@ -379,6 +429,9 @@ let simplify (rules : rule list) =
   let imrules = List.rev imrule_acc in
 
   (* Performs per-rule simplification: *)
-  let _imrules = imrules |> List.map simplify_rule_recursively in
+  let imrules = imrules |> List.map simplify_rule_recursively in
+
+  (* Remove rules that have a contradicting body: *)
+  let _imrules = imrules |> List.filter (fun imrule -> not (has_contradicting_body imrule)) in
 
   failwith "TODO: simplify"
