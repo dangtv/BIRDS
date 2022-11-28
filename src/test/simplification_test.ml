@@ -48,10 +48,45 @@ let run_tests (test_cases : test_case list) : bool =
 
 
 let main () =
+  let track = NamedVar "TRACK" in
+  let date = NamedVar "DATE" in
+  let rating = NamedVar "RATING" in
+  let album = NamedVar "ALBUM" in
   run_tests [
     {
       title    = "empty";
       input    = [];
       expected = [];
+    };
+    {
+      title = "(1)";
+      input = [
+        (* (1):
+          -tracks(TRACK, DATE, RATING, ALBUM) :-
+            albums(ALBUM, _),
+            albums(ALBUM, V6845),
+            tracks(TRACK, DATE, RATING, ALBUM),
+            tracks(TRACK, DATE, RATING, ALBUM),
+            RATING = 1. *)
+        (Deltadelete ("tracks", [ track; date; rating; album ]), [
+          Rel (Pred ("albums", [ album; AnonVar ]));
+          Rel (Pred ("albums", [ album; NamedVar "V6845" ]));
+          Rel (Pred ("tracks", [ track; date; rating; album ]));
+          Rel (Pred ("tracks", [ track; date; rating; album ]));
+          Equat (Equation ("=", Var rating, Const (Int 1)));
+        ]);
+      ];
+      expected = [
+        (* (1) simplified:
+          -tracks(TRACK, DATE, RATING, ALBUM) :-
+            albums(ALBUM, _),
+            tracks(TRACK, DATE, RATING, ALBUM),
+            RATING = 1. *)
+        (Deltadelete ("tracks", [ track; date; rating; album ]), [
+          Rel (Pred ("albums", [ album; AnonVar ]));
+          Rel (Pred ("tracks", [ track; date; rating; album ]));
+          Equat (Equation ("=", Var rating, Const (Int 1)));
+        ])
+      ];
     };
   ]
