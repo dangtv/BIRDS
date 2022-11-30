@@ -52,6 +52,7 @@ let main () =
   let date = NamedVar "DATE" in
   let rating = NamedVar "RATING" in
   let album = NamedVar "ALBUM" in
+  let quantity = NamedVar "QUANTITY" in
   run_tests [
     {
       title    = "empty";
@@ -87,6 +88,61 @@ let main () =
           Rel (Pred ("tracks", [ track; date; rating; album ]));
           Equat (Equation ("=", Var rating, Const (Int 1)));
         ])
+      ];
+    };
+    {
+      title = "(2): erased by contradiction";
+      input = [
+        (* (2):
+          -tracks(TRACK, DATE, RATING, ALBUM) :-
+            albums(ALBUM, V34),
+            albums(ALBUM, V6846),
+            tracks(TRACK, DATE, RATING, ALBUM),
+            tracks(V31, V32, V33, ALBUM),
+            tracks(TRACK, DATE, RATING, ALBUM),
+            RATING = 1,
+            not tracks(V31, V32, V33, ALBUM). *)
+        (Deltadelete ("tracks", [ track; date; rating; album ]), [
+          Rel (Pred ("albums", [ album; NamedVar "V34" ]));
+          Rel (Pred ("albums", [ album; NamedVar "V6846" ]));
+          Rel (Pred ("tracks", [ track; date; rating; album ]));
+          Rel (Pred ("tracks", [ NamedVar "V31"; NamedVar "V32"; NamedVar "V33"; album ]));
+          Rel (Pred ("tracks", [ track; date; rating; album ]));
+          Equat (Equation ("=", Var rating, Const (Int 1)));
+          Not (Pred ("tracks", [ NamedVar "V31"; NamedVar "V32"; NamedVar "V33"; album ]));
+        ]);
+      ];
+      expected = [];
+    };
+    {
+      title = "(7)";
+      input = [
+        (* (7):
+          -albums(ALBUM, QUANTITY) :-
+            albums(ALBUM, QUANTITY),
+            albums(ALBUM, QUANTITY),
+            tracks(_, _, _, ALBUM),
+            tracks(V6853, V6854, V6855, ALBUM),
+            V6855 = 1. *)
+        (Deltadelete ("albums", [ album; quantity ]), [
+          Rel (Pred ("albums", [ album; quantity ]));
+          Rel (Pred ("albums", [ album; quantity ]));
+          Rel (Pred ("tracks", [ AnonVar; AnonVar; AnonVar; album ]));
+          Rel (Pred ("tracks", [ NamedVar "V6853"; NamedVar "V6854"; NamedVar "V6855"; album ]));
+          Equat (Equation ("=", Var (NamedVar "V6855"), Const (Int 1)));
+        ]);
+      ];
+      expected = [
+        (* (7) simplified:
+          -albums(ALBUM, QUANTITY) :-
+            albums(ALBUM, QUANTITY),
+            tracks(_, _, V6855, ALBUM),
+            V6855 = 1. *)
+        (Deltadelete ("albums", [ album; quantity ]), [
+          Rel (Pred ("albums", [ album; quantity ]));
+          Rel (Pred ("tracks", [ AnonVar; AnonVar; NamedVar "V6855"; album ]));
+          Equat (Equation ("=", Var (NamedVar "V6855"), Const (Int 1)));
+        ]);
       ];
     };
   ]
