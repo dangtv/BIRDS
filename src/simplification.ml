@@ -3,14 +3,31 @@ open Expr
 open Utils
 
 
-let const_equal (c1 : const) (c2 : const) : bool =
-  match (c1, c2) with
-  | (Int n1, Int n2)       -> Int.equal n1 n2
-  | (Real r1, Real r2)     -> Float.equal r1 r2 (* Not conform to IEEE754’s equality *)
-  | (String s1, String s2) -> String.equal s1 s2
-  | (Bool b1, Bool b2)     -> Bool.equal b1 b2
-  | (Null, Null)           -> true
-  | _                      -> false
+module Const = struct
+  type t = const
+
+  let compare (c1 : const) (c2 : const) : int =
+    match (c1, c2) with
+    | (Int n1, Int n2)       -> Int.compare n1 n2
+    | (Int _, _)             -> 1
+    | (_, Int _)             -> -1
+    | (Real r1, Real r2)     -> Float.compare r1 r2
+    | (Real _, _)            -> 1
+    | (_, Real _)            -> -1
+    | (String s1, String s2) -> String.compare s1 s2
+    | (String _, _)          -> 1
+    | (_, String _)          -> -1
+    | (Bool b1, Bool b2)     -> Bool.compare b1 b2
+    | (Bool _, _)            -> 1
+    | (_, Bool _)            -> -1
+    | (Null, Null)           -> 0
+
+  (* Note: The equality of floats is NOT conform to IEEE754’s equality *)
+  let equal (c1 : const) (c2 : const) : bool =
+    compare c1 c2 = 0
+end
+
+module ConstSet = Set.Make(Const)
 
 
 type table_name = string
@@ -86,7 +103,11 @@ module BodyTermArgumentsSet = Set.Make(BodyTermArguments)
 
 type predicate_map = BodyTermArgumentsSet.t PredicateMap.t
 
-type equation_map = const VariableMap.t
+type constant_requirement =
+  | EqualTo    of const
+  | NotEqualTo of ConstSet.t
+
+type equation_map = constant_requirement VariableMap.t
 
 type intermediate_rule = {
   head_predicate : intermediate_predicate;
@@ -101,6 +122,13 @@ type error =
   | UnexpectedBodyVarForm   of var
   | UnsupportedEquation     of eterm
   | NonequalityNotSupported of eterm
+
+
+let constant_requirement_equal (cr1 : constant_requirement) (cr2 : constant_requirement) : bool =
+  match (cr1, cr2) with
+  | (EqualTo c1, EqualTo c2)             -> Const.equal c1 c2
+  | (NotEqualTo cset1, NotEqualTo cset2) -> ConstSet.equal cset1 cset2
+  | _                                    -> false
 
 
 let predicate_equal (impred1 : intermediate_predicate) (impred2 : intermediate_predicate) : bool =
@@ -123,7 +151,7 @@ let rule_equal (imrule1 : intermediate_rule) (imrule2 : intermediate_rule) : boo
     List.equal head_var_equal imrule1.head_arguments imrule2.head_arguments;
     predicate_map_equal imrule1.positive_terms imrule2.positive_terms;
     predicate_map_equal imrule1.negative_terms imrule2.negative_terms;
-    VariableMap.equal const_equal imrule1.equations imrule2.equations;
+    VariableMap.equal constant_requirement_equal imrule1.equations imrule2.equations;
   ]
 
 
@@ -185,13 +213,19 @@ let extend_predicate_map (impred : intermediate_predicate) (args : body_term_arg
 let check_equation_map (x : var_name) (c : const) (eqnmap : equation_map) : equation_map option =
   match eqnmap |> VariableMap.find_opt x with
   | None ->
-      Some (eqnmap |> VariableMap.add x c)
+      Some (eqnmap |> VariableMap.add x (EqualTo c))
 
-  | Some c0 ->
-      if const_equal c0 c then
+  | Some (EqualTo c0) ->
+      if Const.equal c0 c then
         Some eqnmap
       else
         None
+
+  | Some (NotEqualTo cset0) ->
+      if cset0 |> ConstSet.mem c then
+        None
+      else
+        Some (eqnmap |> VariableMap.add x (EqualTo c))
 
 
 (* Converts rules to intermediate ones.
@@ -290,7 +324,16 @@ let revert_rule (imrule : intermediate_rule) : rule =
     negative_terms |> PredicateMap.bindings |> List.map (revert_body_terms ~positive:false) |> List.concat
   in
   let terms_eq =
-    equations |> VariableMap.bindings |> List.map (fun (x, c) -> Equat (Equation ("=", Var (NamedVar x), Const c)))
+    equations |> VariableMap.bindings |> List.concat_map (fun (x, cr) ->
+      match cr with
+      | EqualTo c ->
+          [ Equat (Equation ("=", Var (NamedVar x), Const c)) ]
+
+      | NotEqualTo cset ->
+          cset |> ConstSet.elements |> List.map (fun c ->
+            Noneq (Equation ("=", Var (NamedVar x), Const c))
+          )
+    )
   in
   let body = List.concat [ terms_pos; terms_neg; terms_eq ] in
   (head, body)
