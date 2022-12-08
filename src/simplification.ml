@@ -191,14 +191,25 @@ let convert_body_rterm (rterm : rterm) : (intermediate_predicate * body_term_arg
   return (impred, imbvars)
 
 
-let convert_eterm (eterm : eterm) : (var_name * const, error) result =
+let convert_eterm ~(negated : bool) (eterm : eterm) : (var_name * constant_requirement, error) result =
   let open ResultMonad in
-  match eterm with
-  | Equation("=", Var (NamedVar x), Const c)          -> return (x, c)
-  | Equation("=", Var (NamedVar x), Var (ConstVar c)) -> return (x, c)
-  | Equation("=", Const c, Var (NamedVar x))          -> return (x, c)
-  | Equation("=", Var (ConstVar c), Var (NamedVar x)) -> return (x, c)
-  | _                                                 -> err (UnsupportedEquation eterm)
+  begin
+    match eterm with
+    | Equation("=", Var (NamedVar x), Const c)           -> return (x, true, c)
+    | Equation("=", Var (NamedVar x), Var (ConstVar c))  -> return (x, true, c)
+    | Equation("=", Const c, Var (NamedVar x))           -> return (x, true, c)
+    | Equation("=", Var (ConstVar c), Var (NamedVar x))  -> return (x, true, c)
+    | Equation("<>", Var (NamedVar x), Const c)          -> return (x, false, c)
+    | Equation("<>", Var (NamedVar x), Var (ConstVar c)) -> return (x, false, c)
+    | Equation("<>", Const c, Var (NamedVar x))          -> return (x, false, c)
+    | Equation("<>", Var (ConstVar c), Var (NamedVar x)) -> return (x, false, c)
+    | _                                                  -> err (UnsupportedEquation eterm)
+  end >>= fun (x, equal, c) ->
+  let equal = if negated then not equal else equal in
+  if equal then
+    return (x, EqualTo c)
+  else
+    return (x, NotEqualTo (ConstSet.singleton c))
 
 
 let extend_predicate_map (impred : intermediate_predicate) (args : body_term_arguments) (predmap : predicate_map) : predicate_map =
@@ -210,22 +221,35 @@ let extend_predicate_map (impred : intermediate_predicate) (args : body_term_arg
   predmap |> PredicateMap.add impred (argsset |> BodyTermArgumentsSet.add args)
 
 
-let check_equation_map (x : var_name) (c : const) (eqnmap : equation_map) : equation_map option =
+let check_equation_map (x : var_name) (cr : constant_requirement) (eqnmap : equation_map) : equation_map option =
   match eqnmap |> VariableMap.find_opt x with
   | None ->
-      Some (eqnmap |> VariableMap.add x (EqualTo c))
+      Some (eqnmap |> VariableMap.add x cr)
 
-  | Some (EqualTo c0) ->
-      if Const.equal c0 c then
-        Some eqnmap
-      else
-        None
+  | Some cr0 ->
+      begin
+        match (cr0, cr) with
+        | (EqualTo c0, EqualTo c) ->
+            if Const.equal c0 c then
+              Some eqnmap
+            else
+              None
 
-  | Some (NotEqualTo cset0) ->
-      if cset0 |> ConstSet.mem c then
-        None
-      else
-        Some (eqnmap |> VariableMap.add x (EqualTo c))
+        | (NotEqualTo cset0, EqualTo c) ->
+            if cset0 |> ConstSet.mem c then
+              None
+            else
+              Some (eqnmap |> VariableMap.add x (EqualTo c))
+
+        | (EqualTo c0, NotEqualTo cset) ->
+            if cset |> ConstSet.mem c0 then
+              None
+            else
+              Some eqnmap
+
+        | (NotEqualTo cset0, NotEqualTo cset) ->
+            Some (eqnmap |> VariableMap.add x (NotEqualTo (ConstSet.union cset0 cset)))
+      end
 
 
 (* Converts rules to intermediate ones.
@@ -257,9 +281,9 @@ let convert_rule (rule : rule) : (intermediate_rule option, error) result =
               return (Some (predmap_pos, predmap_neg, eqnmap))
 
           | Equat eterm ->
-              convert_eterm eterm >>= fun (x, c) ->
+              convert_eterm ~negated:false eterm >>= fun (x, cr) ->
               begin
-                match eqnmap |> check_equation_map x c with
+                match eqnmap |> check_equation_map x cr with
                 | None ->
                   (* If it turns out that the list of equations is unsatisfiable: *)
                     return None
@@ -269,7 +293,16 @@ let convert_rule (rule : rule) : (intermediate_rule option, error) result =
               end
 
           | Noneq eterm ->
-              err (NonequalityNotSupported eterm)
+              convert_eterm ~negated:true eterm >>= fun (x, cr) ->
+              begin
+                match eqnmap |> check_equation_map x cr with
+                | None ->
+                  (* If it turns out that the list of equations is unsatisfiable: *)
+                    return None
+
+                | Some eqnmap ->
+                    return (Some (predmap_pos, predmap_neg, eqnmap))
+              end
         end
   ) (Some (PredicateMap.empty, PredicateMap.empty, VariableMap.empty)) >>= fun opt ->
   return (opt |> Option.map (fun (predmap_pos, predmap_neg, eqnmap) ->
