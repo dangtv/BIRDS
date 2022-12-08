@@ -47,6 +47,7 @@ TOP_FILES=\
 
 TOP_FILES_WITH_MLI=\
 	parser expr conversion ast2sql ast2theorem\
+	simplification\
 
 TEST_ONLY_FILES=\
     ast2sql_operation_based_conversion_test\
