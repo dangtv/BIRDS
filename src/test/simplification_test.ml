@@ -145,4 +145,41 @@ let main () =
         ]);
       ];
     };
+    {
+      title = "(32)";
+      input = [
+        (* (32):
+          -albums(ALBUM, QUANTITY) :-
+            albums(ALBUM, QUANTITY),
+            albums(ALBUM, QUANTITY),
+            tracks(TRACK, DATE, RATING, ALBUM),
+            tracks(V6847, V6848, V6849, ALBUM),
+            V6849 = 1,
+            not RATING = 1. *)
+        (Deltadelete ("albums", [ album; quantity ]), [
+          Rel (Pred ("albums", [ album; quantity ]));
+          Rel (Pred ("albums", [ album; quantity ]));
+          Rel (Pred ("tracks", [ track; date; rating; album ]));
+          Rel (Pred ("tracks", [ NamedVar "V6847"; NamedVar "V6848"; NamedVar "V6849"; album ]));
+          Equat (Equation ("=", Var (NamedVar "V6849"), Const (Int 1)));
+          Noneq (Equation ("=", Var rating, Const (Int 1)));
+        ]);
+      ];
+      expected = [
+        (* (32) simplified:
+          -albums(ALBUM, QUANTITY) :-
+            albums(ALBUM, QUANTITY),
+            tracks(_, _, RATING, ALBUM),
+            tracks(_, _, V6849, ALBUM),
+            not RATING = 1,
+            V6849 = 1. *)
+        (Deltadelete ("albums", [ album; quantity ]), [
+          Rel (Pred ("albums", [ album; quantity ]));
+          Rel (Pred ("tracks", [ AnonVar; AnonVar; rating; album ]));
+          Rel (Pred ("tracks", [ AnonVar; AnonVar; NamedVar "V6849"; album ]));
+          Noneq (Equation ("=", Var rating, Const (Int 1)));
+          Equat (Equation ("=", Var (NamedVar "V6849"), Const (Int 1)));
+        ]);
+      ];
+    };
   ]
