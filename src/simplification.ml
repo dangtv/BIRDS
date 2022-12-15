@@ -558,6 +558,27 @@ let has_contradicting_body (imrule : intermediate_rule) : bool =
   ) dom false
 
 
+let are_beta_equivalent_rules (imrule1 : intermediate_rule) (imrule : intermediate_rule) : bool =
+  false (* TODO: implement this *)
+
+
+let remove_duplicate_rules (imrules : intermediate_rule list) : intermediate_rule list =
+  let rec aux acc imrules =
+    match imrules with
+    | [] ->
+        List.rev acc
+
+    | imrule_head :: imrules_tail ->
+        let imrules_tail =
+          imrules_tail |> List.filter (fun imrule ->
+            not (are_beta_equivalent_rules imrule_head imrule)
+          )
+        in
+        aux (imrule_head :: acc) imrules_tail
+  in
+  aux [] imrules
+
+
 let simplify (rules : rule list) : (rule list, error) result =
   let open ResultMonad in
 
@@ -576,10 +597,11 @@ let simplify (rules : rule list) : (rule list, error) result =
 
   Printf.printf "**** SIMPLIFIED: %s\n" (imrules |> List.map (fun imrule -> string_of_rule (revert_rule imrule)) |> String.concat "; "); (* TODO: remove this *)
 
-  (* Remove rules that have a contradicting body: *)
+  (* Removes rules that have a contradicting body: *)
   let imrules = imrules |> List.filter (fun imrule -> not (has_contradicting_body imrule)) in
 
-  (* TODO: remove duplicate rules here *)
+  (* Removes duplicate rules here *)
+  let imrules = imrules |> remove_duplicate_rules in
 
   let rules = imrules |> List.map revert_rule in
   return rules
