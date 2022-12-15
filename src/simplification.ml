@@ -43,6 +43,12 @@ type intermediate_head_var =
   | ImHeadVar of var_name
 
 
+module HeadVarSubst = Map.Make(String)
+
+
+type head_var_substitution = intermediate_head_var HeadVarSubst.t
+
+
 let head_var_equal (ImHeadVar x1) (ImHeadVar x2) =
   String.equal x1 x2
 
@@ -558,8 +564,33 @@ let has_contradicting_body (imrule : intermediate_rule) : bool =
   ) dom false
 
 
-let are_beta_equivalent_rules (imrule1 : intermediate_rule) (imrule : intermediate_rule) : bool =
-  false (* TODO: implement this *)
+let are_alpha_equivalent_rules (imrule1 : intermediate_rule) (imrule2 : intermediate_rule) : bool =
+  let
+    {
+      head_predicate = hp1; head_arguments = hvars1;
+      positive_terms = poss1; negative_terms = negs1; equations = eqns1;
+    } = imrule1
+  in
+  let
+    {
+      head_predicate = hp2; head_arguments = hvars2;
+      positive_terms = poss2; negative_terms = negs2; equations = eqns2;
+    } = imrule2
+  in
+  if not (predicate_equal hp1 hp2) then
+    false
+  else
+    match List.combine hvars1 hvars2 with
+    | exception Invalid_argument(_) ->
+        false
+
+    | zipped ->
+        let subst =
+          zipped |> List.fold_left (fun subst (ImHeadVar hvar1, ImHeadVar hvar2) ->
+            subst |> HeadVarSubst.add hvar1 hvar2
+          ) HeadVarSubst.empty
+        in
+        false (* TODO: implement this *)
 
 
 let remove_duplicate_rules (imrules : intermediate_rule list) : intermediate_rule list =
@@ -571,7 +602,7 @@ let remove_duplicate_rules (imrules : intermediate_rule list) : intermediate_rul
     | imrule_head :: imrules_tail ->
         let imrules_tail =
           imrules_tail |> List.filter (fun imrule ->
-            not (are_beta_equivalent_rules imrule_head imrule)
+            not (are_alpha_equivalent_rules imrule_head imrule)
           )
         in
         aux (imrule_head :: acc) imrules_tail
