@@ -564,6 +564,35 @@ let has_contradicting_body (imrule : intermediate_rule) : bool =
   ) dom false
 
 
+let substitute_predicate_map (subst : head_var_substitution) (predmap1 : predicate_map) : predicate_map =
+  predmap1 |> PredicateMap.map (fun argsset ->
+    BodyTermArgumentsSet.fold (fun args acc ->
+      let args =
+        args |> List.map (function
+        | ImBodyNamedVar x1 ->
+            begin
+              match subst |> HeadVarSubst.find_opt x1 with
+              | None                -> ImBodyNamedVar x1
+              | Some (ImHeadVar x2) -> ImBodyNamedVar x2
+            end
+
+        | ImBodyAnonVar ->
+            ImBodyAnonVar
+        )
+      in
+      acc |> BodyTermArgumentsSet.add args
+    ) argsset BodyTermArgumentsSet.empty
+  )
+
+
+let substitute_equation_map (subst : head_var_substitution) (eqns1 : equation_map) : equation_map =
+  VariableMap.fold (fun x1 cr acc ->
+    match subst |> HeadVarSubst.find_opt x1 with
+    | None                -> acc |> VariableMap.add x1 cr
+    | Some (ImHeadVar x2) -> acc |> VariableMap.add x2 cr
+  ) eqns1 VariableMap.empty
+
+
 let are_alpha_equivalent_rules (imrule1 : intermediate_rule) (imrule2 : intermediate_rule) : bool =
   let
     {
@@ -587,10 +616,17 @@ let are_alpha_equivalent_rules (imrule1 : intermediate_rule) (imrule2 : intermed
     | zipped ->
         let subst =
           zipped |> List.fold_left (fun subst (ImHeadVar hvar1, ImHeadVar hvar2) ->
-            subst |> HeadVarSubst.add hvar1 hvar2
+            subst |> HeadVarSubst.add hvar1 (ImHeadVar hvar2)
           ) HeadVarSubst.empty
         in
-        false (* TODO: implement this *)
+        let poss1subst = poss1 |> substitute_predicate_map subst in
+        let negs1subst = negs1 |> substitute_predicate_map subst in
+        let eqns1subst = eqns1 |> substitute_equation_map subst in
+        List.fold_left ( && ) true [
+          PredicateMap.equal BodyTermArgumentsSet.equal poss1subst poss1;
+          PredicateMap.equal BodyTermArgumentsSet.equal negs1subst negs1;
+          VariableMap.equal constant_requirement_equal eqns1subst eqns1;
+        ]
 
 
 let remove_duplicate_rules (imrules : intermediate_rule list) : intermediate_rule list =
