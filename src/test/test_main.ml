@@ -5,6 +5,7 @@ let () =
       Ast2sql_operation_based_conversion_test.main ();
       Simplification_test.main ();
       Inlining_test.main ();
+      Sql2ast_test.main ();
       (* You can add more tests here *)
     ]
   in
