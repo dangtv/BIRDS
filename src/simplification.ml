@@ -412,7 +412,6 @@ let erase_sole_occurrences_in_predicate_map (count_map : occurrence_count_map) (
         match arg with
         | ImBodyNamedVar x ->
             if x |> has_only_one_occurrence count_map then
-              let () = Printf.printf "**** REMOVE THE SOLE OCCURRENCE OF %s\n" x in (* TODO: remove this *)
               ImBodyAnonVar
             else
               arg
@@ -448,7 +447,6 @@ let erase_sole_occurrences (imrule : intermediate_rule) : intermediate_rule =
   let equations =
     VariableMap.fold (fun x c equations_new ->
       if x |> has_only_one_occurrence count_map then
-        let () = Printf.printf "**** REMOVE THE SOLE OCCURRENCE OF %s IN EQ\n" x in (* TODO: remove this *)
         equations_new
       else
         equations_new |> VariableMap.add x c
@@ -458,7 +456,6 @@ let erase_sole_occurrences (imrule : intermediate_rule) : intermediate_rule =
 
 
 let is_looser ~than:(args1 : body_term_arguments) (args2 : body_term_arguments) : bool =
-  let b = (* TODO: remove this line *)
   match List.combine args1 args2 with
   | exception Invalid_argument _ ->
       false
@@ -469,7 +466,6 @@ let is_looser ~than:(args1 : body_term_arguments) (args2 : body_term_arguments) 
       | (ImBodyAnonVar, ImBodyNamedVar _)      -> false
       | (ImBodyNamedVar x1, ImBodyNamedVar x2) -> String.equal x1 x2
       )
-  in (Printf.printf "**** LOOSENESS: (%s) |- (%s) => %B\n" (string_of_body_term_arguments args1) (string_of_body_term_arguments args2) b); b (* TODO: remove this line *)
 
 
 let remove_looser_positive_terms (argsset : BodyTermArgumentsSet.t) : BodyTermArgumentsSet.t =
@@ -519,15 +515,11 @@ let remove_looser_terms (imrule : intermediate_rule) : intermediate_rule =
 
 let simplify_rule_step (imrule : intermediate_rule) : intermediate_rule =
   let imrule = erase_sole_occurrences imrule in
-
-  Printf.printf "**** SOLE OCCURRENCES REMOVED: %s\n" (string_of_rule (revert_rule imrule)); (* TODO: remove this *)
-
   remove_looser_terms imrule
 
 
 let rec simplify_rule_recursively (imrule1 : intermediate_rule) : intermediate_rule =
   let imrule2 = simplify_rule_step imrule1 in
-  Printf.printf "**** STEP END: %s\n" (string_of_rule (revert_rule imrule2)); (* TODO: remove this *)
   if rule_equal imrule1 imrule2 then
   (* If the simplification reaches a fixpoint: *)
     imrule2
@@ -657,12 +649,8 @@ let simplify (rules : rule list) : (rule list, error) result =
   ) [] >>= fun imrule_acc ->
   let imrules = List.rev imrule_acc in
 
-  Printf.printf "**** CONVERTED: %s\n" (imrules |> List.map (fun imrule -> string_of_rule (revert_rule imrule)) |> String.concat "; "); (* TODO: remove this *)
-
   (* Performs per-rule simplification: *)
   let imrules = imrules |> List.map simplify_rule_recursively in
-
-  Printf.printf "**** SIMPLIFIED: %s\n" (imrules |> List.map (fun imrule -> string_of_rule (revert_rule imrule)) |> String.concat "; "); (* TODO: remove this *)
 
   (* Removes rules that have a contradicting body: *)
   let imrules = imrules |> List.filter (fun imrule -> not (has_contradicting_body imrule)) in
