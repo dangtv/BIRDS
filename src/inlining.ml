@@ -20,13 +20,42 @@ type rule_abstraction = {
   body   : intermediate_clause list;
 }
 
-type error =
-  | UnexpectedHeadVarForm of var
+module RuleAbstraction = struct
+  type t = rule_abstraction
 
+  let compare =
+    compare (* TODO: define this *)
+end
+
+module RuleAbstractionSet = Set.Make(RuleAbstraction)
+
+type predicate_definition =
+  intermediate_predicate * RuleAbstractionSet.t
+
+module Predicate = struct
+  type t = intermediate_predicate
+
+  let compare (impred1 : t) (impred2 : t) : int =
+    match (impred1, impred2) with
+    | (ImPred t1, ImPred t2)               -> String.compare t1 t2
+    | (ImPred _, _)                        -> 1
+    | (_, ImPred _)                        -> -1
+    | (ImDeltaInsert t1, ImDeltaInsert t2) -> String.compare t1 t2
+    | (ImDeltaInsert _, _)                 -> 1
+    | (_, ImDeltaInsert _)                 -> -1
+    | (ImDeltaDelete t1, ImDeltaDelete t2) -> String.compare t1 t2
+end
+
+module PredicateMap = Map.Make(Predicate)
+
+type intermediate_program = RuleAbstractionSet.t PredicateMap.t
 
 type state = {
   current_max : int;
 }
+
+type error =
+  | UnexpectedHeadVarForm of var
 
 
 let separate_predicate_and_vars (rterm : rterm) : intermediate_predicate * var list =
@@ -75,15 +104,21 @@ let convert_rule (state : state) (rule : rule) : (state * intermediate_predicate
   return (state, impred, ruleabs)
 
 
+let resolve_dependencies_among_predicates (improg : intermediate_program) : (predicate_definition list, error) result =
+  failwith "TODO: implement this"
+
+
 let inline_rules (rules : rule list) : (rule list, error) result =
   let open ResultMonad in
 
   (* Converts rules into intermediate ones
-     by substituting each occurrence of the anonymous variable with fresh variables. *)
+     by substituting each occurrence of the anonymous variable with fresh variables: *)
   let state = { current_max = 0 } in
   rules |> foldM (fun (state, improg) rule ->
     convert_rule state rule >>= fun (state, impred, ruleabs) ->
     failwith "TODO: add a mapping `(impred |-> ruleabs)` to `improg` here"
-  ) (state, []) >>= fun (_state, _improg) ->
+  ) (state, PredicateMap.empty) >>= fun (_state, improg) ->
 
+  (* Extracts dependencies among IDB predicates and perform a topological sorting: *)
+  resolve_dependencies_among_predicates improg >>= fun _sorted_rules ->
   failwith "TODO: implement this"
