@@ -42,6 +42,7 @@ TOP_FILES=\
 	ast2fol ast2sql ast2ros\
 	ast2theorem \
 	bx\
+	inlining\
 	debugger\
 	simplification\
 
