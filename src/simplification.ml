@@ -8,7 +8,7 @@ module Const = struct
 
   let compare (c1 : const) (c2 : const) : int =
     match (c1, c2) with
-    | (Int n1, Int n2)       -> Int.compare n1 n2
+    | (Int n1, Int n2)       -> compare n1 n2 (* `Int.compare` can be used for OCaml >= 4.08 *)
     | (Int _, _)             -> 1
     | (_, Int _)             -> -1
     | (Real r1, Real r2)     -> Float.compare r1 r2
