@@ -50,6 +50,21 @@ let main () =
   run_tests [
     {
       title= "sample";
+      (*
+       * SQL:
+       *   UPDATE
+       *     ced
+       *   SET
+       *     dname = 'R&D'
+       *   WHERE
+       *     dname = 'Dev'
+       *
+       * datalog:
+       *   ced_tmp(V0, V1) :- V1 <> R&D.
+       *   -ced(V0, V1) :- ced(V0, V1), V1 = Dev, ced_tmp(V0, V1).
+       *   +ced(V0, V1) :- V1 = R&D, -ced(V0, V1_2)
+       *
+       *)
       input= (
         Sql2ast.SqlUpdateSet (
           "ced",
@@ -89,6 +104,26 @@ let main () =
     };
     {
       title= "Update multi columns";
+      (*
+       * SQL:
+       *   UPDATE
+       *     t
+       *   SET
+       *     c1 = 'v1',
+       *     c3 = 'v3',
+       *     c5 = 'v5'
+       *   WHERE
+       *         c2 = 'v2'
+       *     AND c3 = 'v100'
+       *
+       * datalog:
+       *   t_tmp(V0, V1, V2, V3, V4, V5) :- V0 <> v1.
+       *   t_tmp(V0, V1, V2, V3, V4, V5) :- V2 <> v3.
+       *   t_tmp(V0, V1, V2, V3, V4, V5) :- V4 <> v5.
+       *   -t(V0, V1, V2, V3, V4, V5) :- t(V0, V1, V2, V3, V4, V5), V1 = v2, V2 = v100, t_tmp(V0, V1, V2, V3, V4, V5).
+       *   +t(V0, V1, V2, V3, V4, V5) :- V0 = v1, V2 = v3, V4 = v5, -t(V0_2, V1, V2_2, V3, V4_2, V5).
+       *
+       *)
       input= (
         Sql2ast.SqlUpdateSet (
           "t",
@@ -148,6 +183,21 @@ let main () =
     };
     {
       title= "Use other columns";
+      (*
+       * SQL:
+       *   UPDATE
+       *     t
+       *   SET
+       *     c1 = c2,
+       *     c2 = c3
+       *
+       * datalog:
+       *   t_tmp(V0, V1, V2, V3) :- V0 <> V1.
+       *   t_tmp(V0, V1, V2, V3) :- V1 <> V2.
+       *   -t(V0, V1, V2, V3) :- t(V0, V1, V2, V3), t_tmp(V0, V1, V2, V3).
+       *   +t(V0, V1, V2, V3) :- V0 = V1_2, V1 = V2, -t(V0_2, V1_2, V2, V3).
+       *
+       *)
       input= (
         Sql2ast.SqlUpdateSet (
           "t",
