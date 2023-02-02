@@ -12,9 +12,13 @@ type intermediate_predicate =
   | ImDeltaDelete of table_name
 
 type intermediate_clause =
-  | ImClause of intermediate_predicate * named_var list
+  | ImPositive    of intermediate_predicate * named_var list
+  | ImNegative    of intermediate_predicate * named_var list
+  | ImEquation    of eterm
+  | ImNonequation of eterm
 
-(* The type for data of the form `(X_1, ..., X_n) -> C_1, ..., C_m.` (i.e., a rule without a predicate name) *)
+(* The type for rule abstractions,
+  i.e. data of the form `(X_1, ..., X_n) -> C_1, ..., C_m.` *)
 type rule_abstraction = {
   binder : named_var list;
   body   : intermediate_clause list;
@@ -23,8 +27,7 @@ type rule_abstraction = {
 module RuleAbstraction = struct
   type t = rule_abstraction
 
-  let compare =
-    compare (* TODO: define this *)
+  let compare = compare
 end
 
 module RuleAbstractionSet = Set.Make(RuleAbstraction)
@@ -56,6 +59,7 @@ type state = {
 
 type error =
   | UnexpectedHeadVarForm of var
+  | UnexpectedBodyVarForm of var
 
 
 let separate_predicate_and_vars (rterm : rterm) : intermediate_predicate * var list =
@@ -85,20 +89,56 @@ let generate_fresh_name (state : state) : state * named_var =
   ({ current_max = i }, imvar)
 
 
-let convert_body_clause (state : state) (term : term) : state * intermediate_clause =
-  failwith "TODO: implement this by using `generate_fresh_name`"
+let convert_var (state : state) (var : var) : (state * named_var, error) result =
+  let open ResultMonad in
+  match var with
+  | NamedVar x ->
+      return (state, ImNamedVar x)
+
+  | AnonVar ->
+      let (state, imvar) = generate_fresh_name state in
+      return (state, imvar)
+
+  | _ ->
+      err (UnexpectedBodyVarForm var)
+
+
+let convert_rterm (state : state) (rterm : rterm) : (state * intermediate_predicate * named_var list, error) result =
+  let open ResultMonad in
+  let (impred, vars) = separate_predicate_and_vars rterm in
+  vars |> foldM (fun (state, imvar_acc) var ->
+    convert_var state var >>= fun (state, imvar) ->
+    return (state, imvar :: imvar_acc)
+  ) (state, []) >>= fun (state, imvar_acc) ->
+  return (state, impred, List.rev imvar_acc)
+
+
+let convert_body_clause (state : state) (term : term) : (state * intermediate_clause, error) result =
+  let open ResultMonad in
+  match term with
+  | Rel rterm ->
+      convert_rterm state rterm >>= fun (state, impred, imvars) ->
+      return (state, ImPositive (impred, imvars))
+
+  | Not rterm ->
+      convert_rterm state rterm >>= fun (state, impred, imvars) ->
+      return (state, ImNegative (impred, imvars))
+
+  | Equat eterm ->
+      return (state, ImEquation eterm)
+
+  | Noneq eterm ->
+      return (state, ImNonequation eterm)
 
 
 let convert_rule (state : state) (rule : rule) : (state * intermediate_predicate * rule_abstraction, error) result =
   let open ResultMonad in
   let (head, body) = rule in
   convert_head_rterm head >>= fun (impred, binder) ->
-  let (state, imclause_acc) =
-    body |> List.fold_left (fun (state, imclause_acc) term ->
-      let (state, imclause) = convert_body_clause state term in
-      (state, imclause :: imclause_acc)
-    ) (state, [])
-  in
+  body |> foldM (fun (state, imclause_acc) term ->
+    convert_body_clause state term >>= fun (state, imclause) ->
+    return (state, imclause :: imclause_acc)
+  ) (state, []) >>= fun (state, imclause_acc) ->
   let body = List.rev imclause_acc in
   let ruleabs = { binder; body } in
   return (state, impred, ruleabs)
