@@ -17,7 +17,7 @@ module Const = struct
     | (String s1, String s2) -> String.compare s1 s2
     | (String _, _)          -> 1
     | (_, String _)          -> -1
-    | (Bool b1, Bool b2)     -> Bool.compare b1 b2
+    | (Bool b1, Bool b2)     -> compare b1 b2 (* `Bool.compare` can be used for OCaml >= 4.08 *)
     | (Bool _, _)            -> 1
     | (_, Bool _)            -> -1
     | (Null, Null)           -> 0
@@ -100,8 +100,22 @@ let string_of_body_term_arguments imbvars =
 module BodyTermArguments = struct
   type t = body_term_arguments
 
-  let compare =
-    List.compare body_var_compare
+  let compare (args1 : t) (args2 : t) : int =
+    let rec aux args1 args2 =
+      match (args1, args2) with
+      | ([], [])     -> 0
+      | ([], _ :: _) -> 1
+      | (_ :: _, []) -> -1
+
+      | (x1 :: xs1, x2 :: xs2) ->
+          begin
+            match body_var_compare x1 x2 with
+            | 0       -> aux xs1 xs2
+            | nonzero -> nonzero
+          end
+    in
+    aux args1 args2
+      (* `List.compare` can be used for OCaml >= 4.12 *)
 end
 
 module BodyTermArgumentsSet = Set.Make(BodyTermArguments)
@@ -149,12 +163,22 @@ let predicate_map_equal : predicate_map -> predicate_map -> bool =
   PredicateMap.equal BodyTermArgumentsSet.equal
 
 
+let head_arguments_equal (args1 : intermediate_head_var list) (args2 : intermediate_head_var list) : bool =
+  try
+    List.fold_left2 (fun b x1 x2 ->
+      b && head_var_equal x1 x2
+    ) true args1 args2
+  with
+  | Invalid_argument _ -> false
+      (* `List.equal` can be used for OCaml >= 4.12 *)
+
+
 (* Checks that `imrule1` and `imrule2` are syntactically equal
    (i.e. exactly the same including variable names). *)
 let rule_equal (imrule1 : intermediate_rule) (imrule2 : intermediate_rule) : bool =
   List.fold_left ( && ) true [
     predicate_equal imrule1.head_predicate imrule2.head_predicate;
-    List.equal head_var_equal imrule1.head_arguments imrule2.head_arguments;
+    head_arguments_equal imrule1.head_arguments imrule2.head_arguments;
     predicate_map_equal imrule1.positive_terms imrule2.positive_terms;
     predicate_map_equal imrule1.negative_terms imrule2.negative_terms;
     VariableMap.equal constant_requirement_equal imrule1.equations imrule2.equations;
@@ -310,15 +334,18 @@ let convert_rule (rule : rule) : (intermediate_rule option, error) result =
                     return (Some (predmap_pos, predmap_neg, eqnmap))
               end
         end
-  ) (Some (PredicateMap.empty, PredicateMap.empty, VariableMap.empty)) >>= fun opt ->
-  return (opt |> Option.map (fun (predmap_pos, predmap_neg, eqnmap) ->
-    {
-      head_predicate = impred_head;
-      head_arguments = imhvars;
-      positive_terms = predmap_pos;
-      negative_terms = predmap_neg;
-      equations      = eqnmap;
-    }))
+  ) (Some (PredicateMap.empty, PredicateMap.empty, VariableMap.empty)) >>= function
+  | None ->
+      return None
+
+  | Some (predmap_pos, predmap_neg, eqnmap) ->
+      return (Some {
+        head_predicate = impred_head;
+        head_arguments = imhvars;
+        positive_terms = predmap_pos;
+        negative_terms = predmap_neg;
+        equations      = eqnmap;
+      })
 
 
 let revert_head (impred : intermediate_predicate) (imhvars : intermediate_head_var list) : rterm =
@@ -363,7 +390,7 @@ let revert_rule (imrule : intermediate_rule) : rule =
     negative_terms |> PredicateMap.bindings |> List.map (revert_body_terms ~positive:false) |> List.concat
   in
   let terms_eq =
-    equations |> VariableMap.bindings |> List.concat_map (fun (x, cr) ->
+    equations |> VariableMap.bindings |> List.map (fun (x, cr) ->
       match cr with
       | EqualTo c ->
           [ Equat (Equation ("=", Var (NamedVar x), Const c)) ]
@@ -372,7 +399,8 @@ let revert_rule (imrule : intermediate_rule) : rule =
           cset |> ConstSet.elements |> List.map (fun c ->
             Noneq (Equation ("=", Var (NamedVar x), Const c))
           )
-    )
+    ) |> List.concat
+      (* `List.concat_map` can be used for OCaml >= 4.10 *)
   in
   let body = List.concat [ terms_pos; terms_neg; terms_eq ] in
   (head, body)
