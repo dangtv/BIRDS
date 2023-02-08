@@ -144,6 +144,16 @@ let convert_rule (state : state) (rule : rule) : (state * intermediate_predicate
   return (state, impred, ruleabs)
 
 
+(* Adds a mapping `(impred |-> ruleabs)` to `improg` *)
+let add_rule_abstraction (impred : intermediate_predicate) (ruleabs : rule_abstraction) (improg : intermediate_program) : intermediate_program =
+  match improg |> PredicateMap.find_opt impred with
+  | None ->
+      improg |> PredicateMap.add impred (RuleAbstractionSet.singleton ruleabs)
+
+  | Some ruleabsset ->
+      improg |> PredicateMap.add impred (ruleabsset |> RuleAbstractionSet.add ruleabs)
+
+
 let resolve_dependencies_among_predicates (improg : intermediate_program) : (predicate_definition list, error) result =
   failwith "TODO: implement this"
 
@@ -156,7 +166,7 @@ let inline_rules (rules : rule list) : (rule list, error) result =
   let state = { current_max = 0 } in
   rules |> foldM (fun (state, improg) rule ->
     convert_rule state rule >>= fun (state, impred, ruleabs) ->
-    failwith "TODO: add a mapping `(impred |-> ruleabs)` to `improg` here"
+    return (state, improg |> add_rule_abstraction impred ruleabs)
   ) (state, PredicateMap.empty) >>= fun (_state, improg) ->
 
   (* Extracts dependencies among IDB predicates and perform a topological sorting: *)
