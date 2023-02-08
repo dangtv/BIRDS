@@ -158,8 +158,36 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
   failwith "TODO: implement this"
 
 
-let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : rule_abstraction) : (rule_abstraction list, error) result =
+let reduce_rule (ruleabs : rule_abstraction) (args : named_var list) : (intermediate_clause list, error) result =
   failwith "TODO: implement this"
+
+
+let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : rule_abstraction) : (rule_abstraction list, error) result =
+  let open ResultMonad in
+  let { binder; body } = ruleabs in
+  body |> foldM (fun (accs : (intermediate_clause list) list) (clause : intermediate_clause) ->
+    match clause with
+    | ImPositive (impred, args) ->
+        begin
+          match improg_inlined |> PredicateMap.find_opt impred with
+          | Some ruleabsset ->
+              let ruleabss = RuleAbstractionSet.elements ruleabsset in
+              ruleabss |> mapM (fun ruleabs -> reduce_rule ruleabs args) >>= fun clausess ->
+              return (accs |> List.map (fun acc ->
+                clausess |> List.map (fun clauses -> List.rev_append clauses acc)
+              ) |> List.concat)
+
+          | None ->
+            (* If `impred` is not an IDB predicate: *)
+              return (accs |> List.map (fun acc -> clause :: acc))
+        end
+
+    | _ ->
+      (* Clauses other than positive applications are not inlined: *)
+        return (accs |> List.map (fun acc -> clause :: acc))
+
+  ) [ [] ] >>= fun accs ->
+  return (accs |> List.map (fun acc -> { binder; body = List.rev acc }))
 
 
 let inline_rules (rules : rule list) : (rule list, error) result =
