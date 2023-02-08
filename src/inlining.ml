@@ -158,6 +158,10 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
   failwith "TODO: implement this"
 
 
+let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : rule_abstraction) : (rule_abstraction list, error) result =
+  failwith "TODO: implement this"
+
+
 let inline_rules (rules : rule list) : (rule list, error) result =
   let open ResultMonad in
 
@@ -170,5 +174,14 @@ let inline_rules (rules : rule list) : (rule list, error) result =
   ) (state, PredicateMap.empty) >>= fun (_state, improg) ->
 
   (* Extracts dependencies among IDB predicates and perform a topological sorting: *)
-  resolve_dependencies_among_predicates improg >>= fun _sorted_rules ->
-  failwith "TODO: implement this"
+  resolve_dependencies_among_predicates improg >>= fun sorted_rules ->
+
+  (* Performs inlining: *)
+  sorted_rules |> foldM (fun improg_inlined (impred, ruleabsset) ->
+    let ruleabss = RuleAbstractionSet.elements ruleabsset in
+    ruleabss |> mapM (inline_rule_abstraction improg_inlined) >>= fun ruleabsss_inlined ->
+    let ruleabss_inlined = List.concat ruleabsss_inlined in
+    return (improg_inlined |> PredicateMap.add impred (RuleAbstractionSet.of_list ruleabss_inlined))
+  ) PredicateMap.empty >>= fun _improg_inlined ->
+
+  failwith "TODO: return `improg_inlined`"
