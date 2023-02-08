@@ -51,6 +51,8 @@ end
 
 module PredicateMap = Map.Make(Predicate)
 
+module Subst = Map.Make(String)
+
 type intermediate_program = RuleAbstractionSet.t PredicateMap.t
 
 type state = {
@@ -58,8 +60,9 @@ type state = {
 }
 
 type error =
-  | UnexpectedHeadVarForm of var
-  | UnexpectedBodyVarForm of var
+  | UnexpectedHeadVarForm  of var
+  | UnexpectedBodyVarForm  of var
+  | PredicateArityMismatch of int * int
 
 
 let separate_predicate_and_vars (rterm : rterm) : intermediate_predicate * var list =
@@ -159,7 +162,19 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
 
 
 let reduce_rule (ruleabs : rule_abstraction) (args : named_var list) : (intermediate_clause list, error) result =
-  failwith "TODO: implement this"
+  let open ResultMonad in
+  let { binder; body } = ruleabs in
+  match List.combine binder args with
+  | exception Invalid_argument _ ->
+      err (PredicateArityMismatch (List.length binder, List.length args))
+
+  | zipped ->
+      let _subst =
+        zipped |> List.fold_left (fun subst (ImNamedVar x, arg) ->
+          subst |> Subst.add x arg
+        ) Subst.empty
+      in
+      failwith "TODO: apply `subst` to `body`"
 
 
 let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : rule_abstraction) : (rule_abstraction list, error) result =
