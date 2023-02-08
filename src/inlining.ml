@@ -53,6 +53,8 @@ module PredicateMap = Map.Make(Predicate)
 
 module Subst = Map.Make(String)
 
+type substitution = named_var Subst.t
+
 type intermediate_program = RuleAbstractionSet.t PredicateMap.t
 
 type state = {
@@ -161,6 +163,39 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
   failwith "TODO: implement this"
 
 
+let substitute_argument (subst : substitution) (arg : named_var) : named_var =
+  let ImNamedVar x = arg in
+  match subst |> Subst.find_opt x with
+  | Some var -> var
+  | None     -> arg
+
+
+let substitute_vterm (subst : substitution) (vterm : vterm) : vterm =
+  match vterm with
+  | Var (NamedVar x) ->
+      begin
+        match subst |> Subst.find_opt x with
+        | Some (ImNamedVar y) -> Var (NamedVar y)
+        | None                -> vterm
+      end
+
+  | _ ->
+      vterm
+
+
+let substitute_eterm (subst : substitution) (eterm : eterm) : eterm =
+  let Equation (op, vt1, vt2) = eterm in
+  Equation (op, vt1 |> substitute_vterm subst, vt2 |> substitute_vterm subst)
+
+
+let substitute_clause (subst : substitution) (clause : intermediate_clause) : intermediate_clause =
+  match clause with
+  | ImPositive (impred, args) -> ImPositive (impred, args |> List.map (substitute_argument subst))
+  | ImNegative (impred, args) -> ImNegative (impred, args |> List.map (substitute_argument subst))
+  | ImEquation eterm          -> ImEquation (eterm |> substitute_eterm subst)
+  | ImNonequation eterm       -> ImNonequation (eterm |> substitute_eterm subst)
+
+
 let reduce_rule (ruleabs : rule_abstraction) (args : named_var list) : (intermediate_clause list, error) result =
   let open ResultMonad in
   let { binder; body } = ruleabs in
@@ -169,12 +204,12 @@ let reduce_rule (ruleabs : rule_abstraction) (args : named_var list) : (intermed
       err (PredicateArityMismatch (List.length binder, List.length args))
 
   | zipped ->
-      let _subst =
+      let subst =
         zipped |> List.fold_left (fun subst (ImNamedVar x, arg) ->
           subst |> Subst.add x arg
         ) Subst.empty
       in
-      failwith "TODO: apply `subst` to `body`"
+      return (body |> List.map (substitute_clause subst))
 
 
 let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : rule_abstraction) : (rule_abstraction list, error) result =
