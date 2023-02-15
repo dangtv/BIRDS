@@ -53,8 +53,8 @@ TOP_FILES_WITH_MLI=\
 
 TEST_ONLY_FILES=\
     ast2sql_operation_based_conversion_test\
-    simplification_test\
-
+	simplification_test\
+	inlining_test\
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
