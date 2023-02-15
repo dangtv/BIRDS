@@ -67,6 +67,7 @@ type error =
   | UnexpectedHeadVarForm  of var
   | UnexpectedBodyVarForm  of var
   | PredicateArityMismatch of int * int
+  | CyclicDependency       of predicate_definition list
 
 
 let separate_predicate_and_vars (rterm : rterm) : intermediate_predicate * var list =
@@ -165,7 +166,7 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
   (* Adds vertices corresponding to IDB predicates to the graph: *)
   let (graph, acc) =
     PredicateMap.fold (fun impred ruleabsset (graph, acc) ->
-      match graph |> PredicateDependencyGraph.add_vertex impred () with
+      match graph |> PredicateDependencyGraph.add_vertex impred ruleabsset with
       | Error _            -> assert false
       | Ok (graph, vertex) -> (graph, (impred, vertex, ruleabsset) :: acc)
     ) improg (PredicateDependencyGraph.empty, [])
@@ -197,7 +198,8 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
     ) graph
   in
 
-  failwith "TODO: implement this"
+  PredicateDependencyGraph.topological_sort graph
+    |> Result.map_error (fun cycle -> CyclicDependency cycle)
 
 
 let substitute_argument (subst : substitution) (arg : named_var) : named_var =
