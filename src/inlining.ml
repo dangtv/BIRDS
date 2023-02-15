@@ -51,6 +51,8 @@ end
 
 module PredicateMap = Map.Make(Predicate)
 
+module PredicateDependencyGraph = Dependency_graph.Make(Predicate)
+
 module Subst = Map.Make(String)
 
 type substitution = named_var Subst.t
@@ -160,6 +162,16 @@ let add_rule_abstraction (impred : intermediate_predicate) (ruleabs : rule_abstr
 
 
 let resolve_dependencies_among_predicates (improg : intermediate_program) : (predicate_definition list, error) result =
+  let defs = PredicateMap.bindings improg in
+
+  (* Adds vertices corresponding to IDB predicates to the graph: *)
+  let (graph, acc) =
+    PredicateMap.fold (fun impred ruleabsset (graph, acc) ->
+      match graph |> PredicateDependencyGraph.add_vertex impred () with
+      | Error _            -> assert false
+      | Ok (graph, vertex) -> (graph, (impred, vertex, ruleabsset) :: acc)
+    ) improg (PredicateDependencyGraph.empty, [])
+  in
   failwith "TODO: implement this"
 
 
