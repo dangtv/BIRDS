@@ -279,6 +279,29 @@ let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : r
   return (accs |> List.map (fun acc -> { binder; body = List.rev acc }))
 
 
+let inject_rterm (impred : intermediate_predicate) (imvars : named_var list) : rterm =
+  let vars = imvars |> List.map (fun (ImNamedVar x) -> NamedVar x) in
+  match impred with
+  | ImPred table        -> Pred (table, vars)
+  | ImDeltaInsert table -> Deltainsert (table, vars)
+  | ImDeltaDelete table -> Deltadelete (table, vars)
+
+
+let inject_clause (clause : intermediate_clause) : term =
+  match clause with
+  | ImPositive (impred, args) -> Rel (inject_rterm impred args)
+  | ImNegative (impred, args) -> Not (inject_rterm impred args)
+  | ImEquation eterm          -> Equat eterm
+  | ImNonequation eterm       -> Noneq eterm
+
+
+let inject_rule (impred : intermediate_predicate) (ruleabs : rule_abstraction) : rule =
+  let { binder; body } = ruleabs in
+  let rterm = inject_rterm impred binder in
+  let terms = body |> List.map inject_clause in
+  (rterm, terms)
+
+
 let inline_rules (rules : rule list) : (rule list, error) result =
   let open ResultMonad in
 
@@ -299,6 +322,16 @@ let inline_rules (rules : rule list) : (rule list, error) result =
     ruleabss |> mapM (inline_rule_abstraction improg_inlined) >>= fun ruleabsss_inlined ->
     let ruleabss_inlined = List.concat ruleabsss_inlined in
     return (improg_inlined |> PredicateMap.add impred (RuleAbstractionSet.of_list ruleabss_inlined))
-  ) PredicateMap.empty >>= fun _improg_inlined ->
+  ) PredicateMap.empty >>= fun improg_inlined ->
 
-  failwith "TODO: return `improg_inlined`"
+  (* Converts intermediate representations to rules: *)
+  let acc =
+    PredicateMap.fold (fun impred ruleabsset acc ->
+      let ruleabss = RuleAbstractionSet.elements ruleabsset in
+      ruleabss |> List.fold_left (fun acc ruleabs ->
+        let rule = inject_rule impred ruleabs in
+        rule :: acc
+      ) acc
+    ) improg_inlined []
+  in
+  return (List.rev acc)
