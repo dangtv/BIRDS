@@ -162,8 +162,6 @@ let add_rule_abstraction (impred : intermediate_predicate) (ruleabs : rule_abstr
 
 
 let resolve_dependencies_among_predicates (improg : intermediate_program) : (predicate_definition list, error) result =
-  let defs = PredicateMap.bindings improg in
-
   (* Adds vertices corresponding to IDB predicates to the graph: *)
   let (graph, acc) =
     PredicateMap.fold (fun impred ruleabsset (graph, acc) ->
@@ -172,6 +170,33 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
       | Ok (graph, vertex) -> (graph, (impred, vertex, ruleabsset) :: acc)
     ) improg (PredicateDependencyGraph.empty, [])
   in
+
+  (* Adds directed edges that represent dependencies among IDB predicates: *)
+  let graph =
+    acc |> List.rev |> List.fold_left (fun graph (impred_from, vertex_from, ruleabsset) ->
+      let ruleabss = RuleAbstractionSet.elements ruleabsset in
+      ruleabss |> List.fold_left (fun graph ruleabs ->
+        ruleabs.body |> List.fold_left (fun graph clause ->
+          match clause with
+          | ImPositive (impred_to, _) | ImNegative (impred_to, _) ->
+              begin
+                match graph |> PredicateDependencyGraph.get_vertex impred_to with
+                | Some vertex_to ->
+                    (* If `impred_to` is an IDB predicate and thus registered to `graph` as `vertex_to`: *)
+                    graph |> PredicateDependencyGraph.add_edge ~from:vertex_from ~to_:vertex_to
+
+                | None ->
+                    (* If `impred_to` is NOT an IDB predicate: *)
+                    graph
+              end
+
+          | ImEquation _ | ImNonequation _ ->
+              graph
+        ) graph
+      ) graph
+    ) graph
+  in
+
   failwith "TODO: implement this"
 
 
