@@ -36,6 +36,7 @@ LOGIC_FILES_WITH_MLI=\
 
 TOP_FILES=\
 	expr utils parser lexer\
+	dependency_graph\
 	conn_ops\
 	rule_preprocess stratification derivation \
 	bottom_up evaluation\
@@ -43,7 +44,6 @@ TOP_FILES=\
 	ast2theorem \
 	bx\
 	inlining\
-	dependency_graph\
 	debugger\
 	simplification\
 
