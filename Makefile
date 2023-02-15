@@ -1,4 +1,4 @@
-PACKAGES=postgresql,str,num
+PACKAGES=postgresql,str,num,ocamlgraph
 
 # create directory if not exist
 DIR_GUARD=@mkdir -p $(@D)
@@ -43,10 +43,11 @@ TOP_FILES=\
 	ast2theorem \
 	bx\
 	inlining\
+	dependency_graph\
 	debugger\
 
 TOP_FILES_WITH_MLI=\
-	parser expr conversion ast2sql ast2theorem\
+	parser expr conversion ast2sql ast2theorem dependency_graph\
 
 TEST_ONLY_FILES=\
     ast2sql_operation_based_conversion_test\
