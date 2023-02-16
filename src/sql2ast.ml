@@ -126,16 +126,15 @@ let update_to_datalog (update : sql_update) (instance : sql_instance_name option
     >>= fun var ->
     ResultMonad.return (Expr.Equat (Expr.Equation ("<>", Expr.Var var, vterm)))
   ) >>= fun effect_terms ->
-  List.fold_right (fun (column, var) res ->
-    res >>= fun (varlist, in_set) ->
+  let varlist, in_set = List.fold_right (fun (column, var) (varlist, in_set) ->
     match List.assoc_opt column column_and_vterms with
     | None ->
-      ResultMonad.return ((var :: varlist), in_set)
+      (var :: varlist), in_set
     | Some _ ->
       let column_name = string_of_sql_column column in
-      ResultMonad.return ((var :: varlist), (ColumnSet.add column_name in_set))
-  ) column_var_list (Ok ([], ColumnSet.empty))
-  >>= fun (varlist, in_set) ->
+      (var :: varlist), (ColumnSet.add column_name in_set)
+    ) column_var_list ([], ColumnSet.empty)
+  in
   let tmp_pred = Expr.Pred (make_tmp_table_name table_name, varlist) in
   let effect_rules = effect_terms
     |> List.map (fun term -> tmp_pred, [term])
