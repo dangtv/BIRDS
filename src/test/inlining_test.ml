@@ -49,6 +49,10 @@ let run_tests (test_cases : test_case list) : bool =
   ) false
 
 
+let make_lines ss =
+  ss |> List.map (fun s -> s ^ "\n") |> String.concat ""
+
+
 let main () =
   let test_cases =
     [
@@ -58,7 +62,7 @@ let main () =
         expected = "";
       };
       {
-        title = "";
+        title = "minimal inlining";
         input = [
           (Deltainsert ("foo", [ NamedVar "X" ]), [
             Rel (Pred ("bar", [ NamedVar "X" ]));
@@ -67,7 +71,14 @@ let main () =
             Rel (Pred ("qux", [ NamedVar "Y" ]));
           ]);
         ];
-        expected = "";
+        (* Input:
+             +foo(X) :- bar(X).
+             bar(Y) :- qux(Y). *)
+        expected =
+          make_lines [
+            "+foo(X) :- qux(X).";
+            "bar(Y) :- qux(Y).";
+          ];
       };
     ]
   in
