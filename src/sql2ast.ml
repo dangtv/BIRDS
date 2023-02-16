@@ -62,50 +62,58 @@ module ColumnVarMap = Map.Make(String)
 
 let rec ast_vterm_of_sql_vterm colvarmap = function
   | SqlConst const ->
-    Ok (Expr.Const const)
+    ResultMonad.return (Expr.Const const)
   | SqlColumn column ->
     let column_name = string_of_sql_column column in
     ColumnVarMap.find_opt column_name colvarmap
     |> Option.map (fun var -> Expr.Var var)
     |> Option.to_result ~none:("Invalid column name: " ^ column_name)
   | SqlUnaryOp (op, sql_vterm) ->
-    ast_vterm_of_sql_vterm colvarmap sql_vterm >>= fun vterm ->
-    Ok (Expr.UnaryOp (string_of_sql_unary_operator op, vterm))
+    ast_vterm_of_sql_vterm colvarmap sql_vterm
+    >>= fun vterm ->
+    ResultMonad.return (Expr.UnaryOp (string_of_sql_unary_operator op, vterm))
   | SqlBinaryOp (op, left, right) ->
-    ast_vterm_of_sql_vterm colvarmap left >>= fun left ->
-    ast_vterm_of_sql_vterm colvarmap right >>= fun right ->
-    Ok (Expr.BinaryOp (string_of_sql_binary_operator op, left, right))
+    ast_vterm_of_sql_vterm colvarmap left
+    >>= fun left ->
+    ast_vterm_of_sql_vterm colvarmap right
+    >>= fun right ->
+    ResultMonad.return (Expr.BinaryOp (string_of_sql_binary_operator op, left, right))
 
 let ast_terms_of_sql_where_clause colvarmap = function
   | SqlWhere sql_constraints ->
     let ast_term_of_sql_constraint = function
       | SqlConstraint (left, op, right) ->
         let op = string_of_sql_operator op in
-        ast_vterm_of_sql_vterm colvarmap left >>= fun left ->
-        ast_vterm_of_sql_vterm colvarmap right >>= fun right ->
-        Ok (Expr.Equat (Expr.Equation (op, left, right)))
+        ast_vterm_of_sql_vterm colvarmap left
+        >>= fun left ->
+        ast_vterm_of_sql_vterm colvarmap right
+        >>= fun right ->
+        ResultMonad.return (Expr.Equat (Expr.Equation (op, left, right)))
     in
     ResultMonad.mapM
       ast_term_of_sql_constraint
       sql_constraints
-    
+
 let make_tmp_table_name table_name = table_name ^ "_tmp"
 
 module ColumnSet = Set.Make(String)
-    
+
 let update_to_datalog (update : sql_update) (instance : sql_instance_name option) (columns : sql_column_name list) : (Expr.rule list, string) result =
   let SqlUpdateSet (table_name, column_and_vterms, where_clause) = update in
   let make_column_var_list make_var =
     List.mapi (fun idx column_name ->
       let var = make_var idx column_name in
       (instance, column_name), var
-    ) in
+    )
+  in
   let make_colvarmap column_var_list = column_var_list
     |> List.map (fun (col, var) -> string_of_sql_column col, var)
     |> List.to_seq
-    |> ColumnVarMap.of_seq in
+    |> ColumnVarMap.of_seq
+  in
   let column_var_list = columns
-    |> make_column_var_list (fun idx _ -> Expr.NamedVar ("V" ^ string_of_int idx)) in
+    |> make_column_var_list (fun idx _ -> Expr.NamedVar ("V" ^ string_of_int idx))
+  in
   let colvarmap = make_colvarmap column_var_list in
 
   column_and_vterms
@@ -122,15 +130,16 @@ let update_to_datalog (update : sql_update) (instance : sql_instance_name option
     res >>= fun (varlist, in_set) ->
     match List.assoc_opt column column_and_vterms with
     | None ->
-      Ok ((var :: varlist), in_set)
+      ResultMonad.return ((var :: varlist), in_set)
     | Some _ ->
       let column_name = string_of_sql_column column in
-      Ok ((var :: varlist), (ColumnSet.add column_name in_set))
+      ResultMonad.return ((var :: varlist), (ColumnSet.add column_name in_set))
   ) column_var_list (Ok ([], ColumnSet.empty))
   >>= fun (varlist, in_set) ->
   let tmp_pred = Expr.Pred (make_tmp_table_name table_name, varlist) in
   let effect_rules = effect_terms
-    |> List.map (fun term -> tmp_pred, [term]) in
+    |> List.map (fun term -> tmp_pred, [term])
+  in
   let column_var_list' = columns
     |> make_column_var_list (fun idx column_name ->
       let column_name = string_of_sql_column (instance, column_name) in
@@ -138,7 +147,8 @@ let update_to_datalog (update : sql_update) (instance : sql_instance_name option
         Expr.NamedVar ("V" ^ string_of_int idx ^ "_2")
       else
         Expr.NamedVar ("V" ^ string_of_int idx)
-    ) in
+    )
+  in
   let colvarmap' = make_colvarmap column_var_list' in
 
   where_clause
@@ -151,7 +161,8 @@ let update_to_datalog (update : sql_update) (instance : sql_instance_name option
 
   column_and_vterms
   |> ResultMonad.mapM (fun (column, vterm) ->
-    ast_vterm_of_sql_vterm colvarmap' vterm >>= fun vterm ->
+    ast_vterm_of_sql_vterm colvarmap' vterm
+    >>= fun vterm ->
     let column_name = string_of_sql_column column in
     ColumnVarMap.find_opt column_name colvarmap
     |> Option.map (fun var -> Expr.Equat (Expr.Equation ("=", Expr.Var var, vterm)))
@@ -169,4 +180,4 @@ let update_to_datalog (update : sql_update) (instance : sql_instance_name option
   let body = body @ [Expr.Rel delete_pred] in
   let insert_pred = Expr.Deltainsert (table_name, varlist) in
   let insert = insert_pred, body in
-  Ok (effect_rules @ [delete; insert])
+  ResultMonad.return (effect_rules @ [delete; insert])
