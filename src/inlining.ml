@@ -191,7 +191,6 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
   (* Adds vertices corresponding to IDB predicates to the graph: *)
   let (graph, acc) =
     PredicateMap.fold (fun impred ruleabsset (graph, acc) ->
-      Printf.printf "#### ADD VERTEX %s\n" (string_of_intermediate_predicate impred); (* TODO: remove this *)
       match graph |> PredicateDependencyGraph.add_vertex impred ruleabsset with
       | Error _            -> assert false
       | Ok (graph, vertex) -> (graph, (impred, vertex, ruleabsset) :: acc)
@@ -210,9 +209,6 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
               begin
                 match graph |> PredicateDependencyGraph.get_vertex impred_from with
                 | Some vertex_from ->
-                    Printf.printf "#### ADD EDGE %s ----> %s\n"
-                      (string_of_intermediate_predicate impred_from)
-                      (string_of_intermediate_predicate impred_to); (* TODO: remove this *)
                     (* If `impred_to` is an IDB predicate and thus registered to `graph` as `vertex_to`: *)
                     graph |> PredicateDependencyGraph.add_edge ~from:vertex_from ~to_:vertex_to
 
@@ -228,16 +224,8 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
     ) graph
   in
 
-  let open ResultMonad in
-  match PredicateDependencyGraph.topological_sort graph with
-  | Error cycle ->
-      err (CyclicDependency cycle)
-
-  | Ok sorted ->
-      Printf.printf "#### SORTED: %s\n"
-        (sorted |> List.map (fun (impred, _ruleabsset) ->
-          string_of_intermediate_predicate impred) |> String.concat ", "); (* TODO: remove this *)
-      return sorted
+  PredicateDependencyGraph.topological_sort graph
+    |> Result.map_error (fun cycle -> CyclicDependency cycle)
 
 
 let substitute_argument (subst : substitution) (arg : named_var) : named_var =
