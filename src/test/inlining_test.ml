@@ -43,8 +43,8 @@ let run_tests (test_cases : test_case list) : bool =
         Printf.printf "got:\n\"%s\"\n" got;
         true
 
-    | Error _ ->
-        Printf.printf "FAILED (error)\n";
+    | Error e ->
+        Printf.printf "! %s: FAILED (%s)\n" title (Inlining.string_of_error e);
         true
   ) false
 

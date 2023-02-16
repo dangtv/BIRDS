@@ -51,7 +51,10 @@ module Make (Element : ElementType) = struct
 
 
   let get_vertex (elem : element) (graph : 'a t) : Vertex.t option =
-    graph.labels |> ElementMap.find_opt elem |> Option.map (fun (_data, vertex) -> vertex)
+    match graph.labels |> ElementMap.find_opt elem with
+    | Some (_data, vertex) -> Some vertex
+    | None                 -> None
+        (* TODO: use `Option.map` *)
 
 
   let add_edge ~from:(vertex1 : Vertex.t) ~to_:(vertex2 : Vertex.t) (graph : 'a t) : 'a t =
