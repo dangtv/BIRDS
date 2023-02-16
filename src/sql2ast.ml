@@ -1,26 +1,6 @@
 open Utils
 
-module Option = struct
-  let map f = function
-    | Some v -> Some (f v)
-    | None -> None
-
-  let value ~default = function
-    | Some v -> v
-    | None -> default
-
-  let to_result ~none = function
-    | Some v -> Ok v
-    | None -> Error none
-end
-
 let ( >>= ) = ResultMonad.( >>= )
-
-module Result = struct
-  include ResultMonad
-
-  let sequence rs = ResultMonad.mapM (fun x -> x) rs
-end
 
 type sql_binary_operator =
   | SqlPlus    (* + *)
@@ -105,9 +85,9 @@ let ast_terms_of_sql_where_clause colvarmap = function
         ast_vterm_of_sql_vterm colvarmap right >>= fun right ->
         Ok (Expr.Equat (Expr.Equation (op, left, right)))
     in
-    sql_constraints
-    |> List.map ast_term_of_sql_constraint 
-    |> Result.sequence
+    ResultMonad.mapM
+      ast_term_of_sql_constraint
+      sql_constraints
     
 let make_tmp_table_name table_name = table_name ^ "_tmp"
 
@@ -129,14 +109,14 @@ let update_to_datalog (update : sql_update) (instance : sql_instance_name option
   let colvarmap = make_colvarmap column_var_list in
 
   column_and_vterms
-  |> Result.mapM (fun (sql_col, sql_vterm) ->
+  |> ResultMonad.mapM (fun (sql_col, sql_vterm) ->
     ast_vterm_of_sql_vterm colvarmap sql_vterm
     >>= fun vterm ->
     let column_name = string_of_sql_column sql_col in
     ColumnVarMap.find_opt column_name colvarmap
     |> Option.to_result ~none:("Invalid column name: " ^ column_name)
     >>= fun var ->
-    Result.return (Expr.Equat (Expr.Equation ("<>", Expr.Var var, vterm)))
+    ResultMonad.return (Expr.Equat (Expr.Equation ("<>", Expr.Var var, vterm)))
   ) >>= fun effect_terms ->
   List.fold_right (fun (column, var) res ->
     res >>= fun (varlist, in_set) ->
@@ -170,22 +150,20 @@ let update_to_datalog (update : sql_update) (instance : sql_instance_name option
   let delete = delete_pred, (Expr.Rel from :: body @ [Expr.Rel tmp_pred]) in
 
   column_and_vterms
-  |> List.map (fun (column, vterm) ->
+  |> ResultMonad.mapM (fun (column, vterm) ->
     ast_vterm_of_sql_vterm colvarmap' vterm >>= fun vterm ->
     let column_name = string_of_sql_column column in
     ColumnVarMap.find_opt column_name colvarmap
     |> Option.map (fun var -> Expr.Equat (Expr.Equation ("=", Expr.Var var, vterm)))
     |> Option.to_result ~none:("Invalid column name: " ^ column_name)
   )
-  |> Result.sequence
   >>= fun body ->
   columns
-  |> List.map (fun column ->
+  |> ResultMonad.mapM (fun column ->
     let column_name = string_of_sql_column (instance, column) in
     ColumnVarMap.find_opt column_name colvarmap'
     |> Option.to_result ~none:("Invalid column name: " ^ column_name)
   )
-  |> Result.sequence
   >>= fun delete_var_list ->
   let delete_pred = Expr.Deltadelete (table_name, delete_var_list) in
   let body = body @ [Expr.Rel delete_pred] in
