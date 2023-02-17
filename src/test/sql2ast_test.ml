@@ -14,9 +14,10 @@ type test_result =
 
 let run_test {input; expected; _} =
   let open ResultMonad in
-  let string_of_rules rules = rules
-    |> List.map Expr.string_of_rule
-    |> String.concat "; "
+  let string_of_rules rules =
+    rules
+      |> List.map Expr.string_of_rule
+      |> String.concat "; "
   in
   let (update, instance, columns) = input in
   Sql2ast.update_to_datalog update instance columns >>= fun actual ->
@@ -41,15 +42,15 @@ let run_tests (test_cases : test_case list) : bool =
         Printf.printf "actual:\n\"%s\"\n" actual;
         true
 
-    | Error _ ->
-        Printf.printf "! %s: FAILED (error)\n" title;
+    | Error error ->
+        Printf.printf "! %s: FAILED (%s)\n" title @@ Sql2ast.string_of_error error;
         true
   ) false
 
 let main () =
   run_tests [
     {
-      title= "sample";
+      title = "sample";
       (*
        * SQL:
        *   UPDATE
@@ -60,12 +61,12 @@ let main () =
        *     dname = 'Dev'
        *
        * datalog:
-       *   ced_tmp(V0, V1) :- V1 <> R&D.
-       *   -ced(V0, V1) :- ced(V0, V1), V1 = Dev, ced_tmp(V0, V1).
-       *   +ced(V0, V1) :- V1 = R&D, -ced(V0, V1_2)
+       *   ced_tmp(GenV1, GenV2) :- GenV2 <> R&D.
+       *   -ced(GenV1, GenV2) :- ced(GenV1, GenV2), GenV2 = Dev, ced_tmp(GenV1, GenV2).
+       *   +ced(GenV1, GenV2) :- GenV2 = R&D, -ced(GenV1, GenV2_2)
        *
        *)
-      input= (
+      input = (
         Sql2ast.SqlUpdateSet (
           "ced",
           [(None, "dname"), Sql2ast.SqlConst (Expr.String "R&D")],
@@ -80,30 +81,30 @@ let main () =
         None,
         ["ename"; "dname"]
       );
-      expected= [
+      expected = [
         (
-          Expr.Pred ("ced_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"]),
-          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "V1")), (Expr.Var (Expr.ConstVar (Expr.String "R&D")))))]
+          Expr.Pred ("ced_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"]),
+          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "GenV2")), (Expr.Var (Expr.ConstVar (Expr.String "R&D")))))]
         );
         (
-          Expr.Deltadelete ("ced", [Expr.NamedVar "V0"; Expr.NamedVar "V1"]),
+          Expr.Deltadelete ("ced", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"]),
           [
-            Expr.Rel (Expr.Pred ("ced", [Expr.NamedVar "V0"; Expr.NamedVar "V1"]));
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V1")), (Expr.Var (Expr.ConstVar (Expr.String "Dev")))));
-            Expr.Rel (Expr.Pred ("ced_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"]))
+            Expr.Rel (Expr.Pred ("ced", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"]));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV2")), (Expr.Var (Expr.ConstVar (Expr.String "Dev")))));
+            Expr.Rel (Expr.Pred ("ced_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"]))
           ]
         );
         (
-          Expr.Deltainsert ("ced", [Expr.NamedVar "V0"; Expr.NamedVar "V1"]),
+          Expr.Deltainsert ("ced", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"]),
           [
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V1")), (Expr.Var (Expr.ConstVar (Expr.String "R&D")))));
-            Expr.Rel (Expr.Deltadelete ("ced", [Expr.NamedVar "V0"; Expr.NamedVar "V1_2"]));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV2")), (Expr.Var (Expr.ConstVar (Expr.String "R&D")))));
+            Expr.Rel (Expr.Deltadelete ("ced", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2_2"]));
           ]
         )
       ]
     };
     {
-      title= "Update multi columns";
+      title = "Update multi columns";
       (*
        * SQL:
        *   UPDATE
@@ -117,14 +118,14 @@ let main () =
        *     AND c3 = 'v100'
        *
        * datalog:
-       *   t_tmp(V0, V1, V2, V3, V4, V5) :- V0 <> v1.
-       *   t_tmp(V0, V1, V2, V3, V4, V5) :- V2 <> v3.
-       *   t_tmp(V0, V1, V2, V3, V4, V5) :- V4 <> v5.
-       *   -t(V0, V1, V2, V3, V4, V5) :- t(V0, V1, V2, V3, V4, V5), V1 = v2, V2 = v100, t_tmp(V0, V1, V2, V3, V4, V5).
-       *   +t(V0, V1, V2, V3, V4, V5) :- V0 = v1, V2 = v3, V4 = v5, -t(V0_2, V1, V2_2, V3, V4_2, V5).
+       *   t_tmp(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV1 <> v1.
+       *   t_tmp(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV3 <> v3.
+       *   t_tmp(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV5 <> v5.
+       *   -t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6), GenV2 = v2, GenV3 = v100, t_tmp(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6).
+       *   +t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV1 = v1, GenV3 = v3, GenV5 = v5, -t(GenV1_2, GenV2, GenV3_2, GenV4, GenV5_2, GenV6).
        *
        *)
-      input= (
+      input = (
         Sql2ast.SqlUpdateSet (
           "t",
           [
@@ -148,41 +149,41 @@ let main () =
         None,
         ["c1"; "c2"; "c3"; "c4"; "c5"; "c6"]
       );
-      expected= [
+      expected = [
         (
-          Expr.Pred ("t_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"; Expr.NamedVar "V4"; Expr.NamedVar "V5"]),
-          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "V0")), (Expr.Var (Expr.ConstVar (Expr.String "v1")))))]
+          Expr.Pred ("t_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"; Expr.NamedVar "GenV5"; Expr.NamedVar "GenV6"]),
+          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "GenV1")), (Expr.Var (Expr.ConstVar (Expr.String "v1")))))]
         );
         (
-          Expr.Pred ("t_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"; Expr.NamedVar "V4"; Expr.NamedVar "V5"]),
-          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "V2")), (Expr.Var (Expr.ConstVar (Expr.String "v3")))))]
+          Expr.Pred ("t_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"; Expr.NamedVar "GenV5"; Expr.NamedVar "GenV6"]),
+          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "GenV3")), (Expr.Var (Expr.ConstVar (Expr.String "v3")))))]
         );
         (
-          Expr.Pred ("t_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"; Expr.NamedVar "V4"; Expr.NamedVar "V5"]),
-          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "V4")), (Expr.Var (Expr.ConstVar (Expr.String "v5")))))]
+          Expr.Pred ("t_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"; Expr.NamedVar "GenV5"; Expr.NamedVar "GenV6"]),
+          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "GenV5")), (Expr.Var (Expr.ConstVar (Expr.String "v5")))))]
         );
         (
-          Expr.Deltadelete ("t", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"; Expr.NamedVar "V4"; Expr.NamedVar "V5"]),
+          Expr.Deltadelete ("t", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"; Expr.NamedVar "GenV5"; Expr.NamedVar "GenV6"]),
           [
-            Expr.Rel (Expr.Pred ("t", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"; Expr.NamedVar "V4"; Expr.NamedVar "V5"]));
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V1")), (Expr.Var (Expr.ConstVar (Expr.String "v2")))));
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V2")), (Expr.Var (Expr.ConstVar (Expr.String "v100")))));
-            Expr.Rel (Expr.Pred ("t_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"; Expr.NamedVar "V4"; Expr.NamedVar "V5"]))
+            Expr.Rel (Expr.Pred ("t", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"; Expr.NamedVar "GenV5"; Expr.NamedVar "GenV6"]));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV2")), (Expr.Var (Expr.ConstVar (Expr.String "v2")))));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV3")), (Expr.Var (Expr.ConstVar (Expr.String "v100")))));
+            Expr.Rel (Expr.Pred ("t_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"; Expr.NamedVar "GenV5"; Expr.NamedVar "GenV6"]))
           ]
         );
         (
-          Expr.Deltainsert ("t", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"; Expr.NamedVar "V4"; Expr.NamedVar "V5"]),
+          Expr.Deltainsert ("t", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"; Expr.NamedVar "GenV5"; Expr.NamedVar "GenV6"]),
           [
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V0")), (Expr.Var (Expr.ConstVar (Expr.String "v1")))));
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V2")), (Expr.Var (Expr.ConstVar (Expr.String "v3")))));
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V4")), (Expr.Var (Expr.ConstVar (Expr.String "v5")))));
-            Expr.Rel (Expr.Deltadelete ("t", [Expr.NamedVar "V0_2"; Expr.NamedVar "V1"; Expr.NamedVar "V2_2"; Expr.NamedVar "V3"; Expr.NamedVar "V4_2"; Expr.NamedVar "V5"]));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV1")), (Expr.Var (Expr.ConstVar (Expr.String "v1")))));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV3")), (Expr.Var (Expr.ConstVar (Expr.String "v3")))));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV5")), (Expr.Var (Expr.ConstVar (Expr.String "v5")))));
+            Expr.Rel (Expr.Deltadelete ("t", [Expr.NamedVar "GenV1_2"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3_2"; Expr.NamedVar "GenV4"; Expr.NamedVar "GenV5_2"; Expr.NamedVar "GenV6"]));
           ]
         )
       ]
     };
     {
-      title= "Use other columns";
+      title = "Use other columns";
       (*
        * SQL:
        *   UPDATE
@@ -192,13 +193,13 @@ let main () =
        *     c2 = c3
        *
        * datalog:
-       *   t_tmp(V0, V1, V2, V3) :- V0 <> V1.
-       *   t_tmp(V0, V1, V2, V3) :- V1 <> V2.
-       *   -t(V0, V1, V2, V3) :- t(V0, V1, V2, V3), t_tmp(V0, V1, V2, V3).
-       *   +t(V0, V1, V2, V3) :- V0 = V1_2, V1 = V2, -t(V0_2, V1_2, V2, V3).
+       *   t_tmp(GenV1, GenV2, GenV3, GenV4) :- GenV1 <> GenV2.
+       *   t_tmp(GenV1, GenV2, GenV3, GenV4) :- GenV2 <> GenV3.
+       *   -t(GenV1, GenV2, GenV3, GenV4) :- t(GenV1, GenV2, GenV3, GenV4), t_tmp(GenV1, GenV2, GenV3, GenV4).
+       *   +t(GenV1, GenV2, GenV3, GenV4) :- GenV1 = GenV2_2, GenV2 = GenV3, -t(GenV1_2, GenV2_2, GenV3, GenV4).
        *
        *)
-      input= (
+      input = (
         Sql2ast.SqlUpdateSet (
           "t",
           [
@@ -210,28 +211,28 @@ let main () =
         None,
         ["c1"; "c2"; "c3"; "c4"]
       );
-      expected= [
+      expected = [
         (
-          Expr.Pred ("t_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"]),
-          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "V0")), (Expr.Var (Expr.NamedVar "V1"))))]
+          Expr.Pred ("t_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"]),
+          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "GenV1")), (Expr.Var (Expr.NamedVar "GenV2"))))]
         );
         (
-          Expr.Pred ("t_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"]),
-          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "V1")), (Expr.Var (Expr.NamedVar "V2"))))]
+          Expr.Pred ("t_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"]),
+          [Expr.Equat (Expr.Equation ("<>", (Expr.Var (Expr.NamedVar "GenV2")), (Expr.Var (Expr.NamedVar "GenV3"))))]
         );
         (
-          Expr.Deltadelete ("t", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"]),
+          Expr.Deltadelete ("t", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"]),
           [
-            Expr.Rel (Expr.Pred ("t", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"]));
-            Expr.Rel (Expr.Pred ("t_tmp", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"]))
+            Expr.Rel (Expr.Pred ("t", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"]));
+            Expr.Rel (Expr.Pred ("t_tmp", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"]))
           ]
         );
         (
-          Expr.Deltainsert ("t", [Expr.NamedVar "V0"; Expr.NamedVar "V1"; Expr.NamedVar "V2"; Expr.NamedVar "V3"]),
+          Expr.Deltainsert ("t", [Expr.NamedVar "GenV1"; Expr.NamedVar "GenV2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"]),
           [
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V0")), (Expr.Var (Expr.NamedVar "V1_2"))));
-            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "V1")), (Expr.Var (Expr.NamedVar "V2"))));
-            Expr.Rel (Expr.Deltadelete ("t", [Expr.NamedVar "V0_2"; Expr.NamedVar "V1_2"; Expr.NamedVar "V2"; Expr.NamedVar "V3"]));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV1")), (Expr.Var (Expr.NamedVar "GenV2_2"))));
+            Expr.Equat (Expr.Equation ("=", (Expr.Var (Expr.NamedVar "GenV2")), (Expr.Var (Expr.NamedVar "GenV3"))));
+            Expr.Rel (Expr.Deltadelete ("t", [Expr.NamedVar "GenV1_2"; Expr.NamedVar "GenV2_2"; Expr.NamedVar "GenV3"; Expr.NamedVar "GenV4"]));
           ]
         )
       ]
