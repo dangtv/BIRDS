@@ -36,4 +36,8 @@ type sql_where_clause =
 type sql_update =
   | SqlUpdateSet of sql_table_name * (sql_column * sql_vterm) list * sql_where_clause option
 
-val update_to_datalog : sql_update -> sql_instance_name option -> sql_column_name list -> (Expr.rule list, string) result
+type error
+
+val string_of_error : error -> string
+
+val update_to_datalog : sql_update -> sql_instance_name option -> sql_column_name list -> (Expr.rule list, error) result
