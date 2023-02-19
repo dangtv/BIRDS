@@ -235,11 +235,17 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
     |> Result.map_error (fun cycle -> CyclicDependency cycle)
 
 
-let substitute_argument (subst : substitution) (imarg : intermediate_argument) : intermediate_argument =
+let intern_argument (state : state) (subst : substitution) (imarg : intermediate_argument) : state * substitution * intermediate_argument =
   let ImNamedVarArg (ImNamedVar x) = imarg in
   match subst |> Subst.find_opt x with
-  | Some imarg_to -> imarg_to
-  | None          -> imarg
+  | Some imarg_to ->
+      (state, subst, imarg_to)
+
+  | None ->
+      let (state, imvar) = generate_fresh_name state in
+      let imarg_to = ImNamedVarArg imvar in
+      let subst = subst |> Subst.add x imarg_to in
+      (state, subst, imarg_to)
 
 
 let substitute_vterm (subst : substitution) (vterm : vterm) : vterm =
@@ -255,20 +261,44 @@ let substitute_vterm (subst : substitution) (vterm : vterm) : vterm =
       vterm
 
 
-let substitute_eterm (subst : substitution) (eterm : eterm) : eterm =
+let substitute_eterm (state : state) (subst : substitution) (eterm : eterm) : state * substitution * eterm =
+  failwith "TODO: fix this"
+(*
   let Equation (op, vt1, vt2) = eterm in
   Equation (op, vt1 |> substitute_vterm subst, vt2 |> substitute_vterm subst)
+*)
 
 
-let substitute_clause (subst : substitution) (clause : intermediate_clause) : intermediate_clause =
+let intern_argument_list (state : state) (subst : substitution) (imargs : intermediate_argument list) : state * substitution * intermediate_argument list =
+  let (state, subst, imarg_to_acc) =
+    imargs |> List.fold_left (fun (state, subst, imarg_to_acc) imarg ->
+      let (state, subst, imarg_to) = imarg |> intern_argument state subst in
+      (state, subst, imarg_to :: imarg_to_acc)
+    ) (state, subst, [])
+  in
+  (state, subst, List.rev imarg_to_acc)
+
+
+let substitute_clause (state : state) (subst : substitution) (clause : intermediate_clause) : state * substitution * intermediate_clause =
   match clause with
-  | ImPositive (impred, imargs) -> ImPositive (impred, imargs |> List.map (substitute_argument subst))
-  | ImNegative (impred, imargs) -> ImNegative (impred, imargs |> List.map (substitute_argument subst))
-  | ImEquation eterm            -> ImEquation (eterm |> substitute_eterm subst)
-  | ImNonequation eterm         -> ImNonequation (eterm |> substitute_eterm subst)
+  | ImPositive (impred, imargs) ->
+      let (state, subst, imargs_to) = imargs |> intern_argument_list state subst in
+      (state, subst, ImPositive (impred, imargs_to))
+
+  | ImNegative (impred, imargs) ->
+      let (state, subst, imargs_to) = imargs |> intern_argument_list state subst in
+      (state, subst, ImNegative (impred, imargs_to))
+
+  | ImEquation eterm ->
+      let (state, subst, eterm_to) = eterm |> substitute_eterm state subst in
+      (state, subst, ImEquation eterm_to)
+
+  | ImNonequation eterm ->
+      let (state, subst, eterm_to) = eterm |> substitute_eterm state subst in
+      (state, subst, ImNonequation eterm_to)
 
 
-let reduce_rule (ruleabs : rule_abstraction) (imargs : intermediate_argument list) : (intermediate_clause list, error) result =
+let reduce_rule (state : state) (ruleabs : rule_abstraction) (imargs : intermediate_argument list) : (state * intermediate_clause list, error) result =
   let open ResultMonad in
   let { binder; body } = ruleabs in
   match List.combine binder imargs with
@@ -276,40 +306,53 @@ let reduce_rule (ruleabs : rule_abstraction) (imargs : intermediate_argument lis
       err (PredicateArityMismatch (List.length binder, List.length imargs))
 
   | zipped ->
+      (* Initializes substitution by bound variables: *)
       let subst =
         zipped |> List.fold_left (fun subst (ImNamedVar x, imarg) ->
           subst |> Subst.add x imarg
         ) Subst.empty
       in
-      return (body |> List.map (substitute_clause subst))
+      (* Traverses body clauses: *)
+      let (state, _subst, clause_to_acc) =
+        body |> List.fold_left (fun (state, subst, clause_to_acc) clause ->
+          let (state, subst, clause_to) = clause |> substitute_clause state subst in
+          (state, subst, clause_to :: clause_to_acc)
+        ) (state, subst, [])
+      in
+      return (state, List.rev clause_to_acc)
 
 
-let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : rule_abstraction) : (rule_abstraction list, error) result =
+let inline_rule_abstraction (state : state) (improg_inlined : intermediate_program) (ruleabs : rule_abstraction) : (state * rule_abstraction list, error) result =
   let open ResultMonad in
   let { binder; body } = ruleabs in
-  body |> foldM (fun (accs : (intermediate_clause list) list) (clause : intermediate_clause) ->
+  body |> foldM (fun ((state, accs) : state * (intermediate_clause list) list) (clause : intermediate_clause) ->
     match clause with
     | ImPositive (impred, imargs) ->
         begin
           match improg_inlined |> PredicateMap.find_opt impred with
           | Some ruleabsset ->
+            (* If `impred` is an IDB predicate associated with abstractions `ruleabsset`: *)
               let ruleabss = RuleAbstractionSet.elements ruleabsset in
-              ruleabss |> mapM (fun ruleabs -> reduce_rule ruleabs imargs) >>= fun clausess ->
-              return (accs |> List.map (fun acc ->
+              ruleabss |> foldM (fun (state, clauses_acc) ruleabs ->
+                reduce_rule state ruleabs imargs >>= fun (state, clauses) ->
+                return (state, clauses :: clauses_acc)
+              ) (state, []) >>= fun (state, clauses_acc) ->
+              let clausess = List.rev clauses_acc in
+              return (state, accs |> List.map (fun acc ->
                 clausess |> List.map (fun clauses -> List.rev_append clauses acc)
               ) |> List.concat)
 
           | None ->
             (* If `impred` is not an IDB predicate: *)
-              return (accs |> List.map (fun acc -> clause :: acc))
+              return (state, accs |> List.map (fun acc -> clause :: acc))
         end
 
     | _ ->
       (* Clauses other than positive applications are not inlined: *)
-        return (accs |> List.map (fun acc -> clause :: acc))
+        return (state, accs |> List.map (fun acc -> clause :: acc))
 
-  ) [ [] ] >>= fun accs ->
-  return (accs |> List.map (fun acc -> { binder; body = List.rev acc }))
+  ) (state, [ [] ]) >>= fun (state, accs) ->
+  return (state, accs |> List.map (fun acc -> { binder; body = List.rev acc }))
 
 
 let inject_rterm (impred : intermediate_predicate) (imargs : intermediate_argument list) : rterm =
@@ -344,18 +387,20 @@ let inline_rules (rules : rule list) : (rule list, error) result =
   rules |> foldM (fun (state, improg) rule ->
     convert_rule state rule >>= fun (state, impred, ruleabs) ->
     return (state, improg |> add_rule_abstraction impred ruleabs)
-  ) (state, PredicateMap.empty) >>= fun (_state, improg) ->
+  ) (state, PredicateMap.empty) >>= fun (state, improg) ->
 
   (* Extracts dependencies among IDB predicates and perform a topological sorting: *)
   resolve_dependencies_among_predicates improg >>= fun sorted_rules ->
 
   (* Performs inlining: *)
-  sorted_rules |> foldM (fun improg_inlined (impred, ruleabsset) ->
+  sorted_rules |> foldM (fun (state, improg_inlined) (impred, ruleabsset) ->
     let ruleabss = RuleAbstractionSet.elements ruleabsset in
-    ruleabss |> mapM (inline_rule_abstraction improg_inlined) >>= fun ruleabsss_inlined ->
-    let ruleabss_inlined = List.concat ruleabsss_inlined in
-    return (improg_inlined |> PredicateMap.add impred (RuleAbstractionSet.of_list ruleabss_inlined))
-  ) PredicateMap.empty >>= fun improg_inlined ->
+    ruleabss |> foldM (fun (state, ruleabss_inlined) ruleabs ->
+      ruleabs |> inline_rule_abstraction state improg_inlined >>= fun (state, ruleabss_inlined_new) ->
+      return (state, List.append ruleabss_inlined ruleabss_inlined_new)
+      ) (state, []) >>= fun (state, ruleabss_inlined) ->
+    return (state, improg_inlined |> PredicateMap.add impred (RuleAbstractionSet.of_list ruleabss_inlined))
+  ) (state, PredicateMap.empty) >>= fun (_state, improg_inlined) ->
 
   (* Converts intermediate representations to rules: *)
   let acc =
