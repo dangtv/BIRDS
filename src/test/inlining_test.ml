@@ -92,7 +92,7 @@ let main () =
             bar(A, B) :- qux(A, B, _). *)
         expected =
           make_lines [
-            "+foo(X) :- qux(X, GenV1, GenV2).";
+            "+foo(X) :- qux(X, GenV1, GenV3).";
             "bar(A, B) :- qux(A, B, GenV2).";
           ];
       };
@@ -108,7 +108,11 @@ let main () =
         (* Input:
             +foo(X) :- bar(X, _).
             bar(A, B) :- qux(A, B, _). *)
-        expected = "";
+        expected =
+          make_lines [
+            "+foo(X, Y) :- qux(X, GenV1, GenV4) , qux(Y, GenV2, GenV5).";
+            "bar(A, B) :- qux(A, B, GenV3).";
+          ];
       };
       {
         title = "inline multiple disjunctive rules";
@@ -123,8 +127,8 @@ let main () =
             bar(A) :- thud(_, B). *)
         expected =
           make_lines [
-            "+foo(X) :- qux(X, GenV1).";
-            "+foo(X) :- thud(GenV2, X).";
+            "+foo(X) :- qux(X, GenV3).";
+            "+foo(X) :- thud(GenV4, X).";
             "bar(A) :- qux(A, GenV1).";
             "bar(B) :- thud(GenV2, B).";
           ];
