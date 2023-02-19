@@ -80,6 +80,25 @@ let main () =
             "bar(Y) :- qux(Y).";
           ];
       };
+      {
+        title = "inlining rules with anonymous variables";
+        input = [
+          (Deltainsert ("foo", [ NamedVar "X" ]), [
+            Rel (Pred ("bar", [ NamedVar "X"; AnonVar ]));
+          ]);
+          (Pred ("bar", [ NamedVar "A"; NamedVar "B" ]), [
+            Rel (Pred ("qux", [ NamedVar "A"; NamedVar "B"; AnonVar ]));
+          ]);
+        ];
+        (* Input:
+            +foo(X) :- bar(X, _).
+            bar(A, B) :- qux(A, B, _). *)
+        expected =
+          make_lines [
+            "+foo(X) :- qux(X, GenV1, GenV2).";
+            "bar(A, B) :- qux(A, B, GenV2).";
+          ];
+      };
     ]
   in
   run_tests test_cases

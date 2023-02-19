@@ -3,6 +3,10 @@ open Expr
 open Utils
 
 
+(* The prefix used for variables generated during inlining. *)
+let generated_variable_prefix = "GenV"
+
+
 type named_var =
   | ImNamedVar of string
 
@@ -118,7 +122,7 @@ let convert_head_rterm (rterm : rterm) : (intermediate_predicate * named_var lis
 
 let generate_fresh_name (state : state) : state * named_var =
   let i = state.current_max + 1 in
-  let imvar = ImNamedVar (Printf.sprintf "%d" i) in
+  let imvar = ImNamedVar (Printf.sprintf "%s%d" generated_variable_prefix i) in
   ({ current_max = i }, imvar)
 
 
