@@ -115,7 +115,7 @@ let main () =
           ];
       };
       {
-        title = "inline multiple disjunctive rules";
+        title = "inlining multiple disjunctive rules";
         input = [
           (!+ "foo" [ "X" ], [ Rel (Pred ("bar", [ NamedVar "X" ])) ]);
           (!: "bar" [ "A" ], [ Rel (Pred ("qux", [ NamedVar "A"; AnonVar ])) ]);
@@ -134,21 +134,21 @@ let main () =
           ];
       };
       {
-        title = "equations";
+        title = "inlining rules that contain equations";
         input = [
           (!+ "foo" [ "X" ], [ Rel (Pred ("bar", [ NamedVar "X" ])) ]);
-          (!: "bar" [ "Y" ], [
-            Rel (Pred ("qux", [ NamedVar "X"; NamedVar "Y" ]));
-            Equat (Equation ("=", Var (NamedVar "X"), Const (Int 42)));
+          (!: "bar" [ "B" ], [
+            Rel (Pred ("qux", [ NamedVar "A"; NamedVar "B" ]));
+            Equat (Equation ("=", Var (NamedVar "A"), Const (Int 42)));
           ]);
         ];
         (* Input:
              +foo(X) :- bar(X).
-             bar(Y) :- qux(X, Y), X = 42. *)
+             bar(B) :- qux(A, B), A = 42. *)
         expected =
           make_lines [
             "+foo(X) :- qux(GenV1, X) , GenV1 = 42.";
-            "bar(Y) :- qux(X, Y) , X = 42.";
+            "bar(B) :- qux(A, B) , A = 42.";
           ];
       };
     ]
