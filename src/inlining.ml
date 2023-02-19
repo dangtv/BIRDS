@@ -253,25 +253,30 @@ let intern_argument (state : state) (subst : substitution) (imarg : intermediate
       (state, subst, imarg_to)
 
 
-let substitute_vterm (subst : substitution) (vterm : vterm) : vterm =
+let substitute_vterm (state : state) (subst : substitution) (vterm : vterm) : state * substitution * vterm =
   match vterm with
   | Var (NamedVar x) ->
       begin
         match subst |> Subst.find_opt x with
-        | Some (ImNamedVarArg (ImNamedVar y)) -> Var (NamedVar y)
-        | None                                -> vterm
+        | Some (ImNamedVarArg (ImNamedVar y)) ->
+            (state, subst, Var (NamedVar y))
+
+        | None ->
+            let (state, imvar) = generate_fresh_name state in
+            let ImNamedVar y = imvar in
+            let subst = subst |> Subst.add x (ImNamedVarArg imvar) in
+            (state, subst, Var (NamedVar y))
       end
 
   | _ ->
-      vterm
+      (state, subst, vterm)
 
 
 let substitute_eterm (state : state) (subst : substitution) (eterm : eterm) : state * substitution * eterm =
-  failwith "TODO: fix this"
-(*
   let Equation (op, vt1, vt2) = eterm in
-  Equation (op, vt1 |> substitute_vterm subst, vt2 |> substitute_vterm subst)
-*)
+  let (state, subst, vt1_to) = vt1 |> substitute_vterm state subst in
+  let (state, subst, vt2_to) = vt2 |> substitute_vterm state subst in
+  (state, subst, Equation (op, vt1_to, vt2_to))
 
 
 let intern_argument_list (state : state) (subst : substitution) (imargs : intermediate_argument list) : state * substitution * intermediate_argument list =
