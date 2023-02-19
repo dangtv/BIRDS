@@ -53,6 +53,11 @@ let make_lines ss =
   ss |> List.map (fun s -> s ^ "\n") |> String.concat ""
 
 
+let ( !: ) p xs = Pred (p, xs |> List.map (fun x -> NamedVar x))
+let ( !+ ) p xs = Deltainsert (p, xs |> List.map (fun x -> NamedVar x))
+let ( !- ) p xs = Deltadelete (p, xs |> List.map (fun x -> NamedVar x))
+
+
 let main () =
   let test_cases =
     [
@@ -64,12 +69,8 @@ let main () =
       {
         title = "minimal inlining";
         input = [
-          (Deltainsert ("foo", [ NamedVar "X" ]), [
-            Rel (Pred ("bar", [ NamedVar "X" ]));
-          ]);
-          (Pred ("bar", [ NamedVar "Y" ]), [
-            Rel (Pred ("qux", [ NamedVar "Y" ]));
-          ]);
+          (!+ "foo" [ "X" ], [ Rel (Pred ("bar", [ NamedVar "X" ])) ]);
+          (!: "bar" [ "Y" ], [ Rel (Pred ("qux", [ NamedVar "Y" ])) ]);
         ];
         (* Input:
              +foo(X) :- bar(X).
@@ -81,14 +82,10 @@ let main () =
           ];
       };
       {
-        title = "inlining rules with anonymous variables";
+        title = "inlining rules with anonymous variables (1)";
         input = [
-          (Deltainsert ("foo", [ NamedVar "X" ]), [
-            Rel (Pred ("bar", [ NamedVar "X"; AnonVar ]));
-          ]);
-          (Pred ("bar", [ NamedVar "A"; NamedVar "B" ]), [
-            Rel (Pred ("qux", [ NamedVar "A"; NamedVar "B"; AnonVar ]));
-          ]);
+          (!+ "foo" [ "X" ], [ Rel (Pred ("bar", [ NamedVar "X"; AnonVar ])) ]);
+          (!: "bar" [ "A"; "B" ], [ Rel (Pred ("qux", [ NamedVar "A"; NamedVar "B"; AnonVar ])) ]);
         ];
         (* Input:
             +foo(X) :- bar(X, _).
@@ -97,6 +94,39 @@ let main () =
           make_lines [
             "+foo(X) :- qux(X, GenV1, GenV2).";
             "bar(A, B) :- qux(A, B, GenV2).";
+          ];
+      };
+      {
+        title = "inlining rules with anonymous variables (2)";
+        input = [
+          (!+ "foo" [ "X"; "Y" ], [
+            Rel (Pred ("bar", [ NamedVar "X"; AnonVar ]));
+            Rel (Pred ("bar", [ NamedVar "Y"; AnonVar ]));
+          ]);
+          (!: "bar" [ "A"; "B" ], [ Rel (Pred ("qux", [ NamedVar "A"; NamedVar "B"; AnonVar ])) ]);
+        ];
+        (* Input:
+            +foo(X) :- bar(X, _).
+            bar(A, B) :- qux(A, B, _). *)
+        expected = "";
+      };
+      {
+        title = "inline multiple disjunctive rules";
+        input = [
+          (!+ "foo" [ "X" ], [ Rel (Pred ("bar", [ NamedVar "X" ])) ]);
+          (!: "bar" [ "A" ], [ Rel (Pred ("qux", [ NamedVar "A"; AnonVar ])) ]);
+          (!: "bar" [ "B" ], [ Rel (Pred ("thud", [ AnonVar; NamedVar "B" ])) ]);
+        ];
+        (* Input:
+            +foo(X) :- bar(X).
+            bar(A) :- qux(A, _).
+            bar(A) :- thud(_, B). *)
+        expected =
+          make_lines [
+            "+foo(X) :- qux(X, GenV1).";
+            "+foo(X) :- thud(GenV2, X).";
+            "bar(A) :- qux(A, GenV1).";
+            "bar(B) :- thud(GenV2, B).";
           ];
       };
     ]
