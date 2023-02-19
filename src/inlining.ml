@@ -15,9 +15,12 @@ type intermediate_predicate =
   | ImDeltaInsert of table_name
   | ImDeltaDelete of table_name
 
+type intermediate_argument =
+  | ImNamedVarArg of named_var
+
 type intermediate_clause =
-  | ImPositive    of intermediate_predicate * named_var list
-  | ImNegative    of intermediate_predicate * named_var list
+  | ImPositive    of intermediate_predicate * intermediate_argument list
+  | ImNegative    of intermediate_predicate * intermediate_argument list
   | ImEquation    of eterm
   | ImNonequation of eterm
 
@@ -59,7 +62,7 @@ module PredicateDependencyGraph = Dependency_graph.Make(Predicate)
 
 module Subst = Map.Make(String)
 
-type substitution = named_var Subst.t
+type substitution = intermediate_argument Subst.t
 
 type intermediate_program = RuleAbstractionSet.t PredicateMap.t
 
@@ -126,39 +129,39 @@ let generate_fresh_name (state : state) : state * named_var =
   ({ current_max = i }, imvar)
 
 
-let convert_var (state : state) (var : var) : (state * named_var, error) result =
+let convert_body_var (state : state) (var : var) : (state * intermediate_argument, error) result =
   let open ResultMonad in
   match var with
   | NamedVar x ->
-      return (state, ImNamedVar x)
+      return (state, ImNamedVarArg (ImNamedVar x))
 
   | AnonVar ->
       let (state, imvar) = generate_fresh_name state in
-      return (state, imvar)
+      return (state, ImNamedVarArg imvar)
 
   | _ ->
       err (UnexpectedBodyVarForm var)
 
 
-let convert_rterm (state : state) (rterm : rterm) : (state * intermediate_predicate * named_var list, error) result =
+let convert_body_rterm (state : state) (rterm : rterm) : (state * intermediate_predicate * intermediate_argument list, error) result =
   let open ResultMonad in
   let (impred, vars) = separate_predicate_and_vars rterm in
-  vars |> foldM (fun (state, imvar_acc) var ->
-    convert_var state var >>= fun (state, imvar) ->
-    return (state, imvar :: imvar_acc)
-  ) (state, []) >>= fun (state, imvar_acc) ->
-  return (state, impred, List.rev imvar_acc)
+  vars |> foldM (fun (state, imarg_acc) var ->
+    convert_body_var state var >>= fun (state, imarg) ->
+    return (state, imarg :: imarg_acc)
+  ) (state, []) >>= fun (state, imarg_acc) ->
+  return (state, impred, List.rev imarg_acc)
 
 
 let convert_body_clause (state : state) (term : term) : (state * intermediate_clause, error) result =
   let open ResultMonad in
   match term with
   | Rel rterm ->
-      convert_rterm state rterm >>= fun (state, impred, imvars) ->
-      return (state, ImPositive (impred, imvars))
+      convert_body_rterm state rterm >>= fun (state, impred, imargs) ->
+      return (state, ImPositive (impred, imargs))
 
   | Not rterm ->
-      convert_rterm state rterm >>= fun (state, impred, imvars) ->
+      convert_body_rterm state rterm >>= fun (state, impred, imvars) ->
       return (state, ImNegative (impred, imvars))
 
   | Equat eterm ->
@@ -232,11 +235,11 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
     |> Result.map_error (fun cycle -> CyclicDependency cycle)
 
 
-let substitute_argument (subst : substitution) (arg : named_var) : named_var =
-  let ImNamedVar x = arg in
+let substitute_argument (subst : substitution) (imarg : intermediate_argument) : intermediate_argument =
+  let ImNamedVarArg (ImNamedVar x) = imarg in
   match subst |> Subst.find_opt x with
-  | Some var -> var
-  | None     -> arg
+  | Some imarg_to -> imarg_to
+  | None          -> imarg
 
 
 let substitute_vterm (subst : substitution) (vterm : vterm) : vterm =
@@ -244,8 +247,8 @@ let substitute_vterm (subst : substitution) (vterm : vterm) : vterm =
   | Var (NamedVar x) ->
       begin
         match subst |> Subst.find_opt x with
-        | Some (ImNamedVar y) -> Var (NamedVar y)
-        | None                -> vterm
+        | Some (ImNamedVarArg (ImNamedVar y)) -> Var (NamedVar y)
+        | None                                -> vterm
       end
 
   | _ ->
@@ -259,23 +262,23 @@ let substitute_eterm (subst : substitution) (eterm : eterm) : eterm =
 
 let substitute_clause (subst : substitution) (clause : intermediate_clause) : intermediate_clause =
   match clause with
-  | ImPositive (impred, args) -> ImPositive (impred, args |> List.map (substitute_argument subst))
-  | ImNegative (impred, args) -> ImNegative (impred, args |> List.map (substitute_argument subst))
-  | ImEquation eterm          -> ImEquation (eterm |> substitute_eterm subst)
-  | ImNonequation eterm       -> ImNonequation (eterm |> substitute_eterm subst)
+  | ImPositive (impred, imargs) -> ImPositive (impred, imargs |> List.map (substitute_argument subst))
+  | ImNegative (impred, imargs) -> ImNegative (impred, imargs |> List.map (substitute_argument subst))
+  | ImEquation eterm            -> ImEquation (eterm |> substitute_eterm subst)
+  | ImNonequation eterm         -> ImNonequation (eterm |> substitute_eterm subst)
 
 
-let reduce_rule (ruleabs : rule_abstraction) (args : named_var list) : (intermediate_clause list, error) result =
+let reduce_rule (ruleabs : rule_abstraction) (imargs : intermediate_argument list) : (intermediate_clause list, error) result =
   let open ResultMonad in
   let { binder; body } = ruleabs in
-  match List.combine binder args with
+  match List.combine binder imargs with
   | exception Invalid_argument _ ->
-      err (PredicateArityMismatch (List.length binder, List.length args))
+      err (PredicateArityMismatch (List.length binder, List.length imargs))
 
   | zipped ->
       let subst =
-        zipped |> List.fold_left (fun subst (ImNamedVar x, arg) ->
-          subst |> Subst.add x arg
+        zipped |> List.fold_left (fun subst (ImNamedVar x, imarg) ->
+          subst |> Subst.add x imarg
         ) Subst.empty
       in
       return (body |> List.map (substitute_clause subst))
@@ -286,12 +289,12 @@ let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : r
   let { binder; body } = ruleabs in
   body |> foldM (fun (accs : (intermediate_clause list) list) (clause : intermediate_clause) ->
     match clause with
-    | ImPositive (impred, args) ->
+    | ImPositive (impred, imargs) ->
         begin
           match improg_inlined |> PredicateMap.find_opt impred with
           | Some ruleabsset ->
               let ruleabss = RuleAbstractionSet.elements ruleabsset in
-              ruleabss |> mapM (fun ruleabs -> reduce_rule ruleabs args) >>= fun clausess ->
+              ruleabss |> mapM (fun ruleabs -> reduce_rule ruleabs imargs) >>= fun clausess ->
               return (accs |> List.map (fun acc ->
                 clausess |> List.map (fun clauses -> List.rev_append clauses acc)
               ) |> List.concat)
@@ -309,8 +312,8 @@ let inline_rule_abstraction (improg_inlined : intermediate_program) (ruleabs : r
   return (accs |> List.map (fun acc -> { binder; body = List.rev acc }))
 
 
-let inject_rterm (impred : intermediate_predicate) (imvars : named_var list) : rterm =
-  let vars = imvars |> List.map (fun (ImNamedVar x) -> NamedVar x) in
+let inject_rterm (impred : intermediate_predicate) (imargs : intermediate_argument list) : rterm =
+  let vars = imargs |> List.map (fun (ImNamedVarArg (ImNamedVar x)) -> NamedVar x) in
   match impred with
   | ImPred table        -> Pred (table, vars)
   | ImDeltaInsert table -> Deltainsert (table, vars)
@@ -319,15 +322,15 @@ let inject_rterm (impred : intermediate_predicate) (imvars : named_var list) : r
 
 let inject_clause (clause : intermediate_clause) : term =
   match clause with
-  | ImPositive (impred, args) -> Rel (inject_rterm impred args)
-  | ImNegative (impred, args) -> Not (inject_rterm impred args)
-  | ImEquation eterm          -> Equat eterm
-  | ImNonequation eterm       -> Noneq eterm
+  | ImPositive (impred, imargs) -> Rel (inject_rterm impred imargs)
+  | ImNegative (impred, imargs) -> Not (inject_rterm impred imargs)
+  | ImEquation eterm            -> Equat eterm
+  | ImNonequation eterm         -> Noneq eterm
 
 
 let inject_rule (impred : intermediate_predicate) (ruleabs : rule_abstraction) : rule =
   let { binder; body } = ruleabs in
-  let rterm = inject_rterm impred binder in
+  let rterm = binder |> List.map (fun var -> ImNamedVarArg var) |> inject_rterm impred in
   let terms = body |> List.map inject_clause in
   (rterm, terms)
 
