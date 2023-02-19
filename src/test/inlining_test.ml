@@ -151,6 +151,21 @@ let main () =
             "bar(B) :- qux(A, B) , A = 42.";
           ];
       };
+      {
+        title = "inlining rules applied with constants";
+        input = [
+          (!+ "foo" [ "X" ], [ Rel (Pred ("bar", [ NamedVar "X"; ConstVar (Int 42) ])) ]);
+          (!: "bar" [ "A"; "B" ], [ Rel (Pred ("qux", [ NamedVar "A"; NamedVar "B"; ConstVar (Int 57) ])) ]);
+        ];
+        (* Input:
+             +foo(X) :- bar(X, 42).
+             bar(A, B) :- qux(A, B, 57). *)
+        expected =
+          make_lines [
+            "+foo(X) :- qux(X, 42, 57).";
+            "bar(A, B) :- qux(A, B, 57).";
+          ];
+      };
     ]
   in
   run_tests test_cases
