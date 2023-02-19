@@ -133,6 +133,24 @@ let main () =
             "bar(B) :- thud(GenV2, B).";
           ];
       };
+      {
+        title = "equations";
+        input = [
+          (!+ "foo" [ "X" ], [ Rel (Pred ("bar", [ NamedVar "X" ])) ]);
+          (!: "bar" [ "Y" ], [
+            Rel (Pred ("qux", [ NamedVar "X"; NamedVar "Y" ]));
+            Equat (Equation ("=", Var (NamedVar "X"), Const (Int 42)));
+          ]);
+        ];
+        (* Input:
+             +foo(X) :- bar(X).
+             bar(Y) :- qux(X, Y), X = 42. *)
+        expected =
+          make_lines [
+            "+foo(X) :- qux(GenV1, X) , GenV1 = 42.";
+            "bar(Y) :- qux(X, Y) , X = 42.";
+          ];
+      };
     ]
   in
   run_tests test_cases
