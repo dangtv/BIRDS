@@ -236,10 +236,15 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
     ) graph
   in
 
+  (* Performs topological sorting according to the dependency graph: *)
   PredicateDependencyGraph.topological_sort graph
     |> Result.map_error (fun cycle -> CyclicDependency cycle)
 
 
+(** Basically, `intern_argument state subst X` returns `subst(X)`
+    if `X` belongs to the domain of `subst`.
+    Otherwise, the application generates a fresh variable `Y` and returns it,
+    extending `subst` with `(X |-> Y)`. *)
 let intern_argument (state : state) (subst : substitution) (imarg : intermediate_argument) : state * substitution * intermediate_argument =
   let ImNamedVarArg (ImNamedVar x) = imarg in
   match subst |> Subst.find_opt x with
@@ -320,13 +325,13 @@ let reduce_rule (state : state) (ruleabs : rule_abstraction) (imargs : intermedi
       err (PredicateArityMismatch (List.length binder, List.length imargs))
 
   | zipped ->
-      (* Initializes substitution by bound variables: *)
+      (* Initializes a substitution by bound variables: *)
       let subst =
         zipped |> List.fold_left (fun subst (ImNamedVar x, imarg) ->
           subst |> Subst.add x imarg
         ) Subst.empty
       in
-      (* Traverses body clauses: *)
+      (* Traverses body clauses and substitute variables occurring in them: *)
       let (state, _subst, clause_to_acc) =
         body |> List.fold_left (fun (state, subst, clause_to_acc) clause ->
           let (state, subst, clause_to) = clause |> substitute_clause state subst in
