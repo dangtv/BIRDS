@@ -3,7 +3,7 @@ open Expr
 open Utils
 
 
-(* The prefix used for variables generated during inlining. *)
+(** The prefix used for variables generated during inlining. *)
 let generated_variable_prefix = "GenV"
 
 
@@ -24,8 +24,8 @@ type intermediate_clause =
   | ImEquation    of eterm
   | ImNonequation of eterm
 
-(* The type for rule abstractions,
-  i.e. data of the form `(X_1, ..., X_n) -> C_1, ..., C_m.` *)
+(** The type for rule abstractions,
+    i.e. data of the form `(X_1, ..., X_n) -> C_1, ..., C_m.` *)
 type rule_abstraction = {
   binder : named_var list;
   body   : intermediate_clause list;
@@ -66,6 +66,7 @@ type substitution = intermediate_argument Subst.t
 
 type intermediate_program = RuleAbstractionSet.t PredicateMap.t
 
+(** The type for states that hold information for generating fresh variables. *)
 type state = {
   current_max : int;
 }
@@ -123,6 +124,7 @@ let convert_head_rterm (rterm : rterm) : (intermediate_predicate * named_var lis
   return (impred, imvars)
 
 
+(** Generates fresh variables for instantiation. *)
 let generate_fresh_name (state : state) : state * named_var =
   let i = state.current_max + 1 in
   let imvar = ImNamedVar (Printf.sprintf "%s%d" generated_variable_prefix i) in
@@ -136,11 +138,13 @@ let convert_body_var (state : state) (var : var) : (state * intermediate_argumen
       return (state, ImNamedVarArg (ImNamedVar x))
 
   | AnonVar ->
+      (* Replaces an occurrence `_` of anonymous variables with a fresh variable: *)
       let (state, imvar) = generate_fresh_name state in
       return (state, ImNamedVarArg imvar)
 
   | _ ->
       err (UnexpectedBodyVarForm var)
+        (* TODO: support conversion of `ConstVar` *)
 
 
 let convert_body_rterm (state : state) (rterm : rterm) : (state * intermediate_predicate * intermediate_argument list, error) result =
@@ -184,7 +188,7 @@ let convert_rule (state : state) (rule : rule) : (state * intermediate_predicate
   return (state, impred, ruleabs)
 
 
-(* Adds a mapping `(impred |-> ruleabs)` to `improg` *)
+(** Adds a mapping `(impred |-> ruleabs)` to `improg`. *)
 let add_rule_abstraction (impred : intermediate_predicate) (ruleabs : rule_abstraction) (improg : intermediate_program) : intermediate_program =
   match improg |> PredicateMap.find_opt impred with
   | None ->
@@ -194,6 +198,7 @@ let add_rule_abstraction (impred : intermediate_predicate) (ruleabs : rule_abstr
       improg |> PredicateMap.add impred (ruleabsset |> RuleAbstractionSet.add ruleabs)
 
 
+(** Performs topological sorting of IDB predicates based on the dependencies among them. *)
 let resolve_dependencies_among_predicates (improg : intermediate_program) : (predicate_definition list, error) result =
   (* Adds vertices corresponding to IDB predicates to the graph: *)
   let (graph, acc) =
@@ -298,6 +303,10 @@ let substitute_clause (state : state) (subst : substitution) (clause : intermedi
       (state, subst, ImNonequation eterm_to)
 
 
+(** Basically, `reduce_rule state ((X_1, ..., X_n) -> C_1, ..., C_m.) [Y_1, ..., Y_n]` returns
+    an array of clauses `{Y_n/X_n, ..., Y_1/X_1}(C_1, ..., C_m)`
+    (where `{_/_}_` denotes the standard capture-avoiding substitution operation).
+    In addition, free variables occurring in C_1, ..., C_m are instantiated by fresh variables beforehand. *)
 let reduce_rule (state : state) (ruleabs : rule_abstraction) (imargs : intermediate_argument list) : (state * intermediate_clause list, error) result =
   let open ResultMonad in
   let { binder; body } = ruleabs in
@@ -322,6 +331,8 @@ let reduce_rule (state : state) (ruleabs : rule_abstraction) (imargs : intermedi
       return (state, List.rev clause_to_acc)
 
 
+(** `inline_rule_abstraction state improg_inlined ruleabs` performs inlining of `ruleabs`
+    by using `improg_inlined`, which consists of "already inlined" definitions. *)
 let inline_rule_abstraction (state : state) (improg_inlined : intermediate_program) (ruleabs : rule_abstraction) : (state * rule_abstraction list, error) result =
   let open ResultMonad in
   let { binder; body } = ruleabs in
