@@ -17,6 +17,7 @@ type intermediate_predicate =
 
 type intermediate_argument =
   | ImNamedVarArg of named_var
+  | ImConstArg    of const
 
 type intermediate_clause =
   | ImPositive    of intermediate_predicate * intermediate_argument list
@@ -142,9 +143,11 @@ let convert_body_var (state : state) (var : var) : (state * intermediate_argumen
       let (state, imvar) = generate_fresh_name state in
       return (state, ImNamedVarArg imvar)
 
+  | ConstVar const ->
+      return (state, ImConstArg const)
+
   | _ ->
       err (UnexpectedBodyVarForm var)
-        (* TODO: support conversion of `ConstVar` *)
 
 
 let convert_body_rterm (state : state) (rterm : rterm) : (state * intermediate_predicate * intermediate_argument list, error) result =
@@ -242,20 +245,26 @@ let resolve_dependencies_among_predicates (improg : intermediate_program) : (pre
 
 
 (** Basically, `intern_argument state subst X` returns `subst(X)`
-    if `X` belongs to the domain of `subst`.
+    if the variable `X` belongs to the domain of `subst`.
     Otherwise, the application generates a fresh variable `Y` and returns it,
     extending `subst` with `(X |-> Y)`. *)
 let intern_argument (state : state) (subst : substitution) (imarg : intermediate_argument) : state * substitution * intermediate_argument =
-  let ImNamedVarArg (ImNamedVar x) = imarg in
-  match subst |> Subst.find_opt x with
-  | Some imarg_to ->
-      (state, subst, imarg_to)
+  match imarg with
+  | ImNamedVarArg (ImNamedVar x) ->
+      begin
+        match subst |> Subst.find_opt x with
+        | Some imarg_to ->
+            (state, subst, imarg_to)
 
-  | None ->
-      let (state, imvar) = generate_fresh_name state in
-      let imarg_to = ImNamedVarArg imvar in
-      let subst = subst |> Subst.add x imarg_to in
-      (state, subst, imarg_to)
+        | None ->
+            let (state, imvar) = generate_fresh_name state in
+            let imarg_to = ImNamedVarArg imvar in
+            let subst = subst |> Subst.add x imarg_to in
+            (state, subst, imarg_to)
+      end
+
+  | ImConstArg _ ->
+      (state, subst, imarg)
 
 
 let substitute_vterm (state : state) (subst : substitution) (vterm : vterm) : state * substitution * vterm =
@@ -265,6 +274,9 @@ let substitute_vterm (state : state) (subst : substitution) (vterm : vterm) : st
         match subst |> Subst.find_opt x with
         | Some (ImNamedVarArg (ImNamedVar y)) ->
             (state, subst, Var (NamedVar y))
+
+        | Some (ImConstArg const) ->
+            (state, subst, Const const)
 
         | None ->
             let (state, imvar) = generate_fresh_name state in
@@ -377,7 +389,12 @@ let inline_rule_abstraction (state : state) (improg_inlined : intermediate_progr
 
 
 let inject_rterm (impred : intermediate_predicate) (imargs : intermediate_argument list) : rterm =
-  let vars = imargs |> List.map (fun (ImNamedVarArg (ImNamedVar x)) -> NamedVar x) in
+  let vars =
+    imargs |> List.map (function
+    | ImNamedVarArg (ImNamedVar x) -> NamedVar x
+    | ImConstArg const             -> ConstVar const
+    )
+  in
   match impred with
   | ImPred table        -> Pred (table, vars)
   | ImDeltaInsert table -> Deltainsert (table, vars)
