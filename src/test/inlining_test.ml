@@ -106,7 +106,7 @@ let main () =
           (!: "bar" [ "A"; "B" ], [ Rel (Pred ("qux", [ NamedVar "A"; NamedVar "B"; AnonVar ])) ]);
         ];
         (* Input:
-            +foo(X) :- bar(X, _).
+            +foo(X, Y) :- bar(X, _), bar(Y, _).
             bar(A, B) :- qux(A, B, _). *)
         expected =
           make_lines [
@@ -124,7 +124,7 @@ let main () =
         (* Input:
             +foo(X) :- bar(X).
             bar(A) :- qux(A, _).
-            bar(A) :- thud(_, B). *)
+            bar(B) :- thud(_, B). *)
         expected =
           make_lines [
             "+foo(X) :- qux(X, GenV3).";
