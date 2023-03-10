@@ -620,7 +620,11 @@ let colored_string color str = match color with
     | "brown"	 -> "\027[33m"^str^"\027[0m"
     | _ -> str
 
-module Option = struct
+module Option : sig
+  val map : ('a -> 'b) -> 'a option -> 'b option
+  val value : default:'a -> 'a option -> 'a
+  val to_result : none:'e -> 'a option -> ('a, 'e) result
+end = struct
   let map f = function
     | Some v -> Some (f v)
     | None -> None
@@ -637,6 +641,7 @@ end
 module ResultMonad : sig
   val return : 'a -> ('a, 'e) result
   val err : 'e -> ('a, 'e) result
+  val map : ('a -> 'b) -> ('a, 'e) result -> ('b, 'e) result
   val map_err : ('e1 -> 'e2) -> ('a, 'e1) result -> ('a, 'e2) result
   val foldM : ('a -> 'b -> ('a, 'e) result) -> 'a -> 'b list -> ('a, 'e) result
   val mapM : ('a -> ('b, 'e) result) -> 'a list -> ('b list, 'e) result
@@ -648,6 +653,10 @@ end = struct
 
   let err e =
     Error e
+
+  let map f = function
+    | Ok x -> return @@ f x
+    | Error _ as e -> e
 
   let ( >>= ) v f =
     match v with
