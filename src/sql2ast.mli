@@ -40,4 +40,10 @@ type error
 
 val string_of_error : error -> string
 
-val update_to_datalog : sql_update -> sql_instance_name option -> sql_column_name list -> (Expr.rule list, error) result
+(**
+  * @param update AST of the SQL UPDATE statement.
+  * @param columns List of column names of the table to be queried.
+  *
+  * @return List of rules in datalog language, or failure.
+  *)
+val update_to_datalog : sql_update -> sql_column_name list -> (Expr.rule list, error) result
