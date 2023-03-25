@@ -71,7 +71,7 @@ type sql_from_target =
   | SqlFromOther of sql_query
 
 and sql_from_clause_entry =
-  sql_from_target * sql_instance_name
+  sql_from_target * sql_instance_name option
 
 and sql_from_clause =
   | SqlFrom of sql_from_clause_entry list
@@ -182,8 +182,11 @@ and stringify_sql_from_clause (SqlFrom froms : sql_from_clause) : string =
 
   | _ :: _ ->
       let s =
-        froms |> List.map (fun (target, name) ->
-          Printf.sprintf "%s AS %s" (stringify_sql_from_target target) name
+        froms |> List.map (fun (target, name_opt) ->
+          let s_target = stringify_sql_from_target target in
+          match name_opt with
+          | None      -> s_target
+          | Some name -> Printf.sprintf "%s AS %s" s_target name
         ) |> String.concat ", "
       in
       Printf.sprintf " FROM %s" s
@@ -489,13 +492,13 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
               (* generate sql query for idb predicate *)
               let idb_sql = non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname, arity)  in
               let pn_a = pname ^ "_a" ^ (string_of_int arity) in
-              (SqlFromOther idb_sql, pn_a ^ "_" ^ (string_of_int n))
+              (SqlFromOther idb_sql, Some (pn_a ^ "_" ^ (string_of_int n)))
             in
             let edb_alias (pname : string) (arity : int) (n : int) : sql_from_clause_entry =
               if str_contains pname "__tmp_" then
-                (SqlFromTable (None, pname), pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
+                (SqlFromTable (None, pname), Some (pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n)))
               else
-                (SqlFromTable (Some dbschema, pname), pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
+                (SqlFromTable (Some dbschema, pname), Some (pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n)))
             in
             let set_alias (rterm : rterm) (a_lst, n) =
               let pname = get_rterm_predname rterm in
@@ -554,11 +557,11 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                 (* Get the from sql of the rterm *)
                 let from_sql : sql_from_clause =
                   if Hashtbl.mem idb key then
-                    SqlFrom [ (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity)), alias) ]
+                    SqlFrom [ (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity)), Some alias) ]
                   else if str_contains pname "__tmp_" then
-                    SqlFrom [ (SqlFromTable (None, pname), alias) ]
+                    SqlFrom [ (SqlFromTable (None, pname), Some alias) ]
                   else
-                    SqlFrom [ (SqlFromTable (Some dbschema, pname), alias) ]
+                    SqlFrom [ (SqlFromTable (Some dbschema, pname), Some alias) ]
                 in
                 (* print_endline "___neg sql___"; print_string from_sql; print_endline "___neg sql___"; *)
                 (* Get the where sql of the rterm *)
@@ -650,7 +653,8 @@ let non_rec_unfold_sql_of_query (dbschema : string) (idb : symtable) (cnt : coln
       List.map (fun (a, b) -> (SqlColumn (Some qrule_alias, a), b)) (List.combine cols cols_by_var)
     in
     let sql_from =
-      (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))), qrule_alias)
+      (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))),
+        Some qrule_alias)
     in
     SqlQuery {
       select = SqlSelect sel_lst;
@@ -2191,7 +2195,7 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
 
     end >>= fun (table, columns_and_args) ->
     let instance = "t" in
-    let sql_from = SqlFrom [ (SqlFromTable (None, table), instance) ] in
+    let sql_from = SqlFrom [ (SqlFromTable (None, table), Some instance) ] in
     columns_and_args |> List.fold_left (fun res (column, arg) ->
       res >>= fun acc ->
       sql_vterm_of_arg ~error_detail varmap arg >>= function
@@ -2227,11 +2231,11 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
     List.concat [
       named_poss |> List.map (fun (pos, instance) ->
         match pos with
-        | PositivePred (table, _args) -> [ (SqlFromTable (None, table), instance) ]
+        | PositivePred (table, _args) -> [ (SqlFromTable (None, table), Some instance) ]
         | _                           -> []
       ) |> List.concat;
       referred_instances |> List.map (fun instance ->
-        (SqlFromTable (None, instance), instance)
+        (SqlFromTable (None, instance), Some instance)
       )
     ]
   in
@@ -2375,18 +2379,17 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
         let delta_env = delta_env |> DeltaEnv.add delta_key (temporary_table, cols) in
         let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
         let update =
-          let instance_name = "inst" in
           match delta_kind with
           | Insert ->
               SqlInsertInto
                 (table,
-                  SqlFrom [ (SqlFromTable (None, temporary_table), instance_name) ])
+                  SqlFrom [ (SqlFromTable (None, temporary_table), None) ])
 
           | Delete ->
               SqlDeleteFrom
                 (table,
                   SqlWhere [
-                    SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), instance_name) ], SqlWhere []) ])
+                    SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), None) ], SqlWhere []) ])
         in
         return (i + 1, creation :: creation_acc, update :: update_acc, delta_env)
 
