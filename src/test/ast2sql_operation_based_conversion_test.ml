@@ -129,9 +129,9 @@ let main () =
             Printf.sprintf "CREATE TEMPORARY TABLE temp0 AS %s;" query1;
             Printf.sprintf "CREATE TEMPORARY TABLE temp1 AS %s;" query2;
             Printf.sprintf "CREATE TEMPORARY TABLE temp2 AS %s;" query3;
-            "INSERT INTO temp0 SELECT * FROM temp0 AS inst;";
-            "DELETE FROM temp1 WHERE EXISTS ( SELECT * FROM temp1 AS inst );";
-            "INSERT INTO temp2 SELECT * FROM temp2 AS inst;";
+            "INSERT INTO eed SELECT * FROM temp0 AS inst;";
+            "DELETE FROM eed WHERE EXISTS ( SELECT * FROM temp1 AS inst );";
+            "INSERT INTO ed SELECT * FROM temp2 AS inst;";
           ]
       };
     ]

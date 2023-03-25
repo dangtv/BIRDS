@@ -2379,12 +2379,12 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
           match delta_kind with
           | Insert ->
               SqlInsertInto
-                (temporary_table,
+                (table,
                   SqlFrom [ (SqlFromTable (None, temporary_table), instance_name) ])
 
           | Delete ->
               SqlDeleteFrom
-                (temporary_table,
+                (table,
                   SqlWhere [
                     SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), instance_name) ], SqlWhere []) ])
         in
