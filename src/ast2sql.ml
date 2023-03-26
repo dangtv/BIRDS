@@ -2365,10 +2365,19 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
                 SqlFrom [ (SqlFromTable (None, temporary_table), None) ])
 
           | Delete ->
+              let sql_where =
+                let cols =
+                  match table_env |> TableEnv.find_opt table with
+                  | None      -> assert false
+                  | Some cols -> cols
+                in
+                SqlWhere (cols |> List.map (fun col ->
+                  SqlConstraint (SqlColumn (Some table, col), SqlRelEqual, SqlColumn (Some temporary_table, col))
+                ))
+              in
               SqlDeleteFrom (table,
                 SqlWhere [
-                  SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), None) ], SqlWhere []) ])
-                (* TODO: fix this *)
+                  SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), None) ], sql_where) ])
         in
         return (i + 1, creation :: creation_acc, update :: update_acc, delta_env)
 
