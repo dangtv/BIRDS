@@ -1788,13 +1788,11 @@ let combine_column_names ~(error_detail : error_detail) (table_env : table_envir
 
 let validate_args_in_head ~(error_detail : error_detail) (table_env : table_environment) (table : table_name) (args : var list) =
   let open ResultMonad in
-  args |> List.fold_left (fun res arg ->
-    res >>= fun x_acc ->
+  args |> mapM (fun arg ->
     match arg with
-    | NamedVar x -> return @@ x :: x_acc
+    | NamedVar x -> return x
     | _          -> err @@ InvalidArgInHead { var = arg; error_detail }
-  ) (return []) >>= fun x_acc ->
-  let vars = List.rev x_acc in
+  ) >>= fun vars ->
   combine_column_names ~error_detail table_env table vars
 
 
@@ -1842,22 +1840,19 @@ let negate_comparison_operator = function
 
 let validate_args_in_body ~(error_detail : error_detail) (vars : var list) : (argument list, error) result =
   let open ResultMonad in
-  vars |> List.fold_left (fun res var ->
-    res >>= fun arg_acc ->
+  vars |> mapM (fun var ->
     match var with
-    | NamedVar x -> return @@ ArgNamedVar x :: arg_acc
-    | ConstVar c -> return @@ ArgConst c :: arg_acc
-    | AnonVar    -> return @@ ArgAnon :: arg_acc
+    | NamedVar x -> return @@ ArgNamedVar x
+    | ConstVar c -> return @@ ArgConst c
+    | AnonVar    -> return @@ ArgAnon
     | _          -> err @@ InvalidArgInBody { var; error_detail }
-  ) (return []) >>= fun arg_acc ->
-  return @@ List.rev arg_acc
+  )
 
 
 (* Separate predicates in a given rule body into positive ones, negative ones, and comparisons. *)
 let decompose_body ~(error_detail : error_detail) (body : term list) : (positive_predicate list * negative_predicate list * comparison list, error) result =
   let open ResultMonad in
-  body |> List.fold_left (fun res term ->
-    res >>= fun (pos_acc, neg_acc, comp_acc) ->
+  body |> foldM (fun (pos_acc, neg_acc, comp_acc) term ->
     match term with
     | Rel (Pred (table, vars)) ->
         validate_args_in_body ~error_detail vars >>= fun args ->
@@ -1896,7 +1891,7 @@ let decompose_body ~(error_detail : error_detail) (body : term list) : (positive
         let op_dual = negate_comparison_operator op in
         return (pos_acc, neg_acc, Comparison (op_dual, t1, t2) :: comp_acc)
 
-  ) (return ([], [], [])) >>= fun (pos_acc, neg_acc, comp_acc) ->
+  ) ([], [], []) >>= fun (pos_acc, neg_acc, comp_acc) ->
   return (List.rev pos_acc, List.rev neg_acc, List.rev comp_acc)
 
 
@@ -1913,8 +1908,7 @@ type delta_environment = (instance_name * column_name list) DeltaEnv.t
 
 let assign_or_find_instance_names (delta_env : delta_environment) (poss : positive_predicate list) : ((positive_predicate * instance_name) list * instance_name list, error) result =
   let open ResultMonad in
-  poss |> List.fold_left (fun res pos ->
-    res >>= fun (index, named_pos_acc, referred_instance_acc) ->
+  poss |> foldM (fun (index, named_pos_acc, referred_instance_acc) pos ->
     match pos with
     | PositivePred (table, _args) ->
         let instance = Printf.sprintf "%s_%d" table index in
@@ -1930,7 +1924,7 @@ let assign_or_find_instance_names (delta_env : delta_environment) (poss : positi
               return (index, (pos, instance) :: named_pos_acc, instance :: referred_instance_acc)
         end
 
-  ) (return (0, [], [])) >>= fun (_, named_pos_acc, referred_instance_acc) ->
+  ) (0, [], []) >>= fun (_, named_pos_acc, referred_instance_acc) ->
   return @@ (List.rev named_pos_acc, List.rev referred_instance_acc)
 
 
@@ -2042,8 +2036,7 @@ let combine_delta_column_names (delta_env : delta_environment) (delta_key : delt
 (* Extends `subst` by traversing occurrence of variables in positive predicates. *)
 let extend_substitution_by_traversing_positives ~(error_detail : error_detail) (table_env : table_environment) (delta_env : delta_environment) (named_poss : (positive_predicate * instance_name) list) (subst : Subst.t) : (Subst.t, error) result =
   let open ResultMonad in
-  named_poss |> List.fold_left (fun res (pos, instance) ->
-    res >>= fun subst ->
+  named_poss |> foldM (fun subst (pos, instance) ->
     begin
       match pos with
       | PositivePred (table, args) ->
@@ -2063,8 +2056,7 @@ let extend_substitution_by_traversing_positives ~(error_detail : error_detail) (
       ) subst
     in
     return subst
-  ) (return subst) >>= fun subst ->
-  return subst
+  ) subst
 
 
 (* Extends `subst` by constraints where a variable is equal to a constant
@@ -2163,10 +2155,9 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
   ) subst (return ([], VarMap.empty)) >>= fun (sql_constraint_acc, varmap) ->
 
   (* Adds comparison constraints to SQL constraints: *)
-  comps |> List.fold_left (fun res comp ->
+  comps |> foldM (fun sql_constraint_acc comp ->
     let Comparison (op, vt1, vt2) = comp in
     let error_detail = InComparison comp in
-    res >>= fun sql_constraint_acc ->
     sql_of_vterm_new ~error_detail varmap vt1 >>= fun sql_vt1 ->
     sql_of_vterm_new ~error_detail varmap vt2 >>= fun sql_vt2 ->
     let sql_op =
@@ -2179,11 +2170,10 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
       | GreaterThanOrEqualTo -> SqlRelGeneral ">="
     in
     return @@ SqlConstraint (sql_vt1, sql_op, sql_vt2) :: sql_constraint_acc
-  ) (return sql_constraint_acc) >>= fun sql_constraint_acc ->
+  ) sql_constraint_acc >>= fun sql_constraint_acc ->
 
   (* Adds constraints that stem from negative predicates: *)
-  negs |> List.fold_left (fun res neg ->
-    res >>= fun sql_constraint_acc ->
+  negs |> foldM (fun sql_constraint_acc neg ->
     begin
       match neg with
       | NegativePred (table, args) ->
@@ -2208,23 +2198,22 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
     ) (return []) >>= fun acc ->
     let sql_where = SqlWhere (List.rev acc) in
     return @@ SqlNotExist (sql_from, sql_where) :: sql_constraint_acc
-  ) (return sql_constraint_acc) >>= fun sql_constraint_acc ->
+  ) sql_constraint_acc >>= fun sql_constraint_acc ->
 
   (* Builds the SELECT clause: *)
-  columns_and_vars |> List.fold_left (fun res (column0, x0) ->
-    res >>= fun selected_acc ->
+  columns_and_vars |> mapM (fun (column0, x0) ->
     match varmap |> VarMap.find_opt x0 with
     | None ->
         err @@ HeadVariableDoesNotOccurInBody x0
 
     | Some (Subst.Occurrence (instance, column)) ->
-        return @@ (SqlColumn (Some instance, column), column0) :: selected_acc
+        return (SqlColumn (Some instance, column), column0)
 
     | Some (Subst.EqualToConst c) ->
-        return @@ (SqlConst c, column0) :: selected_acc
+        return (SqlConst c, column0)
 
-  ) (return []) >>= fun selected_acc ->
-  let sql_select = SqlSelect (List.rev selected_acc) in
+  ) >>= fun selecteds ->
+  let sql_select = SqlSelect selecteds in
 
   (* Builds the FROM clause: *)
   let from_clause_entries =
@@ -2267,11 +2256,9 @@ type delta_grouping_state = {
 
 let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule list) : (rule_group list, error) result =
   let open ResultMonad in
-  rules |> List.fold_left (fun res rule ->
-    res >>= fun (state_opt, group_acc) ->
+  rules |> foldM (fun (state_opt, group_acc) rule ->
     let (head, body) = rule in
-    let error_detail = InRule rule in
-    get_spec_from_head ~error_detail table_env head >>= function
+    get_spec_from_head ~error_detail:(InRule rule) table_env head >>= function
     | PredHead (table, columns_and_vars) ->
         let group = PredGroup (table, { columns_and_vars; body }) in
         begin
@@ -2312,13 +2299,13 @@ let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule 
                 }, group :: group_acc)
         end
 
-  ) (return (None, [])) >>= fun (state_opt, group_acc) ->
+  ) (None, []) >>= fun (state_opt, group_acc) ->
   match state_opt with
   | None ->
       return (List.rev group_acc)
 
   | Some state ->
-      let group_last = DeltaGroup(state.current_target, List.rev state.current_accumulated) in
+      let group_last = DeltaGroup (state.current_target, List.rev state.current_accumulated) in
       let groups = List.rev (group_last :: group_acc) in
       return groups
 
@@ -2338,8 +2325,7 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
   in
   let rules = List.rev expr.rules in (* `expr` holds its rules in the reversed order *)
   divide_rules_into_groups table_env rules >>= fun rule_groups ->
-  rule_groups |> List.fold_left (fun res rule_group ->
-    res >>= fun (i, creation_acc, update_acc, delta_env) ->
+  rule_groups |> foldM (fun (i, creation_acc, update_acc, delta_env) rule_group ->
     let temporary_table = Printf.sprintf "temp%d" i in
     match rule_group with
     | PredGroup (table, headless_rule) ->
@@ -2356,8 +2342,7 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
 
     | DeltaGroup (delta_key, headless_rules) ->
         let (delta_kind, table) = delta_key in
-        headless_rules |> List.fold_left (fun res_acc headless_rule ->
-          res_acc >>= fun sql_query_acc ->
+        headless_rules |> mapM (fun headless_rule ->
           let error_detail =
             let rule =
               let vars = headless_rule.columns_and_vars |> List.map (fun (_, x) -> NamedVar x) in
@@ -2367,13 +2352,9 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
             in
             InRule rule
           in
-          convert_rule_to_operation_based_sql ~error_detail table_env delta_env headless_rule >>= fun sql_query ->
-          return @@ sql_query :: sql_query_acc
-        ) (return []) >>= fun sql_query_acc ->
-        let sql_query =
-          let sql_queries = List.rev sql_query_acc in
-          SqlUnion (SqlUnionOp, sql_queries)
-        in
+          convert_rule_to_operation_based_sql ~error_detail table_env delta_env headless_rule
+        ) >>= fun sql_queries ->
+        let sql_query = SqlUnion (SqlUnionOp, sql_queries) in
         get_column_names_from_table ~error_detail:(InGroup delta_key) table_env table >>= fun cols ->
         let delta_env = delta_env |> DeltaEnv.add delta_key (temporary_table, cols) in
         let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
@@ -2391,7 +2372,7 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
         in
         return (i + 1, creation :: creation_acc, update :: update_acc, delta_env)
 
-  ) (return (0, [], [], DeltaEnv.empty)) >>= fun (_, creation_acc, update_acc, _) ->
+  ) (0, [], [], DeltaEnv.empty) >>= fun (_, creation_acc, update_acc, _) ->
   return @@ List.concat [
     List.rev creation_acc;
     List.rev update_acc;
