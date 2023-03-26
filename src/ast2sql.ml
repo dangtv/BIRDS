@@ -2272,19 +2272,19 @@ let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule 
     let (head, body) = rule in
     let error_detail = InRule rule in
     get_spec_from_head ~error_detail table_env head >>= function
-    | PredHead(table, columns_and_vars) ->
-        let group = PredGroup(table, { columns_and_vars; body }) in
+    | PredHead (table, columns_and_vars) ->
+        let group = PredGroup (table, { columns_and_vars; body }) in
         begin
           match state_opt with
           | None ->
               return (None, group :: group_acc)
 
           | Some state ->
-              let group_prev = DeltaGroup(state.current_target, List.rev state.current_accumulated) in
+              let group_prev = DeltaGroup (state.current_target, List.rev state.current_accumulated) in
               return (None, group :: group_prev :: group_acc)
         end
 
-    | DeltaHead(delta_kind, table, columns_and_vars) ->
+    | DeltaHead (delta_kind, table, columns_and_vars) ->
         let delta_key = (delta_kind, table) in
         let intermediate = { columns_and_vars; body } in
         begin
@@ -2304,8 +2304,8 @@ let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule 
                   current_accumulated = intermediate :: state.current_accumulated;
                 }, group_acc)
               else
-                let group = DeltaGroup(state.current_target, List.rev state.current_accumulated) in
-                return @@ (Some {
+                let group = DeltaGroup (state.current_target, List.rev state.current_accumulated) in
+                return (Some {
                   current_target      = delta_key;
                   current_accumulated = [ intermediate ];
                   already_handled     = state.already_handled |> DeltaKeySet.add state.current_target;
@@ -2342,7 +2342,7 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
     res >>= fun (i, creation_acc, update_acc, delta_env) ->
     let temporary_table = Printf.sprintf "temp%d" i in
     match rule_group with
-    | PredGroup(table, headless_rule) ->
+    | PredGroup (table, headless_rule) ->
         let error_detail =
           let rule =
             let head = Pred (table, headless_rule.columns_and_vars |> List.map (fun (_, x) -> NamedVar x)) in
@@ -2354,15 +2354,16 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
         let creation = SqlCreateView (table, sql_query) in
         return (i + 1, creation :: creation_acc, update_acc, delta_env)
 
-    | DeltaGroup(delta_key, headless_rules) ->
+    | DeltaGroup (delta_key, headless_rules) ->
+        let (delta_kind, table) = delta_key in
         headless_rules |> List.fold_left (fun res_acc headless_rule ->
           res_acc >>= fun sql_query_acc ->
           let error_detail =
             let rule =
               let vars = headless_rule.columns_and_vars |> List.map (fun (_, x) -> NamedVar x) in
-              match delta_key with
-              | (Insert, table) -> (Deltainsert (table, vars), headless_rule.body)
-              | (Delete, table) -> (Deltadelete (table, vars), headless_rule.body)
+              match delta_kind with
+              | Insert -> (Deltainsert (table, vars), headless_rule.body)
+              | Delete -> (Deltadelete (table, vars), headless_rule.body)
             in
             InRule rule
           in
@@ -2373,23 +2374,20 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
           let sql_queries = List.rev sql_query_acc in
           SqlUnion (SqlUnionOp, sql_queries)
         in
-        let (delta_kind, table) = delta_key in
-        let error_detail = InGroup delta_key in
-        get_column_names_from_table ~error_detail table_env table >>= fun cols ->
+        get_column_names_from_table ~error_detail:(InGroup delta_key) table_env table >>= fun cols ->
         let delta_env = delta_env |> DeltaEnv.add delta_key (temporary_table, cols) in
         let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
         let update =
           match delta_kind with
           | Insert ->
-              SqlInsertInto
-                (table,
-                  SqlFrom [ (SqlFromTable (None, temporary_table), None) ])
+              SqlInsertInto (table,
+                SqlFrom [ (SqlFromTable (None, temporary_table), None) ])
 
           | Delete ->
-              SqlDeleteFrom
-                (table,
-                  SqlWhere [
-                    SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), None) ], SqlWhere []) ])
+              SqlDeleteFrom (table,
+                SqlWhere [
+                  SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), None) ], SqlWhere []) ])
+                (* TODO: fix this *)
         in
         return (i + 1, creation :: creation_acc, update :: update_acc, delta_env)
 
