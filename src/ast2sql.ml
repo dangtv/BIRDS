@@ -82,7 +82,10 @@ and sql_constraint =
   | SqlExist      of sql_from_clause * sql_where_clause
 
 and sql_where_clause =
-  | SqlWhere of sql_constraint list
+  | SqlWhere of {
+      using       : sql_from_clause_entry list;
+      constraints : sql_constraint list;
+    }
 
 and sql_aggregation_clause =
   sql_group_by * sql_having
@@ -175,21 +178,19 @@ let rec stringify_sql_from_target (target : sql_from_target) : string =
   | SqlFromOther sql_query            -> Printf.sprintf "(%s)" (stringify_sql_query sql_query)
 
 
+and stringify_sql_nonempty_from_clause_list (froms : sql_from_clause_entry list) : string =
+  froms |> List.map (fun (target, name_opt) ->
+    let s_target = stringify_sql_from_target target in
+    match name_opt with
+    | None      -> s_target
+    | Some name -> Printf.sprintf "%s AS %s" s_target name
+  ) |> String.concat ", "
+
+
 and stringify_sql_from_clause (SqlFrom froms : sql_from_clause) : string =
   match froms with
-  | [] ->
-      ""
-
-  | _ :: _ ->
-      let s =
-        froms |> List.map (fun (target, name_opt) ->
-          let s_target = stringify_sql_from_target target in
-          match name_opt with
-          | None      -> s_target
-          | Some name -> Printf.sprintf "%s AS %s" s_target name
-        ) |> String.concat ", "
-      in
-      Printf.sprintf " FROM %s" s
+  | []     -> ""
+  | _ :: _ -> Printf.sprintf " FROM %s" (stringify_sql_nonempty_from_clause_list froms)
 
 
 and stringify_sql_constraint (sql_constraint : sql_constraint) : string =
@@ -211,16 +212,23 @@ and stringify_sql_constraint (sql_constraint : sql_constraint) : string =
       Printf.sprintf "EXISTS ( SELECT *%s%s )" s_from s_where
 
 
-and stringify_sql_where_clause (SqlWhere constraints : sql_where_clause) : string =
-  match constraints with
-  | [] ->
-      ""
+and stringify_sql_where_clause (sql_where : sql_where_clause) : string =
+  let SqlWhere { using; constraints } = sql_where in
+  let s_using =
+    match using with
+    | []     -> ""
+    | _ :: _ -> Printf.sprintf " USING %s" (stringify_sql_nonempty_from_clause_list using)
+  in
+  let s_constraints =
+    match constraints with
+    | [] ->
+        ""
 
-  | _ :: _ ->
-      let s =
-        constraints |> List.map stringify_sql_constraint |> String.concat " AND "
-      in
-      Printf.sprintf " WHERE %s" s
+    | _ :: _ ->
+        let s = constraints |> List.map stringify_sql_constraint |> String.concat " AND " in
+        Printf.sprintf " WHERE %s" s
+  in
+  Printf.sprintf "%s%s" s_using s_constraints
 
 
 and stringify_sql_aggregation_clause (agg : sql_aggregation_clause) : string =
@@ -608,8 +616,8 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                   | _ ->
                       invalid_arg "There is a non-expected type of var in a negated rterm"
                 in
-                let const_lst = List.fold_left2 build_const [] cnames vlst in
-                let where_sql = SqlWhere const_lst in
+                let constraints = List.fold_left2 build_const [] cnames vlst in
+                let where_sql = SqlWhere { using = []; constraints } in
                 SqlNotExist (from_sql, where_sql)
             in
             List.map gen_neg_sql neg_rt
@@ -617,7 +625,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
           let fnrt = unfold_sql_of_negated_rterms idb vt cnt eqt neg_rt in
           (* merge all constraints *)
           let constraints = List.concat [fvt; feqt; fineq; fnrt] in
-          SqlWhere constraints
+          SqlWhere { using = []; constraints }
         in
         let where_sql = unfold_get_where_clause idb vt cnt eqtb ineqs n_rt in
         let agg_sql = get_aggregation_sql vt cnt head agg_eqs agg_ineqs in
@@ -659,7 +667,7 @@ let non_rec_unfold_sql_of_query (dbschema : string) (idb : symtable) (cnt : coln
     SqlQuery {
       select = SqlSelect sel_lst;
       from   = SqlFrom [ sql_from ];
-      where  = SqlWhere [];
+      where  = SqlWhere { using = []; constraints = [] };
       agg    = (SqlGroupBy [], SqlHaving []);
     }
 
@@ -2186,8 +2194,7 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
     end >>= fun (table, columns_and_args) ->
     let instance = "t" in
     let sql_from = SqlFrom [ (SqlFromTable (None, table), Some instance) ] in
-    columns_and_args |> List.fold_left (fun res (column, arg) ->
-      res >>= fun acc ->
+    columns_and_args |> foldM (fun acc (column, arg) ->
       sql_vterm_of_arg ~error_detail varmap arg >>= function
       | None -> (* corresponds to underscore *)
           return @@ acc
@@ -2195,8 +2202,8 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
       | Some sql_vt ->
           return @@ SqlConstraint (SqlColumn (Some instance, column), SqlRelEqual, sql_vt) :: acc
 
-    ) (return []) >>= fun acc ->
-    let sql_where = SqlWhere (List.rev acc) in
+    ) [] >>= fun acc ->
+    let sql_where = SqlWhere { using = []; constraints = List.rev acc } in
     return @@ SqlNotExist (sql_from, sql_where) :: sql_constraint_acc
   ) sql_constraint_acc >>= fun sql_constraint_acc ->
 
@@ -2231,7 +2238,7 @@ let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_en
   let sql_from = SqlFrom from_clause_entries in
 
   (* Builds the WHERE clause: *)
-  let sql_where = SqlWhere (List.rev sql_constraint_acc) in
+  let sql_where = SqlWhere { using = []; constraints = List.rev sql_constraint_acc } in
 
   return @@ SqlQuery {
     select = sql_select;
@@ -2371,13 +2378,14 @@ let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, err
                   | None      -> assert false
                   | Some cols -> cols
                 in
-                SqlWhere (cols |> List.map (fun col ->
-                  SqlConstraint (SqlColumn (Some table, col), SqlRelEqual, SqlColumn (Some temporary_table, col))
-                ))
+                let constraints =
+                  cols |> List.map (fun col ->
+                    SqlConstraint (SqlColumn (Some table, col), SqlRelEqual, SqlColumn (Some temporary_table, col))
+                  )
+                in
+                SqlWhere { using = [ (SqlFromTable (None, temporary_table), None) ]; constraints }
               in
-              SqlDeleteFrom (table,
-                SqlWhere [
-                  SqlExist (SqlFrom [ (SqlFromTable (None, temporary_table), None) ], sql_where) ])
+              SqlDeleteFrom (table, sql_where)
         in
         return (i + 1, creation :: creation_acc, update :: update_acc, delta_env)
 
