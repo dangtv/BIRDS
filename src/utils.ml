@@ -619,3 +619,52 @@ let colored_string color str = match color with
     | "purple" -> "\027[35m"^str^"\027[0m"
     | "brown"	 -> "\027[33m"^str^"\027[0m"
     | _ -> str
+
+
+module ResultMonad : sig
+  val return : 'a -> ('a, 'e) result
+  val err : 'e -> ('a, 'e) result
+  val map_err : ('e1 -> 'e2) -> ('a, 'e1) result -> ('a, 'e2) result
+  val foldM : ('a -> 'b -> ('a, 'e) result) -> 'a -> 'b list -> ('a, 'e) result
+  val mapM : ('a -> ('b, 'e) result) -> 'a list -> ('b list, 'e) result
+  val ( >>= ) : ('a, 'e) result -> ('a -> ('b, 'e) result) -> ('b, 'e) result
+end = struct
+
+  let return v =
+    Ok v
+
+  let err e =
+    Error e
+
+  let ( >>= ) v f =
+    match v with
+    | Ok x    -> f x
+    | Error e -> Error e
+
+  let map_err f v =
+    match v with
+    | Ok x    -> Ok x
+    | Error e -> Error (f e)
+
+  let foldM f acc vs =
+    vs |> List.fold_left (fun res v ->
+      res >>= fun acc ->
+      f acc v
+    ) (return acc)
+
+  let mapM f vs =
+    vs |> foldM (fun acc v ->
+      f v >>= fun y ->
+      return (y :: acc)
+    ) [] >>= fun acc ->
+    return (List.rev acc)
+end
+
+
+type named_var = string
+
+type table_name = string
+
+type column_name = string
+
+type instance_name = string

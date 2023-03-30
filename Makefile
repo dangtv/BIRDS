@@ -5,10 +5,12 @@ DIR_GUARD=@mkdir -p $(@D)
 
 #Name of the final executable file to be generated
 EX_NAME=birds
+TEST_EX_NAME=birds_unit_tests
 
 # source folder
 SOURCE_DIR=src
 LOGIC_SOURCE_DIR=src/logic
+TEST_SOURCE_DIR=src/test
 
 # binary folder for compilation
 BIN_DIR=bin
@@ -17,13 +19,15 @@ RELEASE_DIR = release
 LOGIC_RELEASE_DIR = release/logic
 OBJ_DIR=${SOURCE_DIR}
 LOGIC_OBJ_DIR=${LOGIC_SOURCE_DIR}
+TEST_OBJ_DIR=${TEST_SOURCE_DIR}
 
-OCAMLC_FLAGS=-bin-annot -w -26  -I $(OBJ_DIR) -I $(LOGIC_OBJ_DIR)
+OCAMLC_FLAGS=-bin-annot -w -26  -I $(OBJ_DIR) -I $(LOGIC_OBJ_DIR) -I $(TEST_OBJ_DIR)
 OCAMLOPT_FLAGS=-bin-annot -w -26 -I $(RELEASE_DIR) -I $(LOGIC_RELEASE_DIR)
-OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR)
+OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR) -I $(TEST_SOURCE_DIR)
 
 #Name of the files that are part of the project
 MAIN_FILE=main
+TEST_MAIN_FILE=test_main
 LOGIC_FILES=\
     lib intro formulas prop fol skolem fol_ex\
 
@@ -43,12 +47,22 @@ TOP_FILES=\
 TOP_FILES_WITH_MLI=\
 	parser expr conversion ast2sql ast2theorem\
 
+TEST_ONLY_FILES=\
+    ast2sql_operation_based_conversion_test\
+
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
     $(TOP_FILES) \
 
-.PHONY: all release clean depend #annot
+TEST_FILES=\
+    $(FILES)\
+    $(TEST_ONLY_FILES:%=test/%)\
+
+.PHONY: all release clean depend test #annot
 all: $(BIN_DIR)/$(EX_NAME)
+
+test: $(BIN_DIR)/$(TEST_EX_NAME)
+	./$(BIN_DIR)/$(TEST_EX_NAME)
 
 #Rule for generating the final executable file
 $(BIN_DIR)/$(EX_NAME): $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(MAIN_FILE).cmo
@@ -59,6 +73,14 @@ $(BIN_DIR)/$(EX_NAME): $(FILES:%=$(OBJ_DIR)/%.cmo) $(OBJ_DIR)/$(MAIN_FILE).cmo
 $(OBJ_DIR)/$(MAIN_FILE).cmo: $(FILES:%=$(OBJ_DIR)/%.cmo) $(SOURCE_DIR)/$(MAIN_FILE).ml
 	$(DIR_GUARD)
 	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(OBJ_DIR)/$(MAIN_FILE) -c $(SOURCE_DIR)/$(MAIN_FILE).ml
+
+$(BIN_DIR)/$(TEST_EX_NAME): $(TEST_FILES:%=$(OBJ_DIR)/%.cmo) $(TEST_OBJ_DIR)/$(TEST_MAIN_FILE).cmo
+	$(DIR_GUARD)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -linkpkg $(TEST_FILES:%=$(OBJ_DIR)/%.cmo) $(TEST_OBJ_DIR)/$(TEST_MAIN_FILE).cmo -o $(BIN_DIR)/$(TEST_EX_NAME)
+
+$(TEST_OBJ_DIR)/$(TEST_MAIN_FILE).cmo: $(TEST_FILES:%=$(OBJ_DIR)/%.cmo) $(TEST_SOURCE_DIR)/$(TEST_MAIN_FILE).ml
+	$(DIR_GUARD)
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -thread -o $(TEST_OBJ_DIR)/$(TEST_MAIN_FILE) -c $(TEST_SOURCE_DIR)/$(TEST_MAIN_FILE).ml
 
 #Special rules for creating the lexer and parser
 $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/parser.mli: $(SOURCE_DIR)/parser.mly
@@ -91,7 +113,7 @@ $(OBJ_DIR)/%.cmi $(OBJ_DIR)/%.cmo $(OBJ_DIR)/%.cmt: $(SOURCE_DIR)/%.ml
 include depend
 
 clean:
-	rm -r -f $(BIN_DIR)/* $(RELEASE_DIR)/* $(SOURCE_DIR)/parser.mli $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/lexer.ml $(OBJ_DIR)/*.cmt $(LOGIC_OBJ_DIR)/*.cmt $(OBJ_DIR)/*.cmti $(LOGIC_OBJ_DIR)/*.cmti $(OBJ_DIR)/*.cmo $(LOGIC_OBJ_DIR)/*.cmo $(OBJ_DIR)/*.cmi $(LOGIC_OBJ_DIR)/*.cmi
+	rm -r -f $(BIN_DIR)/* $(RELEASE_DIR)/* $(SOURCE_DIR)/parser.mli $(SOURCE_DIR)/parser.ml $(SOURCE_DIR)/lexer.ml $(OBJ_DIR)/*.cmt $(LOGIC_OBJ_DIR)/*.cmt $(TEST_OBJ_DIR)/*.cmt $(OBJ_DIR)/*.cmti $(LOGIC_OBJ_DIR)/*.cmti $(TEST_OBJ_DIR)/*.cmti $(OBJ_DIR)/*.cmo $(LOGIC_OBJ_DIR)/*.cmo $(TEST_OBJ_DIR)/*.cmo $(OBJ_DIR)/*.cmi $(LOGIC_OBJ_DIR)/*.cmi $(TEST_OBJ_DIR)/*.cmi
 
 depend:
 	ocamlfind ocamldep $(OCAMLDEP_FLAGS) $(FILES:%=$(SOURCE_DIR)/%.ml) $(SOURCE_DIR)/lexer.mll $(SOURCE_DIR)/parser.mli |sed -e 's/$(SOURCE_DIR)/$(BIN_DIR)/g' > depend

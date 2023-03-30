@@ -35,17 +35,23 @@ type sql_operator =
   | SqlRelNotEqual
   | SqlRelGeneral of string
 
+type sql_schema_name = string
+
+type sql_table_name = string
+
 type sql_column_name = string
+
+type sql_instance_name = string
 
 type sql_vterm =
   | SqlConst    of Expr.const
-  | SqlColumn   of sql_column_name
+  | SqlColumn   of sql_instance_name option * sql_column_name
   | SqlUnaryOp  of sql_unary_operator * sql_vterm
   | SqlBinaryOp of sql_binary_operator * sql_vterm * sql_vterm
   | SqlAggVar   of sql_agg_function * sql_vterm
 
 type sql_select_clause =
-  | SqlSelect of (sql_vterm * string) list
+  | SqlSelect of (sql_vterm * sql_column_name) list
 
 type sql_comp_const =
   | SqlCompConst of sql_vterm * sql_operator * const
@@ -56,12 +62,16 @@ type sql_group_by =
 type sql_having =
   | SqlHaving of sql_comp_const list
 
+type sql_union_operation =
+  | SqlUnionOp
+  | SqlUnionAllOp
+
 type sql_from_target =
-  | SqlFromColumn of sql_column_name
-  | SqlFromOther  of sql_union
+  | SqlFromTable of sql_schema_name option * sql_table_name
+  | SqlFromOther of sql_query
 
 and sql_from_clause_entry =
-  sql_from_target * sql_column_name
+  sql_from_target * sql_instance_name option
 
 and sql_from_clause =
   | SqlFrom of sql_from_clause_entry list
@@ -69,9 +79,13 @@ and sql_from_clause =
 and sql_constraint =
   | SqlConstraint of sql_vterm * sql_operator * sql_vterm
   | SqlNotExist   of sql_from_clause * sql_where_clause
+  | SqlExist      of sql_from_clause * sql_where_clause
 
 and sql_where_clause =
-  | SqlWhere of sql_constraint list
+  | SqlWhere of {
+      using       : sql_from_clause_entry list;
+      constraints : sql_constraint list;
+    }
 
 and sql_aggregation_clause =
   sql_group_by * sql_having
@@ -84,13 +98,13 @@ and sql_query =
       agg    : sql_aggregation_clause;
     }
   | SqlQuerySelectWhereFalse
-
-and sql_union_operation =
-  | SqlUnionOp
-  | SqlUnionAllOp
-
-and sql_union =
   | SqlUnion of sql_union_operation * sql_query list
+
+type sql_operation =
+  | SqlCreateTemporaryTable of table_name * sql_query
+  | SqlCreateView           of table_name * sql_query
+  | SqlInsertInto           of table_name * sql_from_clause
+  | SqlDeleteFrom           of table_name * sql_where_clause
 
 
 let rec stringify_sql_vterm (vt : sql_vterm) : string =
@@ -98,8 +112,11 @@ let rec stringify_sql_vterm (vt : sql_vterm) : string =
   | SqlConst c ->
       string_of_const c
 
-  | SqlColumn column_name ->
+  | SqlColumn (None, column_name) ->
       column_name
+
+  | SqlColumn (Some instance_name, column_name) ->
+      Printf.sprintf "%s.%s" instance_name column_name
 
   | SqlUnaryOp (un_op, vt1) ->
       let s_op =
@@ -156,25 +173,24 @@ let stringify_sql_comp_const (SqlCompConst (vt, op, c) : sql_comp_const) : strin
 
 let rec stringify_sql_from_target (target : sql_from_target) : string =
   match target with
-  | SqlFromColumn column_name ->
-      column_name
+  | SqlFromTable (None, table)        -> table
+  | SqlFromTable (Some schema, table) -> Printf.sprintf "%s.%s" schema table
+  | SqlFromOther sql_query            -> Printf.sprintf "(%s)" (stringify_sql_query sql_query)
 
-  | SqlFromOther sql_union ->
-      Printf.sprintf "(%s)" (stringify_sql_union sql_union)
+
+and stringify_sql_nonempty_from_clause_list (froms : sql_from_clause_entry list) : string =
+  froms |> List.map (fun (target, name_opt) ->
+    let s_target = stringify_sql_from_target target in
+    match name_opt with
+    | None      -> s_target
+    | Some name -> Printf.sprintf "%s AS %s" s_target name
+  ) |> String.concat ", "
 
 
 and stringify_sql_from_clause (SqlFrom froms : sql_from_clause) : string =
   match froms with
-  | [] ->
-      ""
-
-  | _ :: _ ->
-      let s =
-        froms |> List.map (fun (target, name) ->
-          Printf.sprintf "%s AS %s" (stringify_sql_from_target target) name
-        ) |> String.concat ", "
-      in
-      Printf.sprintf "FROM %s" s
+  | []     -> ""
+  | _ :: _ -> Printf.sprintf " FROM %s" (stringify_sql_nonempty_from_clause_list froms)
 
 
 and stringify_sql_constraint (sql_constraint : sql_constraint) : string =
@@ -188,19 +204,31 @@ and stringify_sql_constraint (sql_constraint : sql_constraint) : string =
   | SqlNotExist (from, where) ->
       let s_from = stringify_sql_from_clause from in
       let s_where = stringify_sql_where_clause where in
-      Printf.sprintf "NOT EXISTS ( SELECT * %s %s )" s_from s_where
+      Printf.sprintf "NOT EXISTS ( SELECT *%s%s )" s_from s_where
+
+  | SqlExist (from, where) ->
+      let s_from = stringify_sql_from_clause from in
+      let s_where = stringify_sql_where_clause where in
+      Printf.sprintf "EXISTS ( SELECT *%s%s )" s_from s_where
 
 
-and stringify_sql_where_clause (SqlWhere constraints : sql_where_clause) : string =
-  match constraints with
-  | [] ->
-      ""
+and stringify_sql_where_clause (sql_where : sql_where_clause) : string =
+  let SqlWhere { using; constraints } = sql_where in
+  let s_using =
+    match using with
+    | []     -> ""
+    | _ :: _ -> Printf.sprintf " USING %s" (stringify_sql_nonempty_from_clause_list using)
+  in
+  let s_constraints =
+    match constraints with
+    | [] ->
+        ""
 
-  | _ :: _ ->
-      let s =
-        constraints |> List.map stringify_sql_constraint |> String.concat " AND "
-      in
-      Printf.sprintf "WHERE %s" s
+    | _ :: _ ->
+        let s = constraints |> List.map stringify_sql_constraint |> String.concat " AND " in
+        Printf.sprintf " WHERE %s" s
+  in
+  Printf.sprintf "%s%s" s_using s_constraints
 
 
 and stringify_sql_aggregation_clause (agg : sql_aggregation_clause) : string =
@@ -208,7 +236,7 @@ and stringify_sql_aggregation_clause (agg : sql_aggregation_clause) : string =
   let s_group_by =
     match column_names with
     | []     -> ""
-    | _ :: _ -> Printf.sprintf "GROUP BY %s" (String.concat ", " column_names)
+    | _ :: _ -> Printf.sprintf " GROUP BY %s" (String.concat ", " column_names)
   in
   let s_having =
     match comp_consts with
@@ -217,9 +245,9 @@ and stringify_sql_aggregation_clause (agg : sql_aggregation_clause) : string =
 
     | _ :: _ ->
         let s = comp_consts |> List.map stringify_sql_comp_const |> String.concat " AND " in
-        Printf.sprintf "HAVING %s" s
+        Printf.sprintf " HAVING %s" s
   in
-  Printf.sprintf "%s %s" s_group_by s_having
+  Printf.sprintf "%s%s" s_group_by s_having
 
 
 and stringify_sql_query (sql : sql_query) : string =
@@ -232,16 +260,30 @@ and stringify_sql_query (sql : sql_query) : string =
       let s_from = stringify_sql_from_clause from in
       let s_where = stringify_sql_where_clause where in
       let s_agg = stringify_sql_aggregation_clause agg in
-      Printf.sprintf "%s %s %s %s" s_select s_from s_where s_agg
+      Printf.sprintf "%s%s%s%s" s_select s_from s_where s_agg
+
+  | SqlUnion (union_op, queries) ->
+      let sep =
+        match union_op with
+        | SqlUnionOp    -> " UNION "
+        | SqlUnionAllOp -> " UNION ALL "
+      in
+      queries |> List.map stringify_sql_query |> String.concat sep
 
 
-and stringify_sql_union (SqlUnion (union_op, queries) : sql_union) : string =
-  let sep =
-    match union_op with
-    | SqlUnionOp    -> " UNION "
-    | SqlUnionAllOp -> " UNION ALL "
-  in
-  queries |> List.map stringify_sql_query |> String.concat sep
+let stringify_sql_operation (sql_op : sql_operation) : string =
+  match sql_op with
+  | SqlCreateTemporaryTable (table, sql_query) ->
+      Printf.sprintf "CREATE TEMPORARY TABLE %s AS %s;" table (stringify_sql_query sql_query)
+
+  | SqlCreateView (table, sql_query) ->
+      Printf.sprintf "CREATE VIEW %s AS %s;" table (stringify_sql_query sql_query)
+
+  | SqlInsertInto (table, sql_from_clause) ->
+      Printf.sprintf "INSERT INTO %s SELECT *%s;" table (stringify_sql_from_clause sql_from_clause)
+
+  | SqlDeleteFrom (table, sql_where_clause) ->
+      Printf.sprintf "DELETE FROM %s%s;" table (stringify_sql_where_clause sql_where_clause)
 
 
 (** Given an aggregate function name, checks if it is supported and returns it. *)
@@ -285,7 +327,7 @@ let sql_of_vterm (vt : vartab) (eqt : eqtab) (expr : vterm) : sql_vterm =
          * is the name of the respective rterm's table column *)
         if Hashtbl.mem vt (string_of_var variable) then
           let column = List.hd (Hashtbl.find vt (string_of_var variable)) in
-          SqlColumn column
+          SqlColumn (None, column)
         (* If the variable does not appear in a positive rterm, but
          * it does in an equality value, then the value is the eq's evaluation *)
         else if Hashtbl.mem eqt (Var variable) then
@@ -316,7 +358,7 @@ let var_to_col (vt : vartab) (eqt : eqtab) (key : symtkey) (variable : var) : sq
    * is the name of the respective rterm's table column *)
   if Hashtbl.mem vt (string_of_var variable) then
     let column = List.hd (Hashtbl.find vt (string_of_var variable)) in
-    SqlColumn column
+    SqlColumn (None, column)
   (* If the variable does not appear in a positive rterm, but
    * it does in an equality value, then the value is the eq's
    * constant, the var has to be removed from the eqtab *)
@@ -428,7 +470,7 @@ let get_aggregation_sql (vt : vartab) (cnt : colnamtab) (head : rterm) (agg_eqs 
     (group_by_sql, having_sql)
 
 
-let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt : colnamtab) (goal : symtkey) : sql_union =
+let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt : colnamtab) (goal : symtkey) : sql_query =
   (* get all the rule having this query in head *)
   (* print_endline ("Reach " ^ (string_of_symtkey goal)); *)
   if not (Hashtbl.mem idb goal) then
@@ -458,13 +500,13 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
               (* generate sql query for idb predicate *)
               let idb_sql = non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname, arity)  in
               let pn_a = pname ^ "_a" ^ (string_of_int arity) in
-              (SqlFromOther idb_sql, pn_a ^ "_" ^ (string_of_int n))
+              (SqlFromOther idb_sql, Some (pn_a ^ "_" ^ (string_of_int n)))
             in
             let edb_alias (pname : string) (arity : int) (n : int) : sql_from_clause_entry =
               if str_contains pname "__tmp_" then
-                (SqlFromColumn pname, pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
+                (SqlFromTable (None, pname), Some (pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n)))
               else
-                (SqlFromColumn (dbschema ^ "." ^ pname), pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n))
+                (SqlFromTable (Some dbschema, pname), Some (pname ^ "_a" ^ (string_of_int arity) ^ "_" ^ (string_of_int n)))
             in
             let set_alias (rterm : rterm) (a_lst, n) =
               let pname = get_rterm_predname rterm in
@@ -487,7 +529,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
             | [] ->
                 acc
             | hd :: tl ->
-                let eq_rels el = SqlConstraint (SqlColumn hd, SqlRelEqual, SqlColumn el) in
+                let eq_rels el = SqlConstraint (SqlColumn (None, hd), SqlRelEqual, SqlColumn (None, el)) in
                 (List.map eq_rels tl) :: acc
           in
           let fvt = List.flatten (Hashtbl.fold var_const vt []) in
@@ -523,21 +565,21 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                 (* Get the from sql of the rterm *)
                 let from_sql : sql_from_clause =
                   if Hashtbl.mem idb key then
-                    SqlFrom [ (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity)), alias) ]
+                    SqlFrom [ (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema idb cnt (pname,arity)), Some alias) ]
                   else if str_contains pname "__tmp_" then
-                    SqlFrom [ (SqlFromColumn pname, alias) ]
+                    SqlFrom [ (SqlFromTable (None, pname), Some alias) ]
                   else
-                    SqlFrom [ (SqlFromColumn (dbschema ^ "." ^ pname), alias) ]
+                    SqlFrom [ (SqlFromTable (Some dbschema, pname), Some alias) ]
                 in
                 (* print_endline "___neg sql___"; print_string from_sql; print_endline "___neg sql___"; *)
                 (* Get the where sql of the rterm *)
                 let build_const (acc : sql_constraint list) (col : sql_column_name) (var : var) : sql_constraint list =
-                  let left = SqlColumn (alias ^ "." ^ col) in
+                  let left = SqlColumn (Some alias, col) in
                   match var with
                   | NamedVar vn ->
                       let right =
                         if Hashtbl.mem vt vn then
-                          SqlColumn (List.hd (Hashtbl.find vt vn))
+                          SqlColumn (None, List.hd (Hashtbl.find vt vn))
                         else if Hashtbl.mem eqt (Var var) then
                           sql_of_vterm vt eqt (Hashtbl.find eqt (Var var))
                         else
@@ -553,7 +595,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                       let vn = string_of_var var in
                       let right =
                         if Hashtbl.mem vt vn then
-                          SqlColumn (List.hd (Hashtbl.find vt vn))
+                          SqlColumn (None, List.hd (Hashtbl.find vt vn))
                         else if Hashtbl.mem eqt (Var var) then
                           sql_of_vterm vt eqt (Hashtbl.find eqt (Var var))
                         else
@@ -574,8 +616,8 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
                   | _ ->
                       invalid_arg "There is a non-expected type of var in a negated rterm"
                 in
-                let const_lst = List.fold_left2 build_const [] cnames vlst in
-                let where_sql = SqlWhere const_lst in
+                let constraints = List.fold_left2 build_const [] cnames vlst in
+                let where_sql = SqlWhere { using = []; constraints } in
                 SqlNotExist (from_sql, where_sql)
             in
             List.map gen_neg_sql neg_rt
@@ -583,7 +625,7 @@ let rec non_rec_unfold_sql_of_symtkey (dbschema : string) (idb : symtable) (cnt 
           let fnrt = unfold_sql_of_negated_rterms idb vt cnt eqt neg_rt in
           (* merge all constraints *)
           let constraints = List.concat [fvt; feqt; fineq; fnrt] in
-          SqlWhere constraints
+          SqlWhere { using = []; constraints }
         in
         let where_sql = unfold_get_where_clause idb vt cnt eqtb ineqs n_rt in
         let agg_sql = get_aggregation_sql vt cnt head agg_eqs agg_ineqs in
@@ -616,15 +658,16 @@ let non_rec_unfold_sql_of_query (dbschema : string) (idb : symtable) (cnt : coln
   else
     let cols = Hashtbl.find cnt (symtkey_of_rterm query) in
     let sel_lst =
-      List.map (fun (a, b) -> (SqlColumn (qrule_alias ^ "." ^ a), b)) (List.combine cols cols_by_var)
+      List.map (fun (a, b) -> (SqlColumn (Some qrule_alias, a), b)) (List.combine cols cols_by_var)
     in
     let sql_from =
-      (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))), qrule_alias)
+      (SqlFromOther (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))),
+        Some qrule_alias)
     in
     SqlQuery {
       select = SqlSelect sel_lst;
       from   = SqlFrom [ sql_from ];
-      where  = SqlWhere [];
+      where  = SqlWhere { using = []; constraints = [] };
       agg    = (SqlGroupBy [], SqlHaving []);
     }
 
@@ -915,7 +958,7 @@ let non_rec_unfold_sql_of_update (dbschema : string) (log : bool) (optimize : bo
             SELECT array_agg(tbl) INTO array_"^ (get_rterm_predname delta)^" FROM ("^
             "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").*
             FROM ("^
-            (stringify_sql_union (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))) ^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl"
+            (stringify_sql_query (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule)))) ^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl"
             (* ^"
             EXCEPT
             SELECT * FROM  "^dbschema^"."^ pname  *)
@@ -951,7 +994,7 @@ let non_rec_unfold_sql_of_update (dbschema : string) (log : bool) (optimize : bo
             SELECT array_agg(tbl) INTO array_"^ (get_rterm_predname delta)^" FROM (" ^
             "SELECT "^"(ROW("^(String.concat "," (Hashtbl.find cnt (symtkey_of_rterm delta))) ^") :: "^dbschema^"."^ pname ^").*
             FROM ("^
-            (stringify_sql_union (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))))^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl;",
+            (stringify_sql_query (non_rec_unfold_sql_of_symtkey dbschema local_idb cnt (symtkey_of_rterm (rule_head qrule))))^") AS "^(get_rterm_predname delta)^"_extra_alias) AS tbl;",
             (* delete each tuple *)
             "
             IF array_"^ (get_rterm_predname delta)^" IS DISTINCT FROM NULL THEN
@@ -1566,3 +1609,788 @@ AS $$
 $$;
 "
     in trigger_pgsql
+
+
+module VarMap = Map.Make(String)
+
+(* A module for substitutions that map variables to
+
+   - a pair of a table instance and a column name, or
+   - a constant value. *)
+module Subst : sig
+
+  type entry =
+    | Occurrence   of instance_name * column_name
+    | EqualToConst of const
+
+  type t
+
+  val empty : t
+
+  val add : named_var -> entry -> t -> t
+
+  val fold : (named_var -> entry * entry list -> 'a -> 'a) -> t -> 'a -> 'a
+
+end = struct
+
+  type entry =
+    | Occurrence   of instance_name * column_name
+    | EqualToConst of const
+
+  module InternalMap = VarMap
+
+  type t = (entry * entry list) InternalMap.t
+
+
+  let empty =
+    InternalMap.empty
+
+
+  let add x entry subst =
+    match subst |> InternalMap.find_opt x with
+    | None ->
+        subst |> InternalMap.add x (entry, [])
+
+    | Some (entry0, entry_acc) ->
+        subst |> InternalMap.add x (entry0, entry :: entry_acc)
+
+
+  let fold f subst acc =
+    InternalMap.fold (fun x (entry0, entry_acc) acc ->
+      f x (entry0, List.rev entry_acc) acc
+    ) subst acc
+
+end
+
+type argument =
+  | ArgNamedVar of named_var
+  | ArgConst    of const
+  | ArgAnon
+
+type delta_kind =
+  | Insert
+  | Delete
+
+type delta_key = delta_kind * table_name
+
+type positive_predicate =
+  | PositivePred  of table_name * argument list
+  | PositiveDelta of delta_key * argument list
+
+type negative_predicate =
+  | NegativePred  of table_name * argument list
+  | NegativeDelta of delta_key * argument list
+
+type comparison_operator =
+  | EqualTo
+  | NotEqualTo
+  | LessThan
+  | GreaterThan
+  | LessThanOrEqualTo
+  | GreaterThanOrEqualTo
+
+let show_comparison_operator = function
+  | EqualTo -> "=="
+  | NotEqualTo -> "<>"
+  | LessThan -> "<"
+  | GreaterThan -> ">"
+  | LessThanOrEqualTo -> "<="
+  | GreaterThanOrEqualTo -> ">="
+
+type comparison =
+  | Comparison of comparison_operator * vterm * vterm
+
+module TableEnv = Map.Make(String)
+
+type table_environment = (column_name list) TableEnv.t
+
+type error_detail =
+  | InRule       of rule
+  | InComparison of comparison
+  | InGroup      of delta_key
+
+type error =
+  | InvalidArgInHead of { var : var; error_detail : error_detail }
+  | InvalidArgInBody of { var : var; error_detail : error_detail }
+  | ArityMismatch of { expected : int; got : int }
+  | UnknownComparisonOperator of string
+  | EqualToMoreThanOneConstant of { variable : named_var; const1 : const; const2 : const }
+  | HeadVariableDoesNotOccurInBody of named_var
+  | UnexpectedNamedVar of { named_var : named_var; error_detail : error_detail }
+  | UnexpectedVarForm of { var : var; error_detail : error_detail }
+  | UnknownBinaryOperator of { op : string; error_detail : error_detail }
+  | UnknownUnaryOperator of { op : string; error_detail : error_detail }
+  | UnknownTable of { table : table_name; error_detail : error_detail }
+  | HasMoreThanOneRuleGroup of delta_key
+  | DeltaNotFound of delta_key
+
+
+let show_error_detail (error_detail : error_detail) =
+  match error_detail with
+  | InRule rule ->
+      Printf.sprintf "in rule %s" (string_of_rule rule)
+  | InComparison (Comparison (op, vt1, vt2)) ->
+      Printf.sprintf "in comparison %s %s %s"
+        (string_of_vterm vt1) (show_comparison_operator op) (string_of_vterm vt2)
+  | InGroup (Insert, table) ->
+      Printf.sprintf "in group +%s" table
+  | InGroup (Delete, table) ->
+      Printf.sprintf "in group -%s" table
+
+
+let show_error = function
+  | InvalidArgInHead { var; error_detail } ->
+      Printf.sprintf "invalid arg %s in the rule head; %s" (string_of_var var) (show_error_detail error_detail)
+  | InvalidArgInBody { var; error_detail } ->
+      Printf.sprintf "invalid arg %s in the rule body; %s" (string_of_var var) (show_error_detail error_detail)
+  | ArityMismatch r ->
+      Printf.sprintf "arity mismatch (expected: %d, got: %d)" r.expected r.got
+  | UnknownComparisonOperator op ->
+      Printf.sprintf "unknown comparison operator %s" op
+  | EqualToMoreThanOneConstant r ->
+      Printf.sprintf "variable %s are required to be equal to more than one constants; %s and %s"
+        r.variable (string_of_const r.const1) (string_of_const r.const2)
+  | HeadVariableDoesNotOccurInBody named_var ->
+      Printf.sprintf "variable %s in a rule head does not occur in the rule body" named_var
+  | UnexpectedNamedVar { named_var; error_detail } ->
+      Printf.sprintf "unexpected named variable %s; %s" named_var (show_error_detail error_detail)
+  | UnexpectedVarForm { var; error_detail } ->
+      Printf.sprintf "unexpected variable form: %s; %s" (string_of_var var) (show_error_detail error_detail)
+  | UnknownBinaryOperator { op; error_detail } ->
+      Printf.sprintf "unknown binary operator %s; %s" op (show_error_detail error_detail)
+  | UnknownUnaryOperator { op; error_detail } ->
+      Printf.sprintf "unknown unary operator %s; %s" op (show_error_detail error_detail)
+  | UnknownTable { table; error_detail } ->
+      Printf.sprintf "unknown table %s; %s" table (show_error_detail error_detail)
+  | HasMoreThanOneRuleGroup (Insert, table) ->
+      Printf.sprintf "+%s has more than one rule group" table
+  | HasMoreThanOneRuleGroup (Delete, table) ->
+      Printf.sprintf "-%s has more than one rule group" table
+  | DeltaNotFound (Insert, table) ->
+      Printf.sprintf "no rule has already been defined for +%s" table
+  | DeltaNotFound (Delete, table) ->
+      Printf.sprintf "no rule has already been defined for -%s" table
+
+
+let get_column_names_from_table ~(error_detail : error_detail) (table_env : table_environment) (table : table_name) : (column_name list, error) result =
+  let open ResultMonad in
+  match table_env |> TableEnv.find_opt table with
+  | None      -> err @@ UnknownTable { table; error_detail }
+  | Some cols -> return cols
+
+
+(* Gets the list `cols` of column names of table named `table` and zips it with `xs`.
+   Returns `Error _` when the length of `xs` is different from that of `cols`. *)
+let combine_column_names ~(error_detail : error_detail) (table_env : table_environment) (table : table_name) (xs : 'a list) : ((column_name * 'a) list, error) result =
+  let open ResultMonad in
+  get_column_names_from_table ~error_detail table_env table >>= fun columns ->
+  try
+    return (List.combine columns xs)
+  with
+  | _ ->
+      err @@ ArityMismatch {
+        expected = List.length columns;
+        got      = List.length xs;
+      }
+
+
+let validate_args_in_head ~(error_detail : error_detail) (table_env : table_environment) (table : table_name) (args : var list) =
+  let open ResultMonad in
+  args |> mapM (fun arg ->
+    match arg with
+    | NamedVar x -> return x
+    | _          -> err @@ InvalidArgInHead { var = arg; error_detail }
+  ) >>= fun vars ->
+  combine_column_names ~error_detail table_env table vars
+
+
+type head_spec =
+  | PredHead  of table_name * (column_name * named_var) list
+  | DeltaHead of delta_kind * table_name * (column_name * named_var) list
+
+
+let get_spec_from_head ~(error_detail : error_detail) (table_env : table_environment) (head : rterm) : (head_spec, error) result =
+  let open ResultMonad in
+  match head with
+  | Pred (table, args) ->
+      validate_args_in_head ~error_detail table_env table args >>= fun columns_and_vars ->
+      return @@ PredHead(table, columns_and_vars)
+
+  | Deltainsert (table, args) ->
+      validate_args_in_head ~error_detail table_env table args >>= fun columns_and_vars ->
+      return @@ DeltaHead(Insert, table, columns_and_vars)
+
+  | Deltadelete (table, args) ->
+      validate_args_in_head ~error_detail table_env table args >>= fun columns_and_vars ->
+      return @@ DeltaHead(Delete, table, columns_and_vars)
+
+
+let get_comparison_operator (op_str : string) : (comparison_operator, error) result =
+  let open ResultMonad in
+  match op_str with
+  | "="  -> return EqualTo
+  | "<>" -> return NotEqualTo
+  | "<"  -> return LessThan
+  | ">"  -> return GreaterThan
+  | "<=" -> return LessThanOrEqualTo
+  | ">=" -> return GreaterThanOrEqualTo
+  | _    -> err @@ UnknownComparisonOperator op_str
+
+
+let negate_comparison_operator = function
+  | EqualTo              -> NotEqualTo
+  | NotEqualTo           -> EqualTo
+  | LessThan             -> GreaterThanOrEqualTo
+  | GreaterThan          -> LessThanOrEqualTo
+  | LessThanOrEqualTo    -> GreaterThan
+  | GreaterThanOrEqualTo -> LessThan
+
+
+let validate_args_in_body ~(error_detail : error_detail) (vars : var list) : (argument list, error) result =
+  let open ResultMonad in
+  vars |> mapM (fun var ->
+    match var with
+    | NamedVar x -> return @@ ArgNamedVar x
+    | ConstVar c -> return @@ ArgConst c
+    | AnonVar    -> return @@ ArgAnon
+    | _          -> err @@ InvalidArgInBody { var; error_detail }
+  )
+
+
+(* Separate predicates in a given rule body into positive ones, negative ones, and comparisons. *)
+let decompose_body ~(error_detail : error_detail) (body : term list) : (positive_predicate list * negative_predicate list * comparison list, error) result =
+  let open ResultMonad in
+  body |> foldM (fun (pos_acc, neg_acc, comp_acc) term ->
+    match term with
+    | Rel (Pred (table, vars)) ->
+        validate_args_in_body ~error_detail vars >>= fun args ->
+        return (PositivePred (table, args) :: pos_acc, neg_acc, comp_acc)
+
+    | Rel (Deltainsert (table, vars)) ->
+        validate_args_in_body ~error_detail vars >>= fun args ->
+        let delta_key = (Insert, table) in
+        return (PositiveDelta (delta_key, args) :: pos_acc, neg_acc, comp_acc)
+
+    | Rel (Deltadelete (table, vars)) ->
+        validate_args_in_body ~error_detail vars >>= fun args ->
+        let delta_key = (Delete, table) in
+        return (PositiveDelta (delta_key, args) :: pos_acc, neg_acc, comp_acc)
+
+    | Not (Pred (table, vars)) ->
+        validate_args_in_body ~error_detail vars >>= fun args ->
+        return (pos_acc, NegativePred (table, args) :: neg_acc, comp_acc)
+
+    | Not (Deltainsert (table, vars)) ->
+        validate_args_in_body ~error_detail vars >>= fun args ->
+        let delta_key = (Insert, table) in
+        return (pos_acc, NegativeDelta (delta_key, args) :: neg_acc, comp_acc)
+
+    | Not (Deltadelete (table, vars)) ->
+        validate_args_in_body ~error_detail vars >>= fun args ->
+        let delta_key = (Delete, table) in
+        return (pos_acc, NegativeDelta (delta_key, args) :: neg_acc, comp_acc)
+
+    | Equat (Equation (op_str, t1, t2)) ->
+        get_comparison_operator op_str >>= fun op ->
+        return (pos_acc, neg_acc, Comparison (op, t1, t2) :: comp_acc)
+
+    | Noneq (Equation (op_str, t1, t2)) ->
+        get_comparison_operator op_str >>= fun op ->
+        let op_dual = negate_comparison_operator op in
+        return (pos_acc, neg_acc, Comparison (op_dual, t1, t2) :: comp_acc)
+
+  ) ([], [], []) >>= fun (pos_acc, neg_acc, comp_acc) ->
+  return (List.rev pos_acc, List.rev neg_acc, List.rev comp_acc)
+
+
+module DeltaKey = struct
+  type t = delta_key
+
+  let compare = Stdlib.compare
+end
+
+module DeltaEnv = Map.Make(DeltaKey)
+
+type delta_environment = (instance_name * column_name list) DeltaEnv.t
+
+
+let assign_or_find_instance_names (delta_env : delta_environment) (poss : positive_predicate list) : ((positive_predicate * instance_name) list * instance_name list, error) result =
+  let open ResultMonad in
+  poss |> foldM (fun (index, named_pos_acc, referred_instance_acc) pos ->
+    match pos with
+    | PositivePred (table, _args) ->
+        let instance = Printf.sprintf "%s_%d" table index in
+        return (index + 1, (pos, instance) :: named_pos_acc, referred_instance_acc)
+
+    | PositiveDelta (delta_key, _args) ->
+        begin
+          match delta_env |> DeltaEnv.find_opt delta_key with
+          | None ->
+              err @@ DeltaNotFound delta_key
+
+          | Some (instance, _cols) ->
+              return (index, (pos, instance) :: named_pos_acc, instance :: referred_instance_acc)
+        end
+
+  ) (0, [], []) >>= fun (_, named_pos_acc, referred_instance_acc) ->
+  return @@ (List.rev named_pos_acc, List.rev referred_instance_acc)
+
+
+type as_const_or_var =
+  | AsNamedVar of named_var
+  | AsConst    of const
+  | NotConstOrNamedVar
+
+
+let as_const_or_var (vt : vterm) : as_const_or_var =
+  match vt with
+  | Const c          -> AsConst c
+  | Var (NamedVar x) -> AsNamedVar x
+  | Var (ConstVar c) -> AsConst c
+  | _                -> NotConstOrNamedVar
+
+
+let get_sql_binary_operation  ~(error_detail : error_detail) (bin_op_str : string) : (sql_binary_operator, error) result =
+  let open ResultMonad in
+  match bin_op_str with
+  | "+" -> return SqlPlus
+  | "-" -> return SqlMinus
+  | "*" -> return SqlTimes
+  | "/" -> return SqlDivides
+  | "^" -> return SqlLor
+  | _   -> err @@ UnknownBinaryOperator { op = bin_op_str; error_detail }
+
+
+let get_sql_unary_operation ~(error_detail : error_detail) (un_op_str : string) : (sql_unary_operator, error) result =
+  let open ResultMonad in
+  match un_op_str with
+  | "-" -> return SqlNegate
+  | _   -> err @@ UnknownUnaryOperator { op = un_op_str; error_detail }
+
+
+let get_named_var (varmap : Subst.entry VarMap.t) (x : named_var) : sql_vterm option =
+  let open ResultMonad in
+  match varmap |> VarMap.find_opt x with
+  | None                                       -> None
+  | Some (Subst.Occurrence (instance, column)) -> Some (SqlColumn (Some instance, column))
+  | Some (Subst.EqualToConst c)                -> Some (SqlConst c)
+
+
+let sql_of_vterm_new ~(error_detail : error_detail) (varmap : Subst.entry VarMap.t) (vt : vterm) : (sql_vterm, error) result =
+  let open ResultMonad in
+  let rec aux (vt : vterm) =
+    match vt with
+    | Const c
+    | Var (ConstVar c) ->
+        return @@ SqlConst c
+
+    | Var (NamedVar x) ->
+        begin
+          match get_named_var varmap x with
+          | None        -> err @@ UnexpectedNamedVar { named_var = x; error_detail }
+          | Some sql_vt -> return sql_vt
+        end
+
+    | Var var ->
+        err @@ UnexpectedVarForm { var; error_detail }
+
+    | BinaryOp (bin_op_str, vt1, vt2) ->
+        get_sql_binary_operation ~error_detail bin_op_str >>= fun sql_bin_op ->
+        aux vt1 >>= fun sql_vt1 ->
+        aux vt2 >>= fun sql_vt2 ->
+        return @@ SqlBinaryOp (sql_bin_op, sql_vt1, sql_vt2)
+
+    | UnaryOp (un_op_str, vt1) ->
+        get_sql_unary_operation ~error_detail un_op_str >>= fun sql_un_op ->
+        aux vt1 >>= fun sql_vt1 ->
+        return @@ SqlUnaryOp (sql_un_op, sql_vt1)
+  in
+  aux vt
+
+
+let sql_vterm_of_arg ~(error_detail : error_detail) (varmap : Subst.entry VarMap.t) (arg : argument) : (sql_vterm option, error) result =
+  let open ResultMonad in
+  match arg with
+  | ArgNamedVar x ->
+        begin
+          match get_named_var varmap x with
+          | None        -> err @@ UnexpectedNamedVar { named_var = x; error_detail }
+          | Some sql_vt -> return @@ Some sql_vt
+        end
+
+  | ArgConst c ->
+      return @@ Some (SqlConst c)
+
+  | ArgAnon ->
+      return None
+
+
+let combine_delta_column_names (delta_env : delta_environment) (delta_key : delta_key) (args : argument list) : (instance_name * (column_name * argument) list, error) result =
+  let open ResultMonad in
+  match delta_env |> DeltaEnv.find_opt delta_key with
+  | None ->
+      err @@ DeltaNotFound delta_key
+
+  | Some (instance, cols) ->
+      begin
+        try
+          return @@ (instance, List.combine cols args)
+        with
+        | _ ->
+            err @@ ArityMismatch { expected = List.length cols; got = List.length args }
+      end
+
+
+(* Extends `subst` by traversing occurrence of variables in positive predicates. *)
+let extend_substitution_by_traversing_positives ~(error_detail : error_detail) (table_env : table_environment) (delta_env : delta_environment) (named_poss : (positive_predicate * instance_name) list) (subst : Subst.t) : (Subst.t, error) result =
+  let open ResultMonad in
+  named_poss |> foldM (fun subst (pos, instance) ->
+    begin
+      match pos with
+      | PositivePred (table, args) ->
+          combine_column_names ~error_detail table_env table args
+
+      | PositiveDelta (delta_key, args) ->
+          combine_delta_column_names delta_env delta_key args >>= fun (_instance, columns_and_args) ->
+          return columns_and_args
+
+    end >>= fun columns_and_args ->
+    let subst =
+      columns_and_args |> List.fold_left (fun subst (column, arg) ->
+        match arg with
+        | ArgNamedVar x -> subst |> Subst.add x (Subst.Occurrence (instance, column))
+        | ArgConst _    -> subst
+        | ArgAnon       -> subst
+      ) subst
+    in
+    return subst
+  ) subst
+
+
+(* Extends `subst` by constraints where a variable is equal to a constant
+   Consumed equality constraints are removed from `comps`. *)
+let extend_substitution_by_traversing_conparisons (comps : comparison list) (subst : Subst.t) : comparison list * Subst.t =
+  let (comp_acc, subst) =
+    comps |> List.fold_left (fun (comp_acc, subst) comp ->
+      let Comparison (op, vt1, vt2) = comp in
+      match op with
+      | EqualTo ->
+          begin
+            match (as_const_or_var vt1, as_const_or_var vt2) with
+            | (AsNamedVar x, AsConst c) -> (comp_acc, subst |> Subst.add x (Subst.EqualToConst c))
+            | (AsConst c, AsNamedVar x) -> (comp_acc, subst |> Subst.add x (Subst.EqualToConst c))
+            | _                         -> (comp :: comp_acc, subst)
+          end
+
+      | _ ->
+          (comp :: comp_acc, subst)
+    ) ([], subst)
+  in
+  let comps = List.rev comp_acc in
+  (comps, subst)
+
+
+let partition_map f xs =
+  let (acc1, acc2) =
+    xs |> List.fold_left (fun (acc1, acc2) x ->
+      match f x with
+      | Ok v1    -> (v1 :: acc1, acc2)
+      | Error v2 -> (acc1, v2 :: acc2)
+    ) ([], [])
+  in
+  (List.rev acc1, List.rev acc2)
+
+
+(* The type for representing a rule without its head predicate,
+   i.e., the part `(X_1, ..., X_m) :- C_1, ..., C_n` of
+   a rule `±r(X_1, ..., X_m) :- C_1, ..., C_n`. *)
+type headless_rule = {
+  columns_and_vars : (column_name * named_var) list;
+  body             : term list;
+}
+
+
+let convert_rule_to_operation_based_sql ~(error_detail : error_detail) (table_env : table_environment) (delta_env : delta_environment) (headless_rule : headless_rule) : (sql_query, error) result =
+  let open ResultMonad in
+  let columns_and_vars = headless_rule.columns_and_vars in
+  let body = headless_rule.body in
+  decompose_body ~error_detail body >>= fun (poss, negs, comps) ->
+
+  assign_or_find_instance_names delta_env poss >>= fun (named_poss, referred_instances) ->
+  let subst = Subst.empty in
+  extend_substitution_by_traversing_positives ~error_detail table_env delta_env named_poss subst >>= fun subst ->
+  let (comps, subst) = extend_substitution_by_traversing_conparisons comps subst in
+
+  (* Converts `subst` into SQL constraints and `varmap`: *)
+  Subst.fold (fun x (entry, entries) res ->
+    res >>= fun (sql_constraint_acc, varmap) ->
+    let (consts, occurrences) =
+      (entry :: entries) |> partition_map (function
+      | Subst.EqualToConst c                -> Ok c
+      | Subst.Occurrence (instance, column) -> Error (instance, column)
+      )
+    in
+    match (consts, occurrences) with
+    | ([], []) ->
+        assert false
+
+    | ([], (instance0, column0) :: occurrence_rest) ->
+        let sql_constraint_acc =
+          let right = SqlColumn (Some instance0, column0) in
+          occurrence_rest |> List.fold_left (fun sql_constraint_acc (instance, column) ->
+            SqlConstraint (SqlColumn (Some instance, column), SqlRelEqual, right) :: sql_constraint_acc
+          ) sql_constraint_acc
+        in
+        let varmap = varmap |> VarMap.add x (Subst.Occurrence (instance0, column0)) in
+        return (sql_constraint_acc, varmap)
+
+    | ([ c ], _) ->
+        let sql_constraint_acc =
+          let right = SqlConst c in
+          occurrences |> List.fold_left (fun sql_constraint_acc (table, column) ->
+            SqlConstraint (SqlColumn (Some table, column), SqlRelEqual, right) :: sql_constraint_acc
+          ) sql_constraint_acc
+        in
+        let varmap = varmap |> VarMap.add x (Subst.EqualToConst c) in
+        return (sql_constraint_acc, varmap)
+
+    | (c1 :: c2 :: _, _) ->
+        err @@ EqualToMoreThanOneConstant {
+          variable = x;
+          const1 = c1;
+          const2 = c2;
+        }
+  ) subst (return ([], VarMap.empty)) >>= fun (sql_constraint_acc, varmap) ->
+
+  (* Adds comparison constraints to SQL constraints: *)
+  comps |> foldM (fun sql_constraint_acc comp ->
+    let Comparison (op, vt1, vt2) = comp in
+    let error_detail = InComparison comp in
+    sql_of_vterm_new ~error_detail varmap vt1 >>= fun sql_vt1 ->
+    sql_of_vterm_new ~error_detail varmap vt2 >>= fun sql_vt2 ->
+    let sql_op =
+      match op with
+      | EqualTo              -> SqlRelEqual
+      | NotEqualTo           -> SqlRelNotEqual
+      | LessThan             -> SqlRelGeneral "<"
+      | GreaterThan          -> SqlRelGeneral ">"
+      | LessThanOrEqualTo    -> SqlRelGeneral "<="
+      | GreaterThanOrEqualTo -> SqlRelGeneral ">="
+    in
+    return @@ SqlConstraint (sql_vt1, sql_op, sql_vt2) :: sql_constraint_acc
+  ) sql_constraint_acc >>= fun sql_constraint_acc ->
+
+  (* Adds constraints that stem from negative predicates: *)
+  negs |> foldM (fun sql_constraint_acc neg ->
+    begin
+      match neg with
+      | NegativePred (table, args) ->
+          combine_column_names ~error_detail table_env table args >>= fun columns_and_args ->
+          return (table, columns_and_args)
+
+      | NegativeDelta (delta_key, args) ->
+          combine_delta_column_names delta_env delta_key args
+
+    end >>= fun (table, columns_and_args) ->
+    let instance = "t" in
+    let sql_from = SqlFrom [ (SqlFromTable (None, table), Some instance) ] in
+    columns_and_args |> foldM (fun acc (column, arg) ->
+      sql_vterm_of_arg ~error_detail varmap arg >>= function
+      | None -> (* corresponds to underscore *)
+          return @@ acc
+
+      | Some sql_vt ->
+          return @@ SqlConstraint (SqlColumn (Some instance, column), SqlRelEqual, sql_vt) :: acc
+
+    ) [] >>= fun acc ->
+    let sql_where = SqlWhere { using = []; constraints = List.rev acc } in
+    return @@ SqlNotExist (sql_from, sql_where) :: sql_constraint_acc
+  ) sql_constraint_acc >>= fun sql_constraint_acc ->
+
+  (* Builds the SELECT clause: *)
+  columns_and_vars |> mapM (fun (column0, x0) ->
+    match varmap |> VarMap.find_opt x0 with
+    | None ->
+        err @@ HeadVariableDoesNotOccurInBody x0
+
+    | Some (Subst.Occurrence (instance, column)) ->
+        return (SqlColumn (Some instance, column), column0)
+
+    | Some (Subst.EqualToConst c) ->
+        return (SqlConst c, column0)
+
+  ) >>= fun selecteds ->
+  let sql_select = SqlSelect selecteds in
+
+  (* Builds the FROM clause: *)
+  let from_clause_entries =
+    List.concat [
+      named_poss |> List.map (fun (pos, instance) ->
+        match pos with
+        | PositivePred (table, _args) -> [ (SqlFromTable (None, table), Some instance) ]
+        | _                           -> []
+      ) |> List.concat;
+      referred_instances |> List.map (fun instance ->
+        (SqlFromTable (None, instance), Some instance)
+      )
+    ]
+  in
+  let sql_from = SqlFrom from_clause_entries in
+
+  (* Builds the WHERE clause: *)
+  let sql_where = SqlWhere { using = []; constraints = List.rev sql_constraint_acc } in
+
+  return @@ SqlQuery {
+    select = sql_select;
+    from   = sql_from;
+    where  = sql_where;
+    agg    = (SqlGroupBy [], SqlHaving []);
+  }
+
+
+module DeltaKeySet = Set.Make(DeltaKey)
+
+type rule_group =
+  | PredGroup  of table_name * headless_rule
+  | DeltaGroup of delta_key * headless_rule list
+
+type delta_grouping_state = {
+  current_target      : delta_key;
+  current_accumulated : headless_rule list;
+  already_handled     : DeltaKeySet.t;
+}
+
+
+let divide_rules_into_groups (table_env : table_environment) (rules : Expr.rule list) : (rule_group list, error) result =
+  let open ResultMonad in
+  rules |> foldM (fun (state_opt, group_acc) rule ->
+    let (head, body) = rule in
+    get_spec_from_head ~error_detail:(InRule rule) table_env head >>= function
+    | PredHead (table, columns_and_vars) ->
+        let group = PredGroup (table, { columns_and_vars; body }) in
+        begin
+          match state_opt with
+          | None ->
+              return (None, group :: group_acc)
+
+          | Some state ->
+              let group_prev = DeltaGroup (state.current_target, List.rev state.current_accumulated) in
+              return (None, group :: group_prev :: group_acc)
+        end
+
+    | DeltaHead (delta_kind, table, columns_and_vars) ->
+        let delta_key = (delta_kind, table) in
+        let intermediate = { columns_and_vars; body } in
+        begin
+          match state_opt with
+          | None ->
+              return (Some {
+                current_target      = delta_key;
+                current_accumulated = [ intermediate ];
+                already_handled     = DeltaKeySet.empty;
+              }, group_acc)
+
+          | Some state ->
+              if state.already_handled |> DeltaKeySet.mem delta_key then
+                err @@ HasMoreThanOneRuleGroup delta_key
+              else if delta_key = state.current_target then
+                return (Some { state with
+                  current_accumulated = intermediate :: state.current_accumulated;
+                }, group_acc)
+              else
+                let group = DeltaGroup (state.current_target, List.rev state.current_accumulated) in
+                return (Some {
+                  current_target      = delta_key;
+                  current_accumulated = [ intermediate ];
+                  already_handled     = state.already_handled |> DeltaKeySet.add state.current_target;
+                }, group :: group_acc)
+        end
+
+  ) (None, []) >>= fun (state_opt, group_acc) ->
+  match state_opt with
+  | None ->
+      return (List.rev group_acc)
+
+  | Some state ->
+      let group_last = DeltaGroup (state.current_target, List.rev state.current_accumulated) in
+      let groups = List.rev (group_last :: group_acc) in
+      return groups
+
+
+let convert_expr_to_operation_based_sql (expr : expr) : (sql_operation list, error) result =
+  let open ResultMonad in
+  let table_env =
+    let defs =
+      match expr.view with
+      | None      -> expr.sources
+      | Some view -> view :: expr.sources
+    in
+    defs |> List.fold_left (fun table_env (table, cols_and_types) ->
+      let cols = cols_and_types |> List.map (fun (col, _) -> col) in
+      table_env |> TableEnv.add table cols
+    ) TableEnv.empty
+  in
+  let rules = List.rev expr.rules in (* `expr` holds its rules in the reversed order *)
+  divide_rules_into_groups table_env rules >>= fun rule_groups ->
+  rule_groups |> foldM (fun (i, creation_acc, update_acc, delta_env) rule_group ->
+    let temporary_table = Printf.sprintf "temp%d" i in
+    match rule_group with
+    | PredGroup (table, headless_rule) ->
+        let error_detail =
+          let rule =
+            let head = Pred (table, headless_rule.columns_and_vars |> List.map (fun (_, x) -> NamedVar x)) in
+            (head, headless_rule.body)
+          in
+          InRule rule
+        in
+        convert_rule_to_operation_based_sql ~error_detail table_env DeltaEnv.empty headless_rule >>= fun sql_query ->
+        let creation = SqlCreateView (table, sql_query) in
+        return (i + 1, creation :: creation_acc, update_acc, delta_env)
+
+    | DeltaGroup (delta_key, headless_rules) ->
+        let (delta_kind, table) = delta_key in
+        headless_rules |> mapM (fun headless_rule ->
+          let error_detail =
+            let rule =
+              let vars = headless_rule.columns_and_vars |> List.map (fun (_, x) -> NamedVar x) in
+              match delta_kind with
+              | Insert -> (Deltainsert (table, vars), headless_rule.body)
+              | Delete -> (Deltadelete (table, vars), headless_rule.body)
+            in
+            InRule rule
+          in
+          convert_rule_to_operation_based_sql ~error_detail table_env delta_env headless_rule
+        ) >>= fun sql_queries ->
+        let sql_query = SqlUnion (SqlUnionOp, sql_queries) in
+        get_column_names_from_table ~error_detail:(InGroup delta_key) table_env table >>= fun cols ->
+        let delta_env = delta_env |> DeltaEnv.add delta_key (temporary_table, cols) in
+        let creation = SqlCreateTemporaryTable (temporary_table, sql_query) in
+        let update =
+          match delta_kind with
+          | Insert ->
+              SqlInsertInto (table,
+                SqlFrom [ (SqlFromTable (None, temporary_table), None) ])
+
+          | Delete ->
+              let sql_where =
+                let cols =
+                  match table_env |> TableEnv.find_opt table with
+                  | None      -> assert false
+                  | Some cols -> cols
+                in
+                let constraints =
+                  cols |> List.map (fun col ->
+                    SqlConstraint (SqlColumn (Some table, col), SqlRelEqual, SqlColumn (Some temporary_table, col))
+                  )
+                in
+                SqlWhere { using = [ (SqlFromTable (None, temporary_table), None) ]; constraints }
+              in
+              SqlDeleteFrom (table, sql_where)
+        in
+        return (i + 1, creation :: creation_acc, update :: update_acc, delta_env)
+
+  ) (0, [], [], DeltaEnv.empty) >>= fun (_, creation_acc, update_acc, _) ->
+  return @@ List.concat [
+    List.rev creation_acc;
+    List.rev update_acc;
+  ]
