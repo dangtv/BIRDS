@@ -117,7 +117,7 @@ let main () =
        *   -t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6), GenV2 = 'v2', GenV3 = 'v100', GenV1 <> 'v1'.
        *   -t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6), GenV2 = 'v2', GenV3 = 'v100', GenV3 <> 'v3'.
        *   -t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6), GenV2 = 'v2', GenV3 = 'v100', GenV5 <> 'v5'.
-       *   +t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV1 = v1, GenV3 = v3, GenV5 = v5, -t(GenV1_2, GenV2, GenV3_2, GenV4, GenV5_2, GenV6).
+       *   +t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV1 = 'v1', GenV3 = 'v3', GenV5 = 'v5', -t(GenV1_2, GenV2, GenV3_2, GenV4, GenV5_2, GenV6).
        *
        *)
       input = (
