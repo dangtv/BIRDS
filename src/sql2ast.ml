@@ -96,7 +96,7 @@ let ast_terms_of_sql_where_clause colvarmap = function
       ast_term_of_sql_constraint
       sql_constraints
 
-let build_effect_rules colvarmap column_and_vterms tmp_pred =
+let build_effects colvarmap column_and_vterms =
   (*
    * For optimisation, generate terms in the delta-datalog language rules
    * that remove records where all columns to be updated in the SET clause
@@ -110,11 +110,8 @@ let build_effect_rules colvarmap column_and_vterms tmp_pred =
         |> Option.to_result ~none:(InvalidColumnName column_name)
         >>= fun var ->
       ResultMonad.return (Expr.Equat (Expr.Equation ("<>", Expr.Var var, vterm))))
-    |> ResultMonad.map (fun effect_terms ->
-      effect_terms |> List.map (fun term -> tmp_pred, [term])
-    )
 
-let build_deletion_rule colvarmap where_clause table_name varlist tmp_pred =
+let build_deletion_rule colvarmap where_clause table_name varlist effect_term =
   (* Constraints corresponding to the WHERE clause. May be empty. *)
   where_clause
     |> Option.map (ast_terms_of_sql_where_clause colvarmap)
@@ -124,7 +121,7 @@ let build_deletion_rule colvarmap where_clause table_name varlist tmp_pred =
   (* Create a rule corresponding to the operation to delete the record to be updated. *)
   let delete_pred = Expr.Deltadelete (table_name, varlist) in
   let from = Expr.Pred (table_name, varlist) in
-  ResultMonad.return (delete_pred, (Expr.Rel from :: body @ [Expr.Rel tmp_pred]))
+  ResultMonad.return (delete_pred, (Expr.Rel from :: body @ [effect_term]))
 
 let build_creation_rule colvarmap colvarmap' column_and_vterms table_name columns varlist =
   (* Create an expression equivalent to a SET clause in SQL. *)
@@ -148,13 +145,6 @@ let build_creation_rule colvarmap colvarmap' column_and_vterms table_name column
   let body = body @ [Expr.Rel delete_pred] in
   let insert_pred = Expr.Deltainsert (table_name, varlist) in
   ResultMonad.return (insert_pred, body)
-
-(**
-  * Create a temporary table name,
-  * but if a table with a table name ending in `_tmp` already exists,
-  * it will not work well.
-  *)
-let make_tmp_table_name table_name = Printf.sprintf "%s_tmp" table_name
 
 module ColumnSet = Set.Make(String)
 
@@ -211,14 +201,11 @@ let update_to_datalog (update : sql_update) (columns : sql_column_name list) : (
     ) in
   let colvarmap' = make_colvarmap column_var_list' in
 
-  (* Pred for optimisation rules.  *)
-  let tmp_pred = Expr.Pred (make_tmp_table_name table_name, varlist) in
-
-  build_effect_rules colvarmap column_and_vterms tmp_pred
-  >>= fun effect_rules ->
-  build_deletion_rule colvarmap where_clause table_name varlist tmp_pred
-  >>= fun delete ->
+  build_effects colvarmap column_and_vterms
+  >>= fun effect_terms ->
+  ResultMonad.mapM (build_deletion_rule colvarmap where_clause table_name varlist) effect_terms
+  >>= fun deletes ->
   build_creation_rule colvarmap colvarmap' column_and_vterms table_name columns varlist
   >>= fun insert ->
 
-  ResultMonad.return (effect_rules @ [delete; insert])
+  ResultMonad.return (deletes @ [insert])

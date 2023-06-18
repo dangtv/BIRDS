@@ -63,20 +63,19 @@ let main () =
        *     dname = 'Dev'
        *
        * datalog:
-       *   ced_tmp(GenV1, GenV2) :- GenV2 <> R&D.
-       *   -ced(GenV1, GenV2) :- ced(GenV1, GenV2), GenV2 = Dev, ced_tmp(GenV1, GenV2).
-       *   +ced(GenV1, GenV2) :- GenV2 = R&D, -ced(GenV1, GenV2_2)
+       *   -ced(GenV1, GenV2) :- ced(GenV1, GenV2), GenV2 = 'Dev', GenV2 <> 'R&D'.
+       *   +ced(GenV1, GenV2) :- GenV2 = 'R&D', -ced(GenV1, GenV2_2)
        *
        *)
       input = (
         SqlUpdateSet (
           "ced",
-          [(None, "dname"), SqlConst (String "R&D")],
+          [(None, "dname"), SqlConst (String "'R&D'")],
           Some (SqlWhere ([
             SqlConstraint (
               SqlColumn (None, "dname"),
               SqlRelEqual,
-              SqlConst (String "Dev")
+              SqlConst (String "'Dev'")
             )
           ]))
         ),
@@ -84,21 +83,17 @@ let main () =
       );
       expected = [
         (
-          Pred ("ced_tmp", [NamedVar "GenV1"; NamedVar "GenV2"]),
-          [Equat (Equation ("<>", (Var (NamedVar "GenV2")), (Var (ConstVar (String "R&D")))))]
-        );
-        (
           Deltadelete ("ced", [NamedVar "GenV1"; NamedVar "GenV2"]),
           [
             Rel (Pred ("ced", [NamedVar "GenV1"; NamedVar "GenV2"]));
-            Equat (Equation ("=", (Var (NamedVar "GenV2")), (Var (ConstVar (String "Dev")))));
-            Rel (Pred ("ced_tmp", [NamedVar "GenV1"; NamedVar "GenV2"]))
+            Equat (Equation ("=", (Var (NamedVar "GenV2")), (Var (ConstVar (String "'Dev'")))));
+            Equat (Equation ("<>", (Var (NamedVar "GenV2")), (Var (ConstVar (String "'R&D'")))))
           ]
         );
         (
           Deltainsert ("ced", [NamedVar "GenV1"; NamedVar "GenV2"]),
           [
-            Equat (Equation ("=", (Var (NamedVar "GenV2")), (Var (ConstVar (String "R&D")))));
+            Equat (Equation ("=", (Var (NamedVar "GenV2")), (Var (ConstVar (String "'R&D'")))));
             Rel (Deltadelete ("ced", [NamedVar "GenV1"; NamedVar "GenV2_2"]));
           ]
         )
@@ -119,10 +114,9 @@ let main () =
        *     AND c3 = 'v100'
        *
        * datalog:
-       *   t_tmp(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV1 <> v1.
-       *   t_tmp(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV3 <> v3.
-       *   t_tmp(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV5 <> v5.
-       *   -t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6), GenV2 = v2, GenV3 = v100, t_tmp(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6).
+       *   -t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6), GenV2 = 'v2', GenV3 = 'v100', GenV1 <> 'v1'.
+       *   -t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6), GenV2 = 'v2', GenV3 = 'v100', GenV3 <> 'v3'.
+       *   -t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6), GenV2 = 'v2', GenV3 = 'v100', GenV5 <> 'v5'.
        *   +t(GenV1, GenV2, GenV3, GenV4, GenV5, GenV6) :- GenV1 = v1, GenV3 = v3, GenV5 = v5, -t(GenV1_2, GenV2, GenV3_2, GenV4, GenV5_2, GenV6).
        *
        *)
@@ -130,20 +124,20 @@ let main () =
         SqlUpdateSet (
           "t",
           [
-            (None, "c1"), SqlConst (String "v1");
-            (None, "c3"), SqlConst (String "v3");
-            (None, "c5"), SqlConst (String "v5")
+            (None, "c1"), SqlConst (String "'v1'");
+            (None, "c3"), SqlConst (String "'v3'");
+            (None, "c5"), SqlConst (String "'v5'")
           ],
           Some (SqlWhere ([
             SqlConstraint (
               SqlColumn (None, "c2"),
               SqlRelEqual,
-              SqlConst (String "v2")
+              SqlConst (String "'v2'")
             );
             SqlConstraint (
               SqlColumn (None, "c3"),
               SqlRelEqual,
-              SqlConst (String "v100")
+              SqlConst (String "'v100'")
             )
           ]))
         ),
@@ -151,32 +145,38 @@ let main () =
       );
       expected = [
         (
-          Pred ("t_tmp", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]),
-          [Equat (Equation ("<>", (Var (NamedVar "GenV1")), (Var (ConstVar (String "v1")))))]
-        );
-        (
-          Pred ("t_tmp", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]),
-          [Equat (Equation ("<>", (Var (NamedVar "GenV3")), (Var (ConstVar (String "v3")))))]
-        );
-        (
-          Pred ("t_tmp", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]),
-          [Equat (Equation ("<>", (Var (NamedVar "GenV5")), (Var (ConstVar (String "v5")))))]
+          Deltadelete ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]),
+          [
+            Rel (Pred ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]));
+            Equat (Equation ("=", (Var (NamedVar "GenV2")), (Var (ConstVar (String "'v2'")))));
+            Equat (Equation ("=", (Var (NamedVar "GenV3")), (Var (ConstVar (String "'v100'")))));
+            Equat (Equation ("<>", (Var (NamedVar "GenV1")), (Var (ConstVar (String "'v1'")))))
+          ]
         );
         (
           Deltadelete ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]),
           [
             Rel (Pred ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]));
-            Equat (Equation ("=", (Var (NamedVar "GenV2")), (Var (ConstVar (String "v2")))));
-            Equat (Equation ("=", (Var (NamedVar "GenV3")), (Var (ConstVar (String "v100")))));
-            Rel (Pred ("t_tmp", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]))
+            Equat (Equation ("=", (Var (NamedVar "GenV2")), (Var (ConstVar (String "'v2'")))));
+            Equat (Equation ("=", (Var (NamedVar "GenV3")), (Var (ConstVar (String "'v100'")))));
+            Equat (Equation ("<>", (Var (NamedVar "GenV3")), (Var (ConstVar (String "'v3'")))))
+          ]
+        );
+        (
+          Deltadelete ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]),
+          [
+            Rel (Pred ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]));
+            Equat (Equation ("=", (Var (NamedVar "GenV2")), (Var (ConstVar (String "'v2'")))));
+            Equat (Equation ("=", (Var (NamedVar "GenV3")), (Var (ConstVar (String "'v100'")))));
+            Equat (Equation ("<>", (Var (NamedVar "GenV5")), (Var (ConstVar (String "'v5'")))))
           ]
         );
         (
           Deltainsert ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"; NamedVar "GenV5"; NamedVar "GenV6"]),
           [
-            Equat (Equation ("=", (Var (NamedVar "GenV1")), (Var (ConstVar (String "v1")))));
-            Equat (Equation ("=", (Var (NamedVar "GenV3")), (Var (ConstVar (String "v3")))));
-            Equat (Equation ("=", (Var (NamedVar "GenV5")), (Var (ConstVar (String "v5")))));
+            Equat (Equation ("=", (Var (NamedVar "GenV1")), (Var (ConstVar (String "'v1'")))));
+            Equat (Equation ("=", (Var (NamedVar "GenV3")), (Var (ConstVar (String "'v3'")))));
+            Equat (Equation ("=", (Var (NamedVar "GenV5")), (Var (ConstVar (String "'v5'")))));
             Rel (Deltadelete ("t", [NamedVar "GenV1_2"; NamedVar "GenV2"; NamedVar "GenV3_2"; NamedVar "GenV4"; NamedVar "GenV5_2"; NamedVar "GenV6"]));
           ]
         )
@@ -193,9 +193,8 @@ let main () =
        *     c2 = c3
        *
        * datalog:
-       *   t_tmp(GenV1, GenV2, GenV3, GenV4) :- GenV1 <> GenV2.
-       *   t_tmp(GenV1, GenV2, GenV3, GenV4) :- GenV2 <> GenV3.
-       *   -t(GenV1, GenV2, GenV3, GenV4) :- t(GenV1, GenV2, GenV3, GenV4), t_tmp(GenV1, GenV2, GenV3, GenV4).
+       *   -t(GenV1, GenV2, GenV3, GenV4) :- t(GenV1, GenV2, GenV3, GenV4), GenV1 <> GenV2.
+       *   -t(GenV1, GenV2, GenV3, GenV4) :- t(GenV1, GenV2, GenV3, GenV4), GenV2 <> GenV3.
        *   +t(GenV1, GenV2, GenV3, GenV4) :- GenV1 = GenV2_2, GenV2 = GenV3, -t(GenV1_2, GenV2_2, GenV3, GenV4).
        *
        *)
@@ -212,18 +211,17 @@ let main () =
       );
       expected = [
         (
-          Pred ("t_tmp", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"]),
-          [Equat (Equation ("<>", (Var (NamedVar "GenV1")), (Var (NamedVar "GenV2"))))]
-        );
-        (
-          Pred ("t_tmp", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"]),
-          [Equat (Equation ("<>", (Var (NamedVar "GenV2")), (Var (NamedVar "GenV3"))))]
+          Deltadelete ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"]),
+          [
+            Rel (Pred ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"]));
+            Equat (Equation ("<>", (Var (NamedVar "GenV1")), (Var (NamedVar "GenV2"))))
+          ]
         );
         (
           Deltadelete ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"]),
           [
             Rel (Pred ("t", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"]));
-            Rel (Pred ("t_tmp", [NamedVar "GenV1"; NamedVar "GenV2"; NamedVar "GenV3"; NamedVar "GenV4"]))
+            Equat (Equation ("<>", (Var (NamedVar "GenV2")), (Var (NamedVar "GenV3"))))
           ]
         );
         (
