@@ -42,19 +42,22 @@ TOP_FILES=\
 	bottom_up evaluation\
 	ast2fol ast2sql ast2ros\
 	ast2theorem \
+	sql2ast \
 	bx\
 	inlining\
 	debugger\
 	simplification\
 
 TOP_FILES_WITH_MLI=\
-	parser expr conversion ast2sql ast2theorem dependency_graph\
+	parser expr conversion ast2sql ast2theorem sql2ast dependency_graph\
 	simplification\
 
 TEST_ONLY_FILES=\
     ast2sql_operation_based_conversion_test\
 	simplification_test\
 	inlining_test\
+	sql2ast_test\
+
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
