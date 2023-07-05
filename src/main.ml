@@ -390,6 +390,13 @@ let main () =
     if (!verification) then print_endline @@ "-- Program is validated --";
     let oc =if !outputf = "" then stdout else open_out !outputf  in
     if (not has_get) then fprintf oc "\n/*view definition (get):\n%s*/\n\n" view_rules_string;
+    let ast2 =
+      match Simplification.simplify ast2.rules with
+      | Ok rules ->
+          { ast2 with rules }
+      | Error e ->
+          failwith "failed to simplify rules" (* TODO: detailed error report *)
+    in
     let sql = Ast2sql.unfold_view_sql (!dbschema) (!log) ast2 in
     fprintf oc "%s\n" sql;
     let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!log) (!dejima_ud) shell_script (!dejima_user) (!inc) (!optimize) (constraint2rule ast2) in
